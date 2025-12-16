@@ -1,1 +1,35 @@
-spring.application.name=udemy
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
+spring:
+  data:
+    web:
+      pageable:
+        one-indexed-parameters: true
+  servlet:
+    multipart:
+      max-file-size: 2048MB
+      max-request-size: 2048MB
+  datasource:
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/udemy
+    username: root
+    password: 752004
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
+auth:
+  jwt:
+    base64-secret-access: qoAEABDke07+AVLepXB4aCMtsT0wMAqR5x2VFyldsnx6e75YQkJH2UcZKTjEyoNgG71SBCXfq5N6NVZxWOfsHQ==
+    base64-secret-fresh: Io0JORP+HAY9pQBkr/YRK1FA1CpJpz3tGjNrAO6Edjgod+QbUSjrcu6aeFH3vH+KM1So3rjTdAm66fXQGWNL4A==
+    access-token-validity-in-seconds: 8640000
+    refresh-token-validity-in-seconds: 8640000
+upload:
+  file:
+    uri: file:///E:/Udemy/upload/
