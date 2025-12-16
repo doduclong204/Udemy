@@ -5,14 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.education.udemy.dto.request.user.UserCreationRequest;
 import com.education.udemy.dto.request.user.UserUpdateRequest;
@@ -77,6 +70,14 @@ public class UserController {
     @ApiMessage("Update a user success")
     ResponseEntity<UserResponse> updateUser(@PathVariable String id, @RequestBody UserUpdateRequest request) {
         return ResponseEntity.ok().body(this.userService.update(id, request));
+    }
+
+    @PatchMapping("/{id}/status")
+    @ApiMessage("Update user status success")
+    ResponseEntity<UserResponse> updateUserStatus(
+            @PathVariable String id,
+            @RequestBody boolean active) {
+        return ResponseEntity.ok().body(this.userService.updateUserStatus(id, active));
     }
 
 //     @CrossOrigin(origins = "*", exposedHeaders = "Content-Disposition")

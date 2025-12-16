@@ -29,7 +29,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     .name("Đỗ Đức Long")
                     .password(passwordEncoder.encode("123456"))
                     .role("ADMIN")
-                    .isActive(true)
+                    .active(true)
                     .phone("0969654190")
                     .bio("Quản trị viên hệ thống")
                     .createdAt(Instant.now())

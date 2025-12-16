@@ -25,6 +25,7 @@ public class UserResponse {
     String avatar;
     String bio;
     String role;
+    Boolean active;
     Instant createdAt;
     Instant updatedAt;
     String createdBy;

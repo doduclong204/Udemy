@@ -25,7 +25,7 @@ public class SecurityConfiguration {
 
                 String[] whileList = {
                                 "/", "/auth/login", "/auth/refresh", "/auth/register",
-                                "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/users","/storage/**","/files/**"
+                                "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html","/storage/**","/files/**"
                 };
                 http
                                 .csrf(c -> c.disable())

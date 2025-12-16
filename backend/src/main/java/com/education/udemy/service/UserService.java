@@ -161,4 +161,12 @@ public class UserService {
     public User getUserByRefreshTokenAndUsername(String token, String username) {
         return this.userRepository.findByRefreshTokenAndUsername(token, username);
     }
+
+    public UserResponse updateUserStatus(String id, boolean active) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        user.setActive(active);
+        return userMapper.toUserResponse(userRepository.save(user));
+    }
 }
