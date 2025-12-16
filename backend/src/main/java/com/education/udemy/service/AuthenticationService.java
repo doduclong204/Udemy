@@ -18,12 +18,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 
 import com.education.udemy.constant.PredefinedRole;
-import com.education.udemy.dto.request.AuthenticationRequest;
-import com.education.udemy.dto.request.IntrospectRequest;
-import com.education.udemy.dto.request.UserCreationRequest;
-import com.education.udemy.dto.response.AuthenticationResponse;
-import com.education.udemy.dto.response.IntrospectResponse;
-import com.education.udemy.dto.response.UserResponse;
+import com.education.udemy.dto.request.auth.AuthenticationRequest;
+import com.education.udemy.dto.request.auth.IntrospectRequest;
+import com.education.udemy.dto.request.user.UserCreationRequest;
+import com.education.udemy.dto.response.auth.AuthenticationResponse;
+import com.education.udemy.dto.response.auth.IntrospectResponse;
+import com.education.udemy.dto.response.user.UserResponse;
 import com.education.udemy.entity.InvalidatedToken;
 import com.education.udemy.entity.User;
 import com.education.udemy.exception.AppException;
@@ -192,7 +192,7 @@ public class AuthenticationService {
             throws AppException, JOSEException, ParseException {
 
         // check valid token
-        if (refresh_token.equals("duy")) {
+        if (refresh_token.equals("long")) {
             throw new AppException(ErrorCode.COOKIES_EMPTY);
         }
         Jwt decodedToken = this.securityUtil.checkValidRefreshToken(refresh_token);

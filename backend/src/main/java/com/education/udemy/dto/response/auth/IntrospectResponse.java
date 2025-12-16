@@ -1,4 +1,4 @@
-package com.education.udemy.dto.response;
+package com.education.udemy.dto.response.auth;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;

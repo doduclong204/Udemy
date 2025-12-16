@@ -1,5 +1,6 @@
-package com.education.udemy.dto.response;
+package com.education.udemy.dto.response.auth;
 
+import com.education.udemy.dto.response.user.UserResponse;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
@@ -12,9 +13,10 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @JsonPropertyOrder(alphabetic = true)
-public class UserInToken {
-    @JsonProperty("_id")
-    String id;
-    String username;
-    String role;
+public class AuthenticationResponse {
+    @JsonProperty("access_token")
+    String accessToken;
+    @JsonProperty("refresh_token")
+    String refreshToken;
+    UserResponse user;
 }

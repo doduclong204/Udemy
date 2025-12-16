@@ -12,7 +12,7 @@ import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
-import com.education.udemy.dto.response.ApiResponse;
+import com.education.udemy.dto.response.api.ApiResponse;
 import com.education.udemy.util.annotation.ApiMessage;
 
 @ControllerAdvice

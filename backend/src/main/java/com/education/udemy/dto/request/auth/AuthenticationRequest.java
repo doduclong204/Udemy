@@ -1,18 +1,14 @@
-package com.education.udemy.dto.request;
-
+package com.education.udemy.dto.request.auth;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class UserUpdateRequest {
-    String password;
-    String name;
+public class AuthenticationRequest {
     String username;
-    String address;
-    String role;
+    String password;
 }

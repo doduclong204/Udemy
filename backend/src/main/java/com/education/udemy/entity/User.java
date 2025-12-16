@@ -1,6 +1,9 @@
 package com.education.udemy.entity;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+
 import com.education.udemy.util.SecurityUtil;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
@@ -30,14 +33,42 @@ public class User {
     String username;
     String password;
     String name;
-    String address;
+    @Column(length = 10)
+    String phone;
+    LocalDate dateOfBirth;
+    @Column(length = 500)
+    String avatar;
+    @Column(columnDefinition = "TEXT")
+    String bio;
     String role;
+
+    Boolean isActive;
 
     Instant createdAt;
     Instant updatedAt;
     String createdBy;
     String updatedBy;
 
+    @OneToMany(mappedBy = "instructor")
+    List<Course> courses;
+
+    @OneToMany(mappedBy = "user")
+    List<Enrollment> enrollments;
+
+    @OneToMany(mappedBy = "user")
+    List<Order> orders;
+
+    @OneToMany(mappedBy = "user")
+    List<Review> reviews;
+
+    @OneToMany(mappedBy = "user")
+    List<Wishlist> wishlists;
+
+    @OneToOne(mappedBy = "user")
+    Cart cart;
+
+    @OneToMany(mappedBy = "user")
+    List<Notification> notifications;
     @PrePersist
     public void handleBeforeCreate() {
         this.createdBy = SecurityUtil.getCurrentUserLogin().isPresent() == true

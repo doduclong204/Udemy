@@ -11,10 +11,10 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.education.udemy.dto.request.AuthenticationRequest;
-import com.education.udemy.dto.request.UserCreationRequest;
-import com.education.udemy.dto.response.AuthenticationResponse;
-import com.education.udemy.dto.response.UserResponse;
+import com.education.udemy.dto.request.auth.AuthenticationRequest;
+import com.education.udemy.dto.request.user.UserCreationRequest;
+import com.education.udemy.dto.response.auth.AuthenticationResponse;
+import com.education.udemy.dto.response.user.UserResponse;
 import com.education.udemy.exception.AppException;
 import com.education.udemy.service.AuthenticationService;
 import com.education.udemy.util.annotation.ApiMessage;

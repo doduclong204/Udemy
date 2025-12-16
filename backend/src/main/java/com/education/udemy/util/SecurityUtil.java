@@ -11,9 +11,9 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.stereotype.Service;
 
-import com.education.udemy.dto.response.AuthenticationResponse;
-import com.education.udemy.dto.response.UserInToken;
-import com.education.udemy.dto.response.UserResponse;
+import com.education.udemy.dto.response.auth.AuthenticationResponse;
+import com.education.udemy.dto.response.user.UserInToken;
+import com.education.udemy.dto.response.user.UserResponse;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;

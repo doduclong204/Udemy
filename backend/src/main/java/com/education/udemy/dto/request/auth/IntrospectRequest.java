@@ -1,4 +1,4 @@
-package com.education.udemy.dto.request;
+package com.education.udemy.dto.request.auth;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;

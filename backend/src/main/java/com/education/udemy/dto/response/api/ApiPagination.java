@@ -1,4 +1,4 @@
-package com.education.udemy.dto.response;
+package com.education.udemy.dto.response.api;
 
 import java.util.List;
 

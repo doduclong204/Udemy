@@ -1,4 +1,4 @@
-package com.education.udemy.dto.response;
+package com.education.udemy.dto.response.user;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
@@ -12,10 +12,9 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @JsonPropertyOrder(alphabetic = true)
-public class AuthenticationResponse {
-    @JsonProperty("access_token")
-    String accessToken;
-    @JsonProperty("refresh_token")
-    String refreshToken;
-    UserResponse user;
+public class UserInToken {
+    @JsonProperty("_id")
+    String id;
+    String username;
+    String role;
 }

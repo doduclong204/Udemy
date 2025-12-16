@@ -1,7 +1,7 @@
-package com.education.udemy.dto.response;
+package com.education.udemy.dto.response.user;
 
 import java.time.Instant;
-import java.util.List;
+import java.time.LocalDate;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
@@ -20,7 +20,10 @@ public class UserResponse {
     String id;
     String username;
     String name;
-    String address;
+    String phone;
+    LocalDate dateOfBirth;
+    String avatar;
+    String bio;
     String role;
     Instant createdAt;
     Instant updatedAt;

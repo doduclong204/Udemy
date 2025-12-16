@@ -20,17 +20,14 @@ public enum ErrorCode {
     // CHECK EXISTED
     USER_EXISTED(400, "User existed", HttpStatus.BAD_REQUEST),
     USER_NOT_EXISTED(404, "User not existed", HttpStatus.NOT_FOUND),
-    GAME_NOT_EXISTED(404, "Game not existed", HttpStatus.NOT_FOUND),
     CATEGORY_NOT_FOUND(400, "This category not found", HttpStatus.BAD_REQUEST),
     CATEGORY_EXISTED(400, "This category is existed", HttpStatus.BAD_REQUEST),
-    PRODUCT_NOT_FOUND(400, "This product not found", HttpStatus.BAD_REQUEST),
     TAG_NOT_FOUND(400, "This tag not found", HttpStatus.BAD_REQUEST),
     ORDER_NOT_FOUND(400, "This order not found", HttpStatus.BAD_REQUEST),
     ROLE_NOT_EXISTED(400, "Role not existed", HttpStatus.BAD_REQUEST),
     PERMISSION_NOT_EXISTED(400, "Permission not existed", HttpStatus.BAD_REQUEST),
     CARTDETAIL_NOT_EXISTED(400, "Cart detail not existed", HttpStatus.BAD_REQUEST),
-    GAME_NOT_FOUND(404, "Game not found", HttpStatus.NOT_FOUND),
-    QUESTION_NOT_EXISTED(404, "Question not existed", HttpStatus.NOT_FOUND),
+
 
     // VALIDATE:
     USERNAME_INVALID(400, "Username must be at least {min} characters", HttpStatus.BAD_REQUEST),
