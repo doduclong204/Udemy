@@ -20,7 +20,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Entity(name = "users")
 @JsonPropertyOrder(alphabetic = true)
-public class User {
+public class User extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @JsonProperty("_id")
@@ -42,12 +42,8 @@ public class User {
     String bio;
     String role;
 
-    Boolean isActive;
-
-    Instant createdAt;
-    Instant updatedAt;
-    String createdBy;
-    String updatedBy;
+    @Builder.Default
+    Boolean active = true;
 
     @OneToMany(mappedBy = "instructor")
     List<Course> courses;
@@ -69,20 +65,5 @@ public class User {
 
     @OneToMany(mappedBy = "user")
     List<Notification> notifications;
-    @PrePersist
-    public void handleBeforeCreate() {
-        this.createdBy = SecurityUtil.getCurrentUserLogin().isPresent() == true
-                ? SecurityUtil.getCurrentUserLogin().get()
-                : "";
-        this.createdAt = Instant.now();
-    }
-
-    @PreUpdate
-    public void handleBeforeUpdate() {
-        this.updatedBy = SecurityUtil.getCurrentUserLogin().isPresent() == true
-                ? SecurityUtil.getCurrentUserLogin().get()
-                : "";
-        this.updatedAt = Instant.now();
-    }
 
 }

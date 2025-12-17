@@ -1,5 +1,6 @@
-package com.education.udemy.dto.request.user;
+package com.education.udemy.dto.request.category;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -17,19 +18,12 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class UserCreationRequest {
-    @Size(min = 4, message = "USERNAME_INVALID")
-    String username;
-
-    @Size(min = 6, message = "INVALID_PASSWORD")
-    String password;
-
-    @NotBlank
+public class CategoryCreationRequest {
+    @NotBlank(message = "Tên danh mục không được để trống")
+    @Size(max = 30, message = "Tên danh mục không được quá 30 ký tự")
     String name;
-    String phone;
-    LocalDate dateOfBirth;
-    String avatar;
-    String bio;
 
-    String role;
+    @Size(max = 500)
+    String icon;
+    String description;
 }

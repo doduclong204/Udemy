@@ -7,6 +7,7 @@ import com.education.udemy.entity.User;
 import com.education.udemy.repository.UserRepository;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 @Service
 public class DatabaseInitializer implements CommandLineRunner {
@@ -32,10 +33,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     .active(true)
                     .phone("0969654190")
                     .bio("Quản trị viên hệ thống")
-                    .createdAt(Instant.now())
-                    .updatedAt(Instant.now())
-                    .createdBy("system")
-                    .updatedBy("system")
+                    .dateOfBirth(LocalDate.of(2004, 5, 7))
                     .build();
 
             this.userRepository.save(adminUser);

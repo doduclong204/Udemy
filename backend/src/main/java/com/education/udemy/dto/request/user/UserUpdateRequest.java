@@ -25,9 +25,7 @@ public class UserUpdateRequest {
     String name;
     String phone;
     LocalDate dateOfBirth;
-    @Column(length = 500)
     String avatar;
-    @Column(columnDefinition = "TEXT")
     String bio;
 
     String role;
