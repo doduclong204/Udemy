@@ -43,12 +43,18 @@ public enum ErrorCode {
     // CART
     CARTDETAIL_NOT_EXISTED(404, "Cart detail not existed", HttpStatus.NOT_FOUND),
 
+    // COURSE
+    COURSE_EXISTED(409, "Course title already exists", HttpStatus.CONFLICT),
+    COURSE_NOT_FOUND(404, "Course not found", HttpStatus.NOT_FOUND),
+    COURSE_HAS_ENROLLMENTS_OR_REVIEWS(400, "Cannot delete course because it has active enrollments, reviews, or orders", HttpStatus.BAD_REQUEST),
+
     // VALIDATE GENERAL
     INVALID_PHONE_NUMBER(400, "Phone number is invalid", HttpStatus.BAD_REQUEST),
     INVALID_CATEGORY_NAME(400, "Category name is invalid", HttpStatus.BAD_REQUEST),
 
     // UNCATEGORIZED
     UNCATEGORIZED_EXCEPTION(500, "Uncategorized error", HttpStatus.INTERNAL_SERVER_ERROR);
+
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {
         this.code = code;

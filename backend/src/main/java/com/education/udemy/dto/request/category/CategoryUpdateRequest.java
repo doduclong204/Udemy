@@ -19,11 +19,8 @@ import java.time.LocalDate;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CategoryUpdateRequest {
-    @NotBlank(message = "Tên danh mục không được để trống")
-    @Size(max = 30, message = "Tên danh mục không được quá 30 ký tự")
     String name;
 
-    @Size(max = 500)
     String icon;
     String description;
 }
