@@ -1,6 +1,7 @@
 package com.education.udemy.dto.response.course;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 
 import com.education.udemy.dto.response.section.SectionResponse;
