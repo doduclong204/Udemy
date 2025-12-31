@@ -11,9 +11,7 @@ import org.mapstruct.*;
 @Mapper(componentModel = "spring", uses = {SectionMapper.class})
 public interface CourseMapper {
 
-    // Khi Create, chúng ta không map categoryId tự động vào object Category được
-    // vì nó là String, nên thường ta sẽ xử lý thủ công trong Service
-    // hoặc ignore nó ở đây để tránh lỗi.
+
     @Mapping(target = "category", ignore = true)
     Course toCourse(CreateCourseRequest request);
 

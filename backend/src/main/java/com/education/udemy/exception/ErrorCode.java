@@ -34,6 +34,8 @@ public enum ErrorCode {
     // ORDER
     ORDER_NOT_FOUND(404, "Order not found", HttpStatus.NOT_FOUND),
     INVALID_PRICE_ORDER(400, "Price is invalid", HttpStatus.BAD_REQUEST),
+    EXPORT_FAILED(9999, "Lỗi khi xuất file dữ liệu", HttpStatus.INTERNAL_SERVER_ERROR),
+
 
     // ROLE & PERMISSION
     ROLE_NOT_EXISTED(404, "Role not existed", HttpStatus.NOT_FOUND),
@@ -54,7 +56,6 @@ public enum ErrorCode {
 
     // UNCATEGORIZED
     UNCATEGORIZED_EXCEPTION(500, "Uncategorized error", HttpStatus.INTERNAL_SERVER_ERROR);
-
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {
         this.code = code;
