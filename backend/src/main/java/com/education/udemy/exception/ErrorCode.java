@@ -50,6 +50,16 @@ public enum ErrorCode {
     COURSE_NOT_FOUND(404, "Course not found", HttpStatus.NOT_FOUND),
     COURSE_HAS_ENROLLMENTS_OR_REVIEWS(400, "Cannot delete course because it has active enrollments, reviews, or orders", HttpStatus.BAD_REQUEST),
 
+    // COUPON
+    COUPON_EXISTED(409, "Coupon code already exists", HttpStatus.CONFLICT),
+    COUPON_NOT_FOUND(404, "Coupon not found", HttpStatus.NOT_FOUND),
+    COUPON_HAS_ORDERS(400, "Cannot delete coupon because it has been used in orders", HttpStatus.BAD_REQUEST),
+
+    COUPON_EXPIRED(400, "Coupon has expired", HttpStatus.BAD_REQUEST),
+    COUPON_INACTIVE(400, "Coupon is currently inactive", HttpStatus.BAD_REQUEST),
+    COUPON_OUT_OF_STOCK(400, "Coupon has reached its maximum usage limit", HttpStatus.BAD_REQUEST),
+    COUPON_MIN_AMOUNT_NOT_REACHED(400, "Order amount is below the minimum required for this coupon", HttpStatus.BAD_REQUEST),
+
     // VALIDATE GENERAL
     INVALID_PHONE_NUMBER(400, "Phone number is invalid", HttpStatus.BAD_REQUEST),
     INVALID_CATEGORY_NAME(400, "Category name is invalid", HttpStatus.BAD_REQUEST),
