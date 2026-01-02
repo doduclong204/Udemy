@@ -4,14 +4,12 @@ import com.education.udemy.dto.request.order.OrderCreationRequest;
 import com.education.udemy.dto.request.order.OrderUpdateRequest;
 import com.education.udemy.dto.response.api.ApiPagination;
 import com.education.udemy.dto.response.order.OrderResponse;
-import com.education.udemy.entity.Course;
-import com.education.udemy.entity.Order;
-import com.education.udemy.entity.OrderItem;
-import com.education.udemy.entity.User;
+import com.education.udemy.entity.*;
 import com.education.udemy.enums.OrderStatus;
 import com.education.udemy.exception.AppException;
 import com.education.udemy.exception.ErrorCode;
 import com.education.udemy.mapper.OrderMapper;
+import com.education.udemy.repository.CouponRepository;
 import com.education.udemy.repository.CourseRepository;
 import com.education.udemy.repository.OrderRepository;
 import com.education.udemy.repository.UserRepository;
@@ -45,6 +43,8 @@ public class OrderService {
     OrderMapper orderMapper;
     CourseRepository courseRepository;
     UserRepository userRepository;
+    CouponService couponService;
+    CouponRepository couponRepository;
 
     @Transactional
     public OrderResponse create(OrderCreationRequest request) {
@@ -69,6 +69,12 @@ public class OrderService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal discountAmount = BigDecimal.ZERO;
+        Coupon appliedCoupon = null;
+        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
+            appliedCoupon = couponRepository.findByCode(request.getCouponCode())
+                    .orElseThrow(() -> new AppException(ErrorCode.COUPON_NOT_FOUND));
+            discountAmount = couponService.calculateDiscount(request.getCouponCode(), totalAmount);
+        }
         BigDecimal finalAmount = totalAmount.subtract(discountAmount);
 
         // 4. Tạo thực thể Order và GÁN USER (Giải quyết lỗi null user_id)
@@ -79,7 +85,8 @@ public class OrderService {
                 .finalAmount(finalAmount)
                 .paymentMethod(request.getPaymentMethod())
                 .paymentStatus(OrderStatus.PENDING)
-                .user(currentUser) // Gán thực thể User vào Order
+                .user(currentUser)
+                .coupon(appliedCoupon)
                 .build();
 
         // 5. Tạo danh sách OrderItems và liên kết với Order
@@ -96,6 +103,12 @@ public class OrderService {
 
         // 6. Lưu Order (Cascade sẽ tự động lưu các OrderItem)
         Order savedOrder = orderRepository.save(order);
+
+        // 7. CẬP NHẬT LƯỢT DÙNG MÃ GIẢM GIÁ (TỰ ĐỘNG)
+        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
+            // Bạn cần viết thêm hàm này trong CouponService (xem phần dưới)
+            couponService.updateCouponUsage(request.getCouponCode());
+        }
 
         log.info("Tạo đơn hàng thành công: {}", savedOrder.getOrderCode());
         return orderMapper.toOrderResponse(savedOrder);
