@@ -1,0 +1,22 @@
+{
+  "files": [],
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    
+    // Các tùy chọn nới lỏng hiện có
+    "noImplicitAny": false, 
+    "noUnusedParameters": false,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "noUnusedLocals": false,
+    "strictNullChecks": false, // Giữ lại vì "strict": true sẽ ghi đè
+    
+    // SỬA Ở ĐÂY: Áp dụng các khuyến nghị
+    "forceConsistentCasingInFileNames": true, // Khắc phục vấn đề casing
+    "strict": true // Khắc phục vấn đề strict mode
+  }
+}

@@ -1,0 +1,338 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 13%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 13%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 13%;
+
+    --primary: 280 85% 58%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 13%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 280 85% 58%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 280 85% 58%;
+
+    --radius: 0.5rem;
+
+    /* Custom Udemy-like tokens */
+    --udemy-purple: 280 85% 58%;
+    --udemy-purple-dark: 280 85% 45%;
+    --udemy-purple-light: 280 60% 95%;
+    --udemy-orange: 32 95% 52%;
+    --udemy-yellow: 45 100% 51%;
+    --udemy-green: 150 80% 35%;
+    --udemy-navy: 220 30% 20%;
+    --udemy-gray-100: 0 0% 97%;
+    --udemy-gray-200: 0 0% 93%;
+    --udemy-gray-300: 0 0% 85%;
+    --udemy-gray-500: 0 0% 55%;
+    --udemy-gray-700: 0 0% 30%;
+    --udemy-gray-900: 0 0% 13%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 280 85% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 280 60% 95%;
+    --sidebar-accent-foreground: 280 85% 45%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 280 85% 58%;
+  }
+
+  .dark {
+    --background: 220 30% 10%;
+    --foreground: 0 0% 95%;
+
+    --card: 220 30% 13%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 220 30% 13%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 280 85% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 30% 18%;
+    --secondary-foreground: 0 0% 95%;
+
+    --muted: 220 30% 18%;
+    --muted-foreground: 0 0% 65%;
+
+    --accent: 280 85% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 30% 20%;
+    --input: 220 30% 20%;
+    --ring: 280 85% 60%;
+
+    --sidebar-background: 220 30% 10%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 280 85% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 30% 18%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 220 30% 20%;
+    --sidebar-ring: 280 85% 60%;
+  }
+
+  /* Admin Theme */
+  .admin-theme {
+    --admin-background: 220 20% 10%;
+    --admin-foreground: 0 0% 95%;
+    --admin-card: 220 20% 13%;
+    --admin-accent: 220 20% 22%;
+    --admin-muted-foreground: 220 10% 60%;
+    --admin-border: 220 20% 25%;
+    --admin-primary: 263 70% 58%;
+    --admin-sidebar: 220 20% 8%;
+    --admin-popover: 220 25% 18%;
+    --admin-popover-foreground: 0 0% 98%;
+  }
+}
+
+.admin-theme,
+.admin-theme [data-radix-popper-content-wrapper],
+.admin-theme [data-radix-popper-content-wrapper] *,
+body:has(.admin-theme) [data-radix-popper-content-wrapper],
+body:has(.admin-theme) [data-radix-popper-content-wrapper] *,
+body:has(.admin-theme) [role="dialog"],
+body:has(.admin-theme) [role="dialog"] *,
+body:has(.admin-theme) [role="alertdialog"],
+body:has(.admin-theme) [role="alertdialog"] * {
+  --background: 220 25% 18%;
+  --foreground: 0 0% 98%;
+  --popover: 220 25% 18%;
+  --popover-foreground: 0 0% 98%;
+  --card: 220 20% 13%;
+  --card-foreground: 0 0% 98%;
+  --muted: 220 20% 22%;
+  --muted-foreground: 220 10% 60%;
+  --accent: 220 20% 25%;
+  --accent-foreground: 0 0% 98%;
+  --border: 220 20% 28%;
+}
+
+/* Admin dialog specific styling - force dark theme with better contrast */
+.admin-dialog {
+  background-color: hsl(220, 25%, 14%) !important;
+  color: hsl(0, 0%, 98%) !important;
+  border-color: hsl(220, 20%, 30%) !important;
+}
+
+.admin-dialog * {
+  color: inherit;
+}
+
+.admin-dialog .text-muted-foreground,
+.admin-dialog [class*="DialogDescription"],
+.admin-dialog [class*="AlertDialogDescription"] {
+  color: hsl(220, 10%, 65%) !important;
+}
+
+/* Info boxes within admin dialogs - better contrast */
+.admin-dialog-info-box {
+  background-color: hsl(220, 20%, 22%) !important;
+  border: 1px solid hsl(220, 20%, 32%) !important;
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.admin-dialog-info-box .label {
+  color: hsl(220, 10%, 60%);
+  font-size: 0.75rem;
+}
+
+.admin-dialog-info-box .value {
+  color: hsl(0, 0%, 98%);
+  font-weight: 500;
+}
+
+.bg-admin-background { background-color: hsl(var(--admin-background)); }
+.bg-admin-card { background-color: hsl(var(--admin-card)); }
+.bg-admin-accent { background-color: hsl(var(--admin-accent)); }
+.bg-admin-sidebar { background-color: hsl(var(--admin-sidebar)); }
+.bg-admin-primary { background-color: hsl(var(--admin-primary)); }
+.text-admin-foreground { color: hsl(var(--admin-foreground)); }
+.text-admin-muted-foreground { color: hsl(var(--admin-muted-foreground)); }
+.text-admin-primary { color: hsl(var(--admin-primary)); }
+.border-admin-border { border-color: hsl(var(--admin-border)); }
+.shadow-admin-primary\/25 { --tw-shadow-color: hsl(var(--admin-primary) / 0.25); }
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold text-foreground;
+  }
+}
+
+@layer components {
+  .course-card {
+    @apply bg-card rounded-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+  }
+
+  .badge-bestseller {
+    @apply bg-udemy-yellow text-udemy-navy text-xs font-bold px-2 py-0.5 rounded;
+  }
+
+  .badge-new {
+    @apply bg-udemy-green text-white text-xs font-bold px-2 py-0.5 rounded;
+  }
+
+  .badge-hot {
+    @apply bg-udemy-orange text-white text-xs font-bold px-2 py-0.5 rounded;
+  }
+
+  .price-original {
+    @apply text-muted-foreground line-through text-sm;
+  }
+
+  .price-discounted {
+    @apply text-foreground font-bold text-lg;
+  }
+
+  .rating-stars {
+    @apply text-udemy-orange;
+  }
+
+  .nav-link {
+    @apply text-foreground hover:text-primary transition-colors duration-200;
+  }
+
+  .category-card {
+    @apply bg-card border border-border rounded-lg p-4 hover:border-primary hover:shadow-md transition-all duration-200 cursor-pointer;
+  }
+
+  .search-input {
+    @apply w-full px-4 py-3 pl-12 border border-border rounded-full bg-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-primary-foreground font-semibold px-6 py-3 rounded-lg hover:bg-udemy-purple-dark transition-all duration-200 shadow-md hover:shadow-lg;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent border-2 border-foreground text-foreground font-semibold px-6 py-3 rounded-lg hover:bg-foreground hover:text-background transition-all duration-200;
+  }
+
+  .btn-cart {
+    @apply bg-primary text-primary-foreground font-bold px-8 py-4 rounded-lg hover:bg-udemy-purple-dark transition-all duration-200 w-full text-center;
+  }
+
+  .section-title {
+    @apply text-2xl font-bold text-foreground mb-6;
+  }
+
+  .carousel-container {
+    @apply flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory;
+  }
+
+  .carousel-item {
+    @apply flex-shrink-0 snap-start;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .text-udemy-purple {
+    color: hsl(var(--udemy-purple));
+  }
+
+  .bg-udemy-purple {
+    background-color: hsl(var(--udemy-purple));
+  }
+
+  .bg-udemy-purple-dark {
+    background-color: hsl(var(--udemy-purple-dark));
+  }
+
+  .bg-udemy-purple-light {
+    background-color: hsl(var(--udemy-purple-light));
+  }
+
+  .text-udemy-orange {
+    color: hsl(var(--udemy-orange));
+  }
+
+  .bg-udemy-orange {
+    background-color: hsl(var(--udemy-orange));
+  }
+
+  .text-udemy-yellow {
+    color: hsl(var(--udemy-yellow));
+  }
+
+  .bg-udemy-yellow {
+    background-color: hsl(var(--udemy-yellow));
+  }
+
+  .text-udemy-green {
+    color: hsl(var(--udemy-green));
+  }
+
+  .bg-udemy-green {
+    background-color: hsl(var(--udemy-green));
+  }
+
+  .text-udemy-navy {
+    color: hsl(var(--udemy-navy));
+  }
+
+  .bg-udemy-navy {
+    background-color: hsl(var(--udemy-navy));
+  }
+
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
