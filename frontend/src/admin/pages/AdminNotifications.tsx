@@ -43,7 +43,7 @@ interface Notification {
   message: string;
   type: 'info' | 'success' | 'warning' | 'course' | 'promo';
   target: 'all' | 'students' | 'new_users';
-  status: 'sent' | 'draft' | 'scheduled';
+  status: 'sent' | 'draft';
   sentAt: string | null;
   createdAt: string;
   readCount: number;
@@ -130,7 +130,6 @@ const targetLabels: Record<Notification['target'], string> = {
 const statusLabels: Record<Notification['status'], string> = {
   sent: 'Đã gửi',
   draft: 'Bản nháp',
-  scheduled: 'Đã lên lịch',
 };
 
 const formatDateTime = (dateString: string | null) => {
@@ -269,7 +268,6 @@ export default function AdminNotifications() {
     switch (status) {
       case 'sent': return 'bg-green-500/10 text-green-500';
       case 'draft': return 'bg-gray-500/10 text-gray-400';
-      case 'scheduled': return 'bg-blue-500/10 text-blue-500';
     }
   };
 
@@ -337,7 +335,6 @@ export default function AdminNotifications() {
               <SelectItem value="all">Tất cả</SelectItem>
               <SelectItem value="sent">Đã gửi</SelectItem>
               <SelectItem value="draft">Bản nháp</SelectItem>
-              <SelectItem value="scheduled">Đã lên lịch</SelectItem>
             </SelectContent>
           </Select>
         </div>
