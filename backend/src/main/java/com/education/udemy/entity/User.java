@@ -64,6 +64,6 @@ public class User extends BaseEntity{
     Cart cart;
 
     @OneToMany(mappedBy = "user")
-    List<Notification> notifications;
+    List<UserNotification> userNotifications;
 
 }
