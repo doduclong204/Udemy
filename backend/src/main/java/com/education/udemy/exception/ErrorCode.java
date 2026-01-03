@@ -45,6 +45,11 @@ public enum ErrorCode {
     // CART
     CARTDETAIL_NOT_EXISTED(404, "Cart detail not existed", HttpStatus.NOT_FOUND),
 
+    // REVIEW
+    REVIEW_NOT_FOUND(404, "Review not found", HttpStatus.NOT_FOUND),
+    REVIEW_ALREADY_REPLIED(400, "Review already has an admin reply", HttpStatus.BAD_REQUEST),
+    REVIEW_NOT_OWNED(403, "You do not have permission to modify this review", HttpStatus.FORBIDDEN),
+
     // COURSE
     COURSE_EXISTED(409, "Course title already exists", HttpStatus.CONFLICT),
     COURSE_NOT_FOUND(404, "Course not found", HttpStatus.NOT_FOUND),
