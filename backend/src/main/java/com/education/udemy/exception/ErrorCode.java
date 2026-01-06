@@ -49,6 +49,10 @@ public enum ErrorCode {
     NOTIFICATION_NOT_FOUND(404, "Notification not found", HttpStatus.NOT_FOUND),
     NOTIFICATION_SEND_FAILED(400, "Failed to send notification", HttpStatus.BAD_REQUEST),
 
+    // WISHLIST
+    WISHLIST_EXISTED(409, "Course is already in your wishlist", HttpStatus.CONFLICT),
+    WISHLIST_NOT_FOUND(404, "Wishlist item not found", HttpStatus.NOT_FOUND),
+
     // REVIEW
     REVIEW_NOT_FOUND(404, "Review not found", HttpStatus.NOT_FOUND),
     REVIEW_ALREADY_REPLIED(400, "Review already has an admin reply", HttpStatus.BAD_REQUEST),

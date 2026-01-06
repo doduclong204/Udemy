@@ -3,8 +3,11 @@ import { Link, useLocation, Navigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWishlist } from '@/contexts/WishlistContext';
 import { courses } from '@/data/mockData';
 import { Progress } from '@/components/ui/progress';
+import { Rating } from '@/components/Rating';
+import { toast } from '@/hooks/use-toast';
 import {
   BookOpen,
   Heart,
@@ -17,6 +20,7 @@ import {
 
 export default function Dashboard() {
   const { user, isAuthenticated } = useAuth();
+  const { wishlist, removeFromWishlist } = useWishlist();
   const location = useLocation();
   
   if (!isAuthenticated) {
@@ -35,7 +39,15 @@ export default function Dashboard() {
     lastAccessed: ['2 giờ trước', 'Hôm qua', '3 ngày trước', '1 tuần trước'][index],
   }));
 
-  const wishlistCourses = courses.slice(4, 7);
+  const handleRemoveFromWishlist = (e: React.MouseEvent, courseId: string, courseTitle: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    removeFromWishlist(courseId);
+    toast({
+      title: 'Đã bỏ yêu thích',
+      description: `${courseTitle} đã được xóa khỏi danh sách yêu thích.`,
+    });
+  };
 
   const navItems = [
     { label: 'Khóa học của tôi', path: '/dashboard', icon: BookOpen },
@@ -180,22 +192,33 @@ export default function Dashboard() {
               <div>
                 <h1 className="text-2xl font-bold mb-6">Danh sách yêu thích</h1>
                 
-                {wishlistCourses.length > 0 ? (
+                {wishlist.length > 0 ? (
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {wishlistCourses.map((course) => (
+                    {wishlist.map((course) => (
                       <Link
                         key={course.id}
                         to={`/course/${course.id}`}
-                        className="bg-card border border-border rounded-lg overflow-hidden hover:shadow-course-hover transition-shadow"
+                        className="bg-card border border-border rounded-lg overflow-hidden hover:shadow-course-hover transition-shadow group relative"
                       >
-                        <img
-                          src={course.image}
-                          alt={course.title}
-                          className="w-full h-36 object-cover"
-                        />
+                        <div className="relative">
+                          <img
+                            src={course.image}
+                            alt={course.title}
+                            className="w-full h-36 object-cover"
+                          />
+                          <button
+                            onClick={(e) => handleRemoveFromWishlist(e, course.id, course.title)}
+                            className="absolute top-2 right-2 w-8 h-8 bg-background/80 hover:bg-background rounded-full flex items-center justify-center transition-colors"
+                            title="Bỏ yêu thích"
+                          >
+                            <Heart className="w-5 h-5 text-primary fill-primary" />
+                          </button>
+                        </div>
                         <div className="p-4">
-                          <h3 className="font-semibold line-clamp-2 mb-2">{course.title}</h3>
-                          <div className="flex items-center gap-2">
+                          <h3 className="font-semibold line-clamp-2 mb-2 group-hover:text-primary transition-colors">{course.title}</h3>
+                          <p className="text-xs text-muted-foreground mb-1">{course.instructor}</p>
+                          <Rating rating={course.rating} reviewCount={course.reviewCount} size="sm" />
+                          <div className="flex items-center gap-2 mt-2">
                             <span className="font-bold">{formatCurrency(course.price)}</span>
                             <span className="text-sm text-muted-foreground line-through">
                               {formatCurrency(course.originalPrice)}

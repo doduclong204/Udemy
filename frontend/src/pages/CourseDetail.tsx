@@ -5,6 +5,7 @@ import { Rating } from '@/components/Rating';
 import { CourseCarousel } from '@/components/CourseCarousel';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
+import { useWishlist } from '@/contexts/WishlistContext';
 import { courses, sections, reviews } from '@/data/mockData';
 import {
   Accordion,
@@ -40,6 +41,7 @@ const formatCurrency = (value: number) => {
 export default function CourseDetail() {
   const { id } = useParams();
   const { addToCart, isInCart } = useCart();
+  const { isInWishlist, toggleWishlist } = useWishlist();
   
   const course = courses.find((c) => c.id === id) || courses[0];
   const relatedCourses = courses.filter((c) => c.category === course.category && c.id !== course.id);
@@ -50,6 +52,21 @@ export default function CourseDetail() {
       title: 'Đã thêm vào giỏ hàng',
       description: `${course.title} đã được thêm vào giỏ hàng của bạn.`,
     });
+  };
+
+  const handleToggleWishlist = () => {
+    toggleWishlist(course);
+    if (isInWishlist(course.id)) {
+      toast({
+        title: 'Đã bỏ yêu thích',
+        description: `${course.title} đã được xóa khỏi danh sách yêu thích.`,
+      });
+    } else {
+      toast({
+        title: 'Đã thêm vào yêu thích',
+        description: `${course.title} đã được thêm vào danh sách yêu thích.`,
+      });
+    }
   };
 
   const getLectureIcon = (type: string) => {
@@ -285,9 +302,16 @@ export default function CourseDetail() {
                     <Share2 className="w-4 h-4" />
                     Chia sẻ
                   </button>
-                  <button className="flex items-center gap-1 text-sm text-foreground hover:text-primary transition-colors">
-                    <Heart className="w-4 h-4" />
-                    Yêu thích
+                  <button 
+                    onClick={handleToggleWishlist}
+                    className={`flex items-center gap-1 text-sm transition-colors ${
+                      isInWishlist(course.id) 
+                        ? 'text-primary' 
+                        : 'text-foreground hover:text-primary'
+                    }`}
+                  >
+                    <Heart className={`w-4 h-4 ${isInWishlist(course.id) ? 'fill-primary' : ''}`} />
+                    {isInWishlist(course.id) ? 'Đã yêu thích' : 'Yêu thích'}
                   </button>
                 </div>
               </div>
