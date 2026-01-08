@@ -43,8 +43,9 @@ public enum ErrorCode {
     INVALID_ROLE_NAME(400, "Role name is invalid", HttpStatus.BAD_REQUEST),
 
     // CART
-    CARTDETAIL_NOT_EXISTED(404, "Cart detail not existed", HttpStatus.NOT_FOUND),
-
+    CART_NOT_FOUND(404, "Cart not found", HttpStatus.NOT_FOUND),                    // thêm mới (dự phòng)
+    CART_ITEM_NOT_FOUND(404, "Cart item not found", HttpStatus.NOT_FOUND),          // thay thế cho CARTDETAIL_NOT_EXISTED
+    COURSE_ALREADY_IN_CART(409, "Course already exists in cart", HttpStatus.CONFLICT),
     // NOTIFICATION
     NOTIFICATION_NOT_FOUND(404, "Notification not found", HttpStatus.NOT_FOUND),
     NOTIFICATION_SEND_FAILED(400, "Failed to send notification", HttpStatus.BAD_REQUEST),
