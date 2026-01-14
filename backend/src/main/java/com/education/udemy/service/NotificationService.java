@@ -7,6 +7,7 @@ import com.education.udemy.entity.Notification;
 import com.education.udemy.entity.User;
 import com.education.udemy.entity.UserNotification;
 import com.education.udemy.enums.NotificationStatus;
+import com.education.udemy.enums.NotificationType;
 import com.education.udemy.exception.AppException;
 import com.education.udemy.exception.ErrorCode;
 import com.education.udemy.mapper.NotificationMapper;
@@ -103,5 +104,26 @@ public class NotificationService {
 
         userNotificationRepository.deleteByNotificationId(id);
         notificationRepository.deleteById(id);
+    }
+    @Transactional
+    public void sendSilentNotification(String title, String message, String relatedId, String relatedType, List<User> recipients) {
+        Notification notification = Notification.builder()
+                .type(NotificationType.COURSE)
+                .title(title)
+                .message(message)
+                .relatedId(relatedId)
+                .relatedType(relatedType)
+                .status(NotificationStatus.SENT)
+                .build();
+        notificationRepository.save(notification);
+
+        List<UserNotification> userNotifications = recipients.stream()
+                .map(user -> UserNotification.builder()
+                        .notification(notification)
+                        .user(user)
+                        .isRead(false)
+                        .build())
+                .toList();
+        userNotificationRepository.saveAll(userNotifications);
     }
 }

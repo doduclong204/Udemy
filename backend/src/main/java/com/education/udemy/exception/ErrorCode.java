@@ -32,6 +32,10 @@ public enum ErrorCode {
     USER_ALREADY_ENROLLED(409, "User has already enrolled in this course", HttpStatus.CONFLICT),
     ENROLLMENT_NOT_FOUND(404, "Enrollment not found", HttpStatus.NOT_FOUND),
 
+    //QA
+    QUESTION_NOT_FOUND(404, "Question not found", HttpStatus.NOT_FOUND),
+    ANSWER_NOT_FOUND(404, "Answer not found", HttpStatus.NOT_FOUND),
+
     // LECTURE & PROGRESS
     LECTURE_NOT_FOUND(404, "Lecture not found", HttpStatus.NOT_FOUND),
     // TAG
