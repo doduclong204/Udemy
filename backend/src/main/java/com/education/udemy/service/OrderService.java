@@ -15,7 +15,6 @@ import com.education.udemy.repository.OrderRepository;
 import com.education.udemy.repository.UserRepository;
 import com.education.udemy.util.SecurityUtil;
 import com.opencsv.CSVWriter;
-import com.turkraft.springfilter.boot.Filter;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -23,7 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,25 +43,21 @@ public class OrderService {
     UserRepository userRepository;
     CouponService couponService;
     CouponRepository couponRepository;
+    EnrollmentService enrollmentService;
 
     @Transactional
     public OrderResponse create(OrderCreationRequest request) {
-        log.info("Bắt đầu tạo đơn hàng mới");
-
-        // 1. Lấy thông tin User đang đăng nhập từ SecurityContext
         String email = SecurityUtil.getCurrentUserLogin()
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
 
         User currentUser = userRepository.findByUsername(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        // 2. Lấy thông tin khóa học từ DB để lấy giá thực tế
         List<Course> courses = courseRepository.findAllById(request.getCourseIds());
         if (courses.isEmpty()) {
             throw new AppException(ErrorCode.COURSE_NOT_FOUND);
         }
 
-        // 3. Tính toán tổng tiền
         BigDecimal totalAmount = courses.stream()
                 .map(Course::getPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -77,7 +71,6 @@ public class OrderService {
         }
         BigDecimal finalAmount = totalAmount.subtract(discountAmount);
 
-        // 4. Tạo thực thể Order và GÁN USER (Giải quyết lỗi null user_id)
         Order order = Order.builder()
                 .orderCode("ORD-" + System.currentTimeMillis())
                 .totalAmount(totalAmount)
@@ -89,7 +82,6 @@ public class OrderService {
                 .coupon(appliedCoupon)
                 .build();
 
-        // 5. Tạo danh sách OrderItems và liên kết với Order
         List<OrderItem> orderItems = courses.stream().map(course ->
                 OrderItem.builder()
                         .course(course)
@@ -100,17 +92,12 @@ public class OrderService {
         ).toList();
 
         order.setOrderItems(orderItems);
-
-        // 6. Lưu Order (Cascade sẽ tự động lưu các OrderItem)
         Order savedOrder = orderRepository.save(order);
 
-        // 7. CẬP NHẬT LƯỢT DÙNG MÃ GIẢM GIÁ (TỰ ĐỘNG)
         if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
-            // Bạn cần viết thêm hàm này trong CouponService (xem phần dưới)
             couponService.updateCouponUsage(request.getCouponCode());
         }
 
-        log.info("Tạo đơn hàng thành công: {}", savedOrder.getOrderCode());
         return orderMapper.toOrderResponse(savedOrder);
     }
 
@@ -139,8 +126,20 @@ public class OrderService {
     public OrderResponse update(String id, OrderUpdateRequest request) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        OrderStatus oldStatus = order.getPaymentStatus();
         orderMapper.updateOrder(order, request);
-        return orderMapper.toOrderResponse(orderRepository.saveAndFlush(order));
+        Order savedOrder = orderRepository.saveAndFlush(order);
+
+        if (oldStatus != OrderStatus.COMPLETED && savedOrder.getPaymentStatus() == OrderStatus.COMPLETED) {
+            if (savedOrder.getOrderItems() != null) {
+                savedOrder.getOrderItems().forEach(item ->
+                        enrollmentService.internalEnroll(savedOrder.getUser(), item.getCourse().getId())
+                );
+            }
+        }
+
+        return orderMapper.toOrderResponse(savedOrder);
     }
 
     public void delete(String id) {
@@ -156,26 +155,21 @@ public class OrderService {
                 .toList();
 
         try (ByteArrayOutputStream out = new ByteArrayOutputStream();
-             // Sử dụng UTF-8
              OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
 
-            // 1. Ghi dấu BOM (Byte Order Mark) để Excel không lỗi font tiếng Việt
             out.write(0xef);
             out.write(0xbb);
             out.write(0xbf);
 
-            // 2. Cấu hình CSVWriter
             CSVWriter csvWriter = new CSVWriter(writer,
                     CSVWriter.DEFAULT_SEPARATOR,
                     CSVWriter.DEFAULT_QUOTE_CHARACTER,
                     CSVWriter.DEFAULT_ESCAPE_CHARACTER,
                     CSVWriter.DEFAULT_LINE_END);
 
-            // 3. Viết tiêu đề (Header)
             String[] header = {"Mã đơn hàng", "Khách hàng", "Tổng tiền", "Giảm giá", "Thanh toán", "Trạng thái", "Ngày tạo"};
             csvWriter.writeNext(header);
 
-            // 4. Viết dữ liệu
             for (OrderResponse res : responses) {
                 String[] data = {
                         res.getOrderCode(),
@@ -194,7 +188,6 @@ public class OrderService {
             return out.toByteArray();
 
         } catch (Exception e) {
-            log.error("Lỗi khi xuất file CSV: ", e);
             throw new AppException(ErrorCode.EXPORT_FAILED);
         }
     }

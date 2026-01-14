@@ -15,6 +15,7 @@ public enum ErrorCode {
     COOKIES_EMPTY(400, "You don't have refresh_token in cookies", HttpStatus.BAD_REQUEST),
     INVALID_KEY(400, "Invalid key", HttpStatus.BAD_REQUEST),
     INVALID_DOB(400, "Your age must be at least {min}", HttpStatus.BAD_REQUEST),
+    USER_NOT_AUTHENTICATED(401, "User is not authenticated", HttpStatus.UNAUTHORIZED),
 
     // USER
     USER_EXISTED(409, "User existed", HttpStatus.CONFLICT),  // 409 Conflict tốt hơn cho existed
@@ -27,6 +28,12 @@ public enum ErrorCode {
     CATEGORY_NOT_FOUND(404, "Category not found", HttpStatus.NOT_FOUND),
     CATEGORY_HAS_COURSES(400, "Cannot delete category because it has courses", HttpStatus.BAD_REQUEST),
 
+    // ENROLLMENT
+    USER_ALREADY_ENROLLED(409, "User has already enrolled in this course", HttpStatus.CONFLICT),
+    ENROLLMENT_NOT_FOUND(404, "Enrollment not found", HttpStatus.NOT_FOUND),
+
+    // LECTURE & PROGRESS
+    LECTURE_NOT_FOUND(404, "Lecture not found", HttpStatus.NOT_FOUND),
     // TAG
     TAG_NOT_FOUND(404, "Tag not found", HttpStatus.NOT_FOUND),
     INVALID_TAG_NAME(400, "Tag name is invalid", HttpStatus.BAD_REQUEST),

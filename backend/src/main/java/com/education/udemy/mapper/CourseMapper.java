@@ -7,7 +7,6 @@ import com.education.udemy.dto.response.course.CourseSummaryResponse;
 import com.education.udemy.entity.Course;
 import org.mapstruct.*;
 
-// Thêm SectionMapper vào đây để MapStruct tự xử lý các list lồng nhau
 @Mapper(componentModel = "spring", uses = {SectionMapper.class})
 public interface CourseMapper {
 
