@@ -32,6 +32,11 @@ public enum ErrorCode {
     USER_ALREADY_ENROLLED(409, "User has already enrolled in this course", HttpStatus.CONFLICT),
     ENROLLMENT_NOT_FOUND(404, "Enrollment not found", HttpStatus.NOT_FOUND),
 
+    // LECTURE NOTE
+    LECTURE_NOTE_NOT_FOUND(404, "Lecture note not found", HttpStatus.NOT_FOUND),
+    LECTURE_NOTE_NOT_OWNED(403, "You do not have permission to modify this note", HttpStatus.FORBIDDEN),
+
+    INVALID_LECTURE_NOTE_TIME(400, "Note timestamp cannot exceed video duration", HttpStatus.BAD_REQUEST),
     //QA
     QUESTION_NOT_FOUND(404, "Question not found", HttpStatus.NOT_FOUND),
     ANSWER_NOT_FOUND(404, "Answer not found", HttpStatus.NOT_FOUND),
