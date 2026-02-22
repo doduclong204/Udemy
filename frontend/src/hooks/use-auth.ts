@@ -26,18 +26,18 @@ export function useAuth() {
   const loading = useAppSelector(selectAuthLoading);
   const error = useAppSelector(selectAuthError);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      await dispatch(loginAsync({ email, password })).unwrap();
+      await dispatch(loginAsync({ username, password })).unwrap();
       return true;
     } catch {
       return false;
     }
   };
 
-  const signup = async (name: string, email: string, password: string): Promise<boolean> => {
+  const signup = async (username: string, password: string, name: string): Promise<boolean> => {
     try {
-      await dispatch(registerAsync({ name, email, password })).unwrap();
+      await dispatch(registerAsync({ username, password, name })).unwrap();
       return true;
     } catch {
       return false;

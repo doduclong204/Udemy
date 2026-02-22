@@ -1,78 +1,85 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "@/hooks/use-toast";
+import { Eye, EyeOff, Lock, User, UserCircle } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import { registerAsync } from "@/redux/slices/authSlice";
+import type { RootState, AppDispatch } from "@/redux/store"; // ← THÊM AppDispatch vào đây
 
 export default function Signup() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const { signup } = useAuth();
   const navigate = useNavigate();
+
+  // Fix: dùng AppDispatch để dispatch async thunk không lỗi TS
+  const dispatch = useDispatch<AppDispatch>();
+
+  const { loading, error } = useSelector((state: RootState) => state.auth);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!agreeTerms) {
       toast({
-        title: 'Yêu cầu điều khoản',
-        description: 'Vui lòng đồng ý với điều khoản và điều kiện.',
-        variant: 'destructive',
+        title: "Yêu cầu điều khoản",
+        description: "Vui lòng đồng ý với điều khoản và điều kiện.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (username.length < 4) {
+      toast({
+        title: "Tên đăng nhập quá ngắn",
+        description: "Tên đăng nhập phải có ít nhất 4 ký tự.",
+        variant: "destructive",
       });
       return;
     }
 
     if (password.length < 6) {
       toast({
-        title: 'Mật khẩu quá ngắn',
-        description: 'Mật khẩu phải có ít nhất 6 ký tự.',
-        variant: 'destructive',
+        title: "Mật khẩu quá ngắn",
+        description: "Mật khẩu phải có ít nhất 6 ký tự.",
+        variant: "destructive",
       });
       return;
     }
 
-    setIsLoading(true);
-    
-    try {
-      const success = await signup(name, email, password);
-      if (success) {
-        toast({
-          title: 'Tạo tài khoản thành công!',
-          description: 'Chào mừng đến với LearnHub. Bắt đầu học ngay hôm nay!',
-        });
-        navigate('/');
-      } else {
-        toast({
-          title: 'Đăng ký thất bại',
-          description: 'Vui lòng kiểm tra thông tin và thử lại.',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
+    // Dispatch registerAsync với type an toàn
+    const result = await dispatch(registerAsync({ username, password, name }));
+
+    if (registerAsync.fulfilled.match(result)) {
       toast({
-        title: 'Lỗi',
-        description: 'Đã xảy ra lỗi. Vui lòng thử lại.',
-        variant: 'destructive',
+        title: "Tạo tài khoản thành công!",
+        description: "Vui lòng đăng nhập để tiếp tục.",
       });
-    } finally {
-      setIsLoading(false);
+      navigate("/login");
+    } else {
+      toast({
+        title: "Đăng ký thất bại",
+        description:
+          (result.payload as string) ||
+          error ||
+          "Tên đăng nhập đã tồn tại hoặc có lỗi xảy ra.",
+        variant: "destructive",
+      });
     }
   };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      
+
       <main className="flex-1 flex items-center justify-center py-12 px-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
@@ -86,7 +93,7 @@ export default function Signup() {
             <div className="space-y-2">
               <Label htmlFor="name">Họ và tên</Label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   id="name"
                   type="text"
@@ -100,15 +107,15 @@ export default function Signup() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Tên đăng nhập</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="Nhập email của bạn"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="username"
+                  type="text"
+                  placeholder="Nhập tên đăng nhập (tối thiểu 4 ký tự)"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="pl-10"
                   required
                 />
@@ -121,7 +128,7 @@ export default function Signup() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   id="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="Tạo mật khẩu (tối thiểu 6 ký tự)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -133,7 +140,11 @@ export default function Signup() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -144,21 +155,29 @@ export default function Signup() {
                 checked={agreeTerms}
                 onCheckedChange={(checked) => setAgreeTerms(checked as boolean)}
               />
-              <Label htmlFor="terms" className="text-sm font-normal leading-tight cursor-pointer">
-                Tôi đồng ý với{' '}
+              <Label
+                htmlFor="terms"
+                className="text-sm font-normal leading-tight cursor-pointer"
+              >
+                Tôi đồng ý với{" "}
                 <Link to="/terms" className="text-primary hover:underline">
                   Điều khoản dịch vụ
-                </Link>{' '}
-                và{' '}
+                </Link>{" "}
+                và{" "}
                 <Link to="/privacy" className="text-primary hover:underline">
                   Chính sách bảo mật
-                </Link>{' '}
+                </Link>{" "}
                 của LearnHub
               </Label>
             </div>
 
-            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-              {isLoading ? 'Đang tạo tài khoản...' : 'Đăng ký'}
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              disabled={loading}
+            >
+              {loading ? "Đang tạo tài khoản..." : "Đăng ký"}
             </Button>
 
             <div className="relative my-6">
@@ -166,7 +185,9 @@ export default function Signup() {
                 <div className="w-full border-t border-border"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="bg-background px-2 text-muted-foreground">Hoặc tiếp tục với</span>
+                <span className="bg-background px-2 text-muted-foreground">
+                  Hoặc tiếp tục với
+                </span>
               </div>
             </div>
 
@@ -193,7 +214,11 @@ export default function Signup() {
                 Google
               </Button>
               <Button type="button" variant="outline" className="w-full">
-                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-5 h-5 mr-2"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                 </svg>
                 Facebook
@@ -202,14 +227,17 @@ export default function Signup() {
           </form>
 
           <p className="text-center text-sm text-muted-foreground mt-8">
-            Đã có tài khoản?{' '}
-            <Link to="/login" className="text-primary font-semibold hover:underline">
+            Đã có tài khoản?{" "}
+            <Link
+              to="/login"
+              className="text-primary font-semibold hover:underline"
+            >
               Đăng nhập
             </Link>
           </p>
         </div>
       </main>
-      
+
       <Footer />
     </div>
   );

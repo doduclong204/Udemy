@@ -1,7 +1,7 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { User, LoginRequest, RegisterRequest } from '@/types';
-import authService from '@/services/authService';
-import type { RootState } from '../store';
+import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import { User, LoginRequest, RegisterRequest } from "@/types";
+import authService from "@/services/authService";
+import type { RootState } from "../store";
 
 interface AuthState {
   user: User | null;
@@ -10,11 +10,9 @@ interface AuthState {
   error: string | null;
 }
 
-// Lấy user từ localStorage khi khởi động
 const getInitialUser = (): User | null => {
   try {
-    const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+    return authService.getCurrentUser();
   } catch {
     return null;
   }
@@ -22,55 +20,69 @@ const getInitialUser = (): User | null => {
 
 const initialState: AuthState = {
   user: getInitialUser(),
-  isAuthenticated: !!getInitialUser(),
+  isAuthenticated: authService.isAuthenticated(),
   loading: false,
   error: null,
 };
 
 // Async Thunks
 export const loginAsync = createAsyncThunk(
-  'auth/login',
+  "auth/login",
   async (data: LoginRequest, { rejectWithValue }) => {
     try {
       const response = await authService.login(data);
       return response.user;
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Đăng nhập thất bại');
+      const message =
+        error.response?.data?.message || error.message || "Đăng nhập thất bại";
+      return rejectWithValue(message);
     }
-  }
+  },
 );
 
 export const registerAsync = createAsyncThunk(
-  'auth/register',
+  "auth/register",
   async (data: RegisterRequest, { rejectWithValue }) => {
     try {
-      const response = await authService.register(data);
-      return response.user;
+      // Register chỉ trả UserResponse, không auto-login
+      const user = await authService.register(data);
+      return user;
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Đăng ký thất bại');
+      const message =
+        error.response?.data?.message || error.message || "Đăng ký thất bại";
+      return rejectWithValue(message);
     }
-  }
+  },
 );
 
-export const logoutAsync = createAsyncThunk(
-  'auth/logout',
-  async () => {
-    await authService.logout();
-  }
+export const logoutAsync = createAsyncThunk("auth/logout", async () => {
+  await authService.logout();
+});
+
+export const fetchAccount = createAsyncThunk(
+  "auth/fetchAccount",
+  async (_, { rejectWithValue }) => {
+    try {
+      const user = await authService.getAccount();
+      return user;
+    } catch (error: any) {
+      return rejectWithValue("Failed to fetch account");
+    }
+  },
 );
 
 // Slice
 const authSlice = createSlice({
-  name: 'auth',
+  name: "auth",
   initialState,
   reducers: {
     setUser: (state, action: PayloadAction<User | null>) => {
       state.user = action.payload;
       state.isAuthenticated = !!action.payload;
       if (action.payload) {
-        localStorage.setItem('user', JSON.stringify(action.payload));
+        localStorage.setItem("user", JSON.stringify(action.payload));
       } else {
-        localStorage.removeItem('user');
+        localStorage.removeItem("user");
       }
     },
     clearError: (state) => {
@@ -81,9 +93,8 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.loading = false;
       state.error = null;
-      localStorage.removeItem('user');
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      localStorage.removeItem("user");
+      localStorage.removeItem("access_token");
     },
   },
   extraReducers: (builder) => {
@@ -102,15 +113,14 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
-      // Register
+      // Register - không auto-login, chỉ thông báo thành công
       .addCase(registerAsync.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(registerAsync.fulfilled, (state, action) => {
+      .addCase(registerAsync.fulfilled, (state) => {
         state.loading = false;
-        state.user = action.payload;
-        state.isAuthenticated = true;
+        // Không set user/isAuthenticated vì register không trả token
       })
       .addCase(registerAsync.rejected, (state, action) => {
         state.loading = false;
@@ -122,6 +132,14 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.loading = false;
         state.error = null;
+      })
+      // Fetch Account
+      .addCase(fetchAccount.fulfilled, (state, action) => {
+        state.user = action.payload;
+        state.isAuthenticated = true;
+      })
+      .addCase(fetchAccount.rejected, (state) => {
+         
       });
   },
 });
@@ -131,8 +149,12 @@ export const { setUser, clearError, resetAuthState } = authSlice.actions;
 
 // Selectors
 export const selectUser = (state: RootState) => state.auth.user;
-export const selectIsAuthenticated = (state: RootState) => state.auth.isAuthenticated;
-export const selectIsAdmin = (state: RootState) => state.auth.user?.role === 'admin';
+export const selectIsAuthenticated = (state: RootState) =>
+  state.auth.isAuthenticated;
+export const selectIsAdmin = (state: RootState) => {
+  const role = state.auth.user?.role;
+  return !!role && role.toUpperCase() === "ADMIN";
+};
 export const selectAuthLoading = (state: RootState) => state.auth.loading;
 export const selectAuthError = (state: RootState) => state.auth.error;
 

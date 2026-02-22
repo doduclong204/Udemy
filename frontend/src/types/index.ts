@@ -27,39 +27,45 @@ export interface ErrorResponse {
   errors?: Record<string, string[]>;
 }
 
-// ==================== Auth Types ====================
+// ==================== Auth Types
 
 export interface User {
   id: string;
-  email: string;
+  username: string;
   name: string;
   avatar?: string;
-  role: 'user' | 'admin';
+  role: string;
   phone?: string;
   bio?: string;
+  dateOfBirth?: string;
+  active?: boolean;
   createdAt?: string;
   updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
 }
 
 export interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
+  access_token: string;
+  refresh_token: string;
   user: User;
-  expiresIn: number;
 }
 
 export interface LoginRequest {
-  email: string;
+  username: string;
   password: string;
 }
 
 export interface RegisterRequest {
-  name: string;
-  email: string;
+  username: string;
   password: string;
-  confirmPassword?: string;
+  name: string;
+  phone?: string;
+  dateOfBirth?: string;
+  avatar?: string;
+  bio?: string;
+  role?: string;
 }
-
 // ==================== Course Types ====================
 
 export interface Course {

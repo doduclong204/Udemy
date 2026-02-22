@@ -133,7 +133,7 @@ export default function Notifications() {
                 />
                 <div>
                   <p className="font-semibold">{user?.name}</p>
-                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                  <p className="text-sm text-muted-foreground">{user?.username}</p>
                 </div>
               </div>
 

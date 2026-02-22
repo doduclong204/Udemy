@@ -1,22 +1,44 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, Menu, X, ChevronDown, Heart, LayoutDashboard, MessageSquare } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
-import { useCart } from '@/contexts/CartContext';
-import { categories } from '@/data/mockData';
-import { NotificationDropdown } from '@/components/NotificationDropdown';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Search,
+  ShoppingCart,
+  Menu,
+  X,
+  ChevronDown,
+  Heart,
+  LayoutDashboard,
+  MessageSquare,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useSelector, useDispatch } from "react-redux";
+import { logoutAsync } from "@/redux/slices/authSlice";
+import type { RootState, AppDispatch } from "@/redux/store"; // ← import AppDispatch ở đây
+import { useCart } from "@/contexts/CartContext";
+import { categories } from "@/data/mockData";
+import { NotificationDropdown } from "@/components/NotificationDropdown";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Sử dụng AppDispatch để dispatch async thunk không lỗi TS
+  const dispatch = useDispatch<AppDispatch>();
+
+  // Lấy state từ Redux
+  const { user, isAuthenticated } = useSelector(
+    (state: RootState) => state.auth,
+  );
+  const isAdmin = useSelector(
+    (state: RootState) => state.auth.user?.role === "ADMIN",
+  );
+
   const { items } = useCart();
   const navigate = useNavigate();
 
@@ -27,7 +49,18 @@ export function Header() {
     }
   };
 
+  // Logout dùng Redux async thunk
+  const handleLogout = () => {
+    dispatch(logoutAsync());
+  };
+
   return (
+    console.log('Header Redux debug:', {
+    isAuthenticated,
+    isAdmin,
+    role: user?.role,
+    fullUser: user ? JSON.stringify(user, null, 2) : 'null'  // in chi tiết user
+  }),
     <header className="sticky top-0 z-50 bg-background border-b border-border shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 gap-4">
@@ -47,7 +80,10 @@ export function Header() {
             <DropdownMenuContent className="w-56 max-h-96 overflow-y-auto">
               {categories.map((category) => (
                 <DropdownMenuItem key={category.id} asChild>
-                  <Link to={`/search?category=${category.name}`} className="flex items-center gap-2">
+                  <Link
+                    to={`/search?category=${category.name}`}
+                    className="flex items-center gap-2"
+                  >
                     <span>{category.icon}</span>
                     <span>{category.name}</span>
                   </Link>
@@ -57,7 +93,10 @@ export function Header() {
           </DropdownMenu>
 
           {/* Search Bar */}
-          <form onSubmit={handleSearch} className="flex-1 max-w-2xl hidden md:block">
+          <form
+            onSubmit={handleSearch}
+            className="flex-1 max-w-2xl hidden md:block"
+          >
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input
@@ -74,10 +113,10 @@ export function Header() {
           <nav className="hidden lg:flex items-center gap-4">
             {/* Admin Button - Only show when logged in as admin */}
             {isAuthenticated && isAdmin && (
-              <Link 
-                to="/admin" 
+              <Link
+                to="/admin"
                 className="flex items-center gap-1.5 text-sm font-medium transition-colors hover:opacity-80"
-                style={{ color: '#7c3aed' }}
+                style={{ color: "#7c3aed" }}
               >
                 <LayoutDashboard className="w-4 h-4" />
                 <span>Quản trị</span>
@@ -107,7 +146,10 @@ export function Header() {
                 <DropdownMenuTrigger asChild>
                   <button className="w-9 h-9 rounded-full overflow-hidden border-2 border-primary">
                     <img
-                      src={user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
+                      src={
+                        user?.avatar ||
+                        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"
+                      }
                       alt={user?.name}
                       className="w-full h-full object-cover"
                     />
@@ -116,7 +158,9 @@ export function Header() {
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-3 py-2 border-b border-border">
                     <p className="font-semibold">{user?.name}</p>
-                    <p className="text-sm text-muted-foreground">{user?.email}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {user?.username}
+                    </p>{" "}
                   </div>
                   <DropdownMenuItem asChild>
                     <Link to="/dashboard">Khóa học của tôi</Link>
@@ -130,7 +174,10 @@ export function Header() {
                   <DropdownMenuItem asChild>
                     <Link to="/dashboard/settings">Cài đặt tài khoản</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={logout} className="text-destructive">
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="text-destructive"
+                  >
                     Đăng xuất
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -153,7 +200,11 @@ export function Header() {
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             aria-label="Toggle menu"
           >
-            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {isMenuOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Menu className="w-6 h-6" />
+            )}
           </button>
         </div>
 
@@ -179,10 +230,10 @@ export function Header() {
             <nav className="flex flex-col gap-3">
               {/* Admin link in mobile menu */}
               {isAuthenticated && isAdmin && (
-                <Link 
-                  to="/admin" 
+                <Link
+                  to="/admin"
                   className="flex items-center gap-2 px-4 py-2 hover:bg-secondary rounded-lg font-medium"
-                  style={{ color: '#7c3aed' }}
+                  style={{ color: "#7c3aed" }}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <LayoutDashboard className="w-5 h-5" />
@@ -190,26 +241,44 @@ export function Header() {
                 </Link>
               )}
 
-              <Link to="/cart" className="flex items-center gap-2 px-4 py-2 hover:bg-secondary rounded-lg">
+              <Link
+                to="/cart"
+                className="flex items-center gap-2 px-4 py-2 hover:bg-secondary rounded-lg"
+              >
                 <ShoppingCart className="w-5 h-5" />
                 Giỏ hàng ({items.length})
               </Link>
-              
+
               {isAuthenticated ? (
                 <>
-                  <Link to="/dashboard" className="px-4 py-2 hover:bg-secondary rounded-lg">
+                  <Link
+                    to="/dashboard"
+                    className="px-4 py-2 hover:bg-secondary rounded-lg"
+                  >
                     Khóa học của tôi
                   </Link>
-                  <Link to="/dashboard/wishlist" className="px-4 py-2 hover:bg-secondary rounded-lg">
+                  <Link
+                    to="/dashboard/wishlist"
+                    className="px-4 py-2 hover:bg-secondary rounded-lg"
+                  >
                     Danh sách yêu thích
                   </Link>
-                  <Link to="/dashboard/messages" className="px-4 py-2 hover:bg-secondary rounded-lg">
+                  <Link
+                    to="/dashboard/messages"
+                    className="px-4 py-2 hover:bg-secondary rounded-lg"
+                  >
                     Tin nhắn
                   </Link>
-                  <Link to="/dashboard/settings" className="px-4 py-2 hover:bg-secondary rounded-lg">
+                  <Link
+                    to="/dashboard/settings"
+                    className="px-4 py-2 hover:bg-secondary rounded-lg"
+                  >
                     Cài đặt tài khoản
                   </Link>
-                  <button onClick={logout} className="px-4 py-2 text-left text-destructive hover:bg-secondary rounded-lg">
+                  <button
+                    onClick={handleLogout}
+                    className="px-4 py-2 text-left text-destructive hover:bg-secondary rounded-lg"
+                  >
                     Đăng xuất
                   </button>
                 </>
@@ -225,7 +294,9 @@ export function Header() {
               )}
 
               <div className="border-t border-border pt-3 mt-2">
-                <p className="px-4 py-2 font-semibold text-sm text-muted-foreground">Danh mục</p>
+                <p className="px-4 py-2 font-semibold text-sm text-muted-foreground">
+                  Danh mục
+                </p>
                 {categories.slice(0, 8).map((category) => (
                   <Link
                     key={category.id}
@@ -244,4 +315,5 @@ export function Header() {
       </div>
     </header>
   );
+  
 }

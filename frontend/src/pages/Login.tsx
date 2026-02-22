@@ -1,56 +1,66 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
+import { Eye, EyeOff, User, Lock } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import { loginAsync, fetchAccount } from "@/redux/slices/authSlice";
+import type { RootState, AppDispatch } from "@/redux/store";
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
   const navigate = useNavigate();
+
+  const dispatch = useDispatch<AppDispatch>();
+  const { loading, error } = useSelector((state: RootState) => state.auth);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      const success = await login(email, password);
-      if (success) {
-        toast({
-          title: 'Chào mừng trở lại!',
-          description: 'Bạn đã đăng nhập thành công.',
+
+    const result = await dispatch(loginAsync({ username, password }));
+
+    if (loginAsync.fulfilled.match(result)) {
+      // Login thành công → thử fetch full account (role, v.v.)
+      // KHÔNG await trực tiếp để tránh throw lỗi toàn cục nếu fetch fail
+      dispatch(fetchAccount())
+        .unwrap()
+        .then(() => {
+          console.log("Fetch account thành công sau login");
+        })
+        .catch((fetchErr: any) => {
+          console.warn(
+            "Fetch account fail sau login (không ảnh hưởng login):",
+            fetchErr.message,
+          );
         });
-        navigate('/');
-      } else {
-        toast({
-          title: 'Đăng nhập thất bại',
-          description: 'Email hoặc mật khẩu không đúng. Vui lòng thử lại.',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
+
       toast({
-        title: 'Lỗi',
-        description: 'Đã xảy ra lỗi. Vui lòng thử lại.',
-        variant: 'destructive',
+        title: "Chào mừng trở lại!",
+        description: "Bạn đã đăng nhập thành công.",
       });
-    } finally {
-      setIsLoading(false);
+      navigate("/");
+    } else {
+      toast({
+        title: "Đăng nhập thất bại",
+        description:
+          (result.payload as string) ||
+          error ||
+          "Tên đăng nhập hoặc mật khẩu không đúng.",
+        variant: "destructive",
+      });
     }
   };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      
+
       <main className="flex-1 flex items-center justify-center py-12 px-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
@@ -62,15 +72,15 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Tên đăng nhập</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="Nhập email của bạn"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="username"
+                  type="text"
+                  placeholder="Nhập tên đăng nhập"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="pl-10"
                   required
                 />
@@ -80,7 +90,10 @@ export default function Login() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Mật khẩu</Label>
-                <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-primary hover:underline"
+                >
                   Quên mật khẩu?
                 </Link>
               </div>
@@ -88,7 +101,7 @@ export default function Login() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   id="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="Nhập mật khẩu"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -100,13 +113,22 @@ export default function Login() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
 
-            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-              {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              disabled={loading}
+            >
+              {loading ? "Đang đăng nhập..." : "Đăng nhập"}
             </Button>
 
             <div className="relative my-6">
@@ -114,7 +136,9 @@ export default function Login() {
                 <div className="w-full border-t border-border"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="bg-background px-2 text-muted-foreground">Hoặc tiếp tục với</span>
+                <span className="bg-background px-2 text-muted-foreground">
+                  Hoặc tiếp tục với
+                </span>
               </div>
             </div>
 
@@ -141,7 +165,11 @@ export default function Login() {
                 Google
               </Button>
               <Button type="button" variant="outline" className="w-full">
-                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-5 h-5 mr-2"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                 </svg>
                 Facebook
@@ -150,14 +178,17 @@ export default function Login() {
           </form>
 
           <p className="text-center text-sm text-muted-foreground mt-8">
-            Chưa có tài khoản?{' '}
-            <Link to="/signup" className="text-primary font-semibold hover:underline">
+            Chưa có tài khoản?{" "}
+            <Link
+              to="/signup"
+              className="text-primary font-semibold hover:underline"
+            >
               Đăng ký miễn phí
             </Link>
           </p>
         </div>
       </main>
-      
+
       <Footer />
     </div>
   );

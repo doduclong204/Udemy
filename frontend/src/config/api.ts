@@ -1,11 +1,12 @@
 import axios from 'axios';
 
 // TODO: Đổi URL production sau
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'http://localhost:8080/api/v1';
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
+  withCredentials: true, // gửi cookie refresh_token
   headers: {
     'Content-Type': 'application/json',
   },
@@ -31,20 +32,28 @@ axiosInstance.interceptors.response.use(
     return response;
   },
   (error) => {
-    const { response } = error;
-    
+    const { response, config } = error;
+
     if (response) {
       switch (response.status) {
-        case 401:
-          // Token hết hạn hoặc không hợp lệ
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          localStorage.removeItem('user');
-          // TODO: Redirect to login hoặc dispatch logout action
-          window.location.href = '/login';
+        case 401: {
+          // Bỏ qua 401 từ các endpoint phụ (fetchAccount, refresh...)
+          // Chỉ force logout khi 401 từ các API thực sự cần auth
+          const url: string = config?.url || '';
+          const isSecondaryAuthEndpoint =
+            url.includes('/auth/account') ||
+            url.includes('/auth/me') ||
+            url.includes('/auth/refresh');
+
+          if (!isSecondaryAuthEndpoint) {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+          }
           break;
+        }
         case 403:
-          // Không có quyền truy cập
           console.error('Forbidden: Bạn không có quyền truy cập tài nguyên này');
           break;
         case 404:
@@ -59,7 +68,7 @@ axiosInstance.interceptors.response.use(
     } else if (error.request) {
       console.error('Network Error: Không thể kết nối đến máy chủ');
     }
-    
+
     return Promise.reject(error);
   }
 );
