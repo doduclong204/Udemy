@@ -21,6 +21,10 @@ const authService = {
     // Fix: đọc response.data.data thay vì response.data
     const authData = response.data.data;
 
+    // Normalize user id (backend may return _id)
+    if (authData.user && (authData.user as any)._id && !(authData.user as any).id) {
+      (authData.user as any).id = (authData.user as any)._id;
+    }
     // Lưu token vào localStorage
     localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, authData.access_token);
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(authData.user));
@@ -76,6 +80,9 @@ const authService = {
       { withCredentials: true },
     );
     const authData = response.data.data;
+    if (authData.user && (authData.user as any)._id && !(authData.user as any).id) {
+      (authData.user as any).id = (authData.user as any)._id;
+    }
 
     localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, authData.access_token);
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(authData.user));

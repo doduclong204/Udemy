@@ -3,7 +3,7 @@ import { API_ENDPOINTS, STORAGE_KEYS } from '@/constant/common.constant';
 import { 
   User, 
   ApiResponse, 
-  PaginationResponse, 
+  ApiPagination,
   Student, 
   UpdateProfileRequest, 
   ChangePasswordRequest,
@@ -94,7 +94,7 @@ const userService = {
     if (student) {
       return {
         id: student.id,
-        email: student.email,
+        username: student.email,
         name: student.name,
         avatar: student.avatar,
         role: 'user',
@@ -110,58 +110,97 @@ const userService = {
    * Lấy danh sách học viên (Admin)
    * TODO: Implement thật với API sau
    */
-  getStudents: async (params?: GetStudentsParams): Promise<PaginationResponse<Student>> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.get<PaginationResponse<Student>>('/admin/students', { params });
-    // return response.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    let filteredStudents = [...mockStudents];
-    
-    if (params?.search) {
-      const search = params.search.toLowerCase();
-      filteredStudents = filteredStudents.filter(s => 
-        s.name.toLowerCase().includes(search) || 
-        s.email.toLowerCase().includes(search)
-      );
+  getStudents: async (params?: GetStudentsParams): Promise<ApiPagination<Student>> => {
+    // Try real backend first
+    try {
+      const page = params?.page || 1;
+      const pageSize = params?.pageSize || 10;
+      const response = await axiosInstance.get<ApiResponse<any>>(`${API_ENDPOINTS.USERS.BASE}`, {
+        params: {
+          // Spring pageable is 0-based
+          page: Math.max(0, page - 1),
+          size: pageSize,
+          search: params?.search,
+          status: params?.status,
+        },
+      });
+      // Backend returns ApiResponse<ApiPagination<UserResponse>>
+      const payload = response.data.data as any;
+      const list = payload?.result ?? [];
+      const meta = payload?.meta ?? { current: page - 1, pageSize, pages: 1, total: Array.isArray(list) ? list.length : 0 };
+
+      const students: Student[] = (Array.isArray(list) ? list : []).map((u: any) => ({
+        id: u._id ?? u.id,
+        name: u.name ?? u.username,
+        email: u.username ?? u.email,
+        avatar: u.avatar ?? '',
+        enrolledCourses: u.enrolledCourses ?? 0,
+        completedCourses: u.completedCourses ?? 0,
+        totalSpent: u.totalSpent ?? 0,
+        joinedAt: u.createdAt ?? '',
+        lastActive: u.updatedAt ?? '',
+        status: (u.active ?? u.status) ? 'Active' : 'Inactive',
+      }));
+
+      return {
+        meta: {
+          current: meta.current ?? (page - 1),
+          pageSize: meta.pageSize ?? pageSize,
+          pages: meta.pages ?? 1,
+          total: meta.total ?? students.length,
+        },
+        result: students,
+      };
+    } catch (err) {
+      // Fallback to mock
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      let filteredStudents = [...mockStudents];
+      
+      if (params?.search) {
+        const search = params.search.toLowerCase();
+        filteredStudents = filteredStudents.filter(s => 
+          s.name.toLowerCase().includes(search) || 
+          s.email.toLowerCase().includes(search)
+        );
+      }
+      
+      if (params?.status) {
+        filteredStudents = filteredStudents.filter(s => s.status === params.status);
+      }
+      
+      const page = params?.page || 1;
+      const pageSize = params?.pageSize || 10;
+      const startIndex = (page - 1) * pageSize;
+      const paginatedStudents = filteredStudents.slice(startIndex, startIndex + pageSize);
+      
+      return {
+        meta: {
+          current: page - 1,
+          pageSize,
+          pages: Math.ceil(filteredStudents.length / pageSize),
+          total: filteredStudents.length,
+        },
+        result: paginatedStudents,
+      };
     }
-    
-    if (params?.status) {
-      filteredStudents = filteredStudents.filter(s => s.status === params.status);
-    }
-    
-    const page = params?.page || 1;
-    const pageSize = params?.pageSize || 10;
-    const startIndex = (page - 1) * pageSize;
-    const paginatedStudents = filteredStudents.slice(startIndex, startIndex + pageSize);
-    
-    return {
-      success: true,
-      data: paginatedStudents,
-      meta: {
-        page,
-        pageSize,
-        totalItems: filteredStudents.length,
-        totalPages: Math.ceil(filteredStudents.length / pageSize),
-        hasNextPage: startIndex + pageSize < filteredStudents.length,
-        hasPrevPage: page > 1,
-      },
-    };
   },
 
   /**
    * Cập nhật trạng thái học viên (Admin)
    * TODO: Implement thật với API sau
    */
-  updateStudentStatus: async (studentId: string, status: 'Active' | 'Inactive'): Promise<void> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // await axiosInstance.put(`/admin/students/${studentId}/status`, { status });
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 500));
-    console.log('Student status updated:', studentId, status);
+  updateStudentStatus: async (studentId: string, status: 'Active' | 'Inactive' | boolean): Promise<void> => {
+    // Backend expects a raw boolean in body indicating `active`
+    const active = typeof status === 'boolean' ? status : status === 'Active';
+    try {
+      await axiosInstance.patch(`${API_ENDPOINTS.USERS.BASE}/${studentId}/status`, active);
+      return;
+    } catch (err) {
+      // fallback to mock
+      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('Student status updated (mock):', studentId, active);
+    }
   },
 
   /**
@@ -169,12 +208,43 @@ const userService = {
    * TODO: Implement thật với API sau
    */
   deleteStudent: async (studentId: string): Promise<void> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // await axiosInstance.delete(`/admin/students/${studentId}`);
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 500));
-    console.log('Student deleted:', studentId);
+    try {
+      await axiosInstance.delete(`${API_ENDPOINTS.USERS.BASE}/${studentId}`);
+      return;
+    } catch (err) {
+      // fallback to mock
+      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('Student deleted (mock):', studentId);
+    }
+  },
+  
+  /**
+   * Tạo user (Admin / Public)
+   */
+  createUser: async (data: { name: string; email: string; password?: string; role?: string }): Promise<any> => {
+    // backend expects `username` (not email)
+    const payload = { ...data, username: data.email } as any;
+    delete payload.email;
+    try {
+      const response = await axiosInstance.post(`${API_ENDPOINTS.USERS.BASE}`, payload);
+      return response.data?.data ?? response.data;
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data?.error || err.message || 'Create user failed';
+      throw new Error(msg);
+    }
+  },
+
+  /**
+   * Cập nhật user (Admin)
+   */
+  updateUser: async (id: string, data: Partial<{ name: string; email: string; role?: string }>): Promise<any> => {
+    const payload: any = { ...data };
+    if ((payload as any).email) {
+      payload.username = (payload as any).email;
+      delete payload.email;
+    }
+    const response = await axiosInstance.put(`${API_ENDPOINTS.USERS.BASE}/${id}`, payload);
+    return response.data?.data ?? response.data;
   },
 };
 

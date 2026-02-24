@@ -6,7 +6,7 @@ import {
   CreateCourseRequest, 
   UpdateCourseRequest,
   ApiResponse, 
-  PaginationResponse,
+  ApiPagination,
   Section,
   GetCoursesParams
 } from '@/types';
@@ -18,7 +18,7 @@ const courseService = {
    * Lấy danh sách khóa học
    * TODO: Implement thật với API sau
    */
-  getCourses: async (params?: GetCoursesParams): Promise<PaginationResponse<Course>> => {
+  getCourses: async (params?: GetCoursesParams): Promise<ApiPagination<Course>> => {
     // TODO: Uncomment khi kết nối Spring Boot
     // const response = await axiosInstance.get<PaginationResponse<Course>>(API_ENDPOINTS.COURSES.BASE, { params });
     // return response.data;
@@ -50,16 +50,13 @@ const courseService = {
     const paginatedCourses = filteredCourses.slice(startIndex, startIndex + pageSize);
     
     return {
-      success: true,
-      data: paginatedCourses,
       meta: {
-        page,
+        current: page - 1,
         pageSize,
-        totalItems: filteredCourses.length,
-        totalPages: Math.ceil(filteredCourses.length / pageSize),
-        hasNextPage: startIndex + pageSize < filteredCourses.length,
-        hasPrevPage: page > 1,
+        pages: Math.ceil(filteredCourses.length / pageSize),
+        total: filteredCourses.length,
       },
+      result: paginatedCourses,
     };
   },
 
@@ -139,7 +136,7 @@ const courseService = {
    * Lấy danh sách khóa học (Admin)
    * TODO: Implement thật với API sau
    */
-  getAdminCourses: async (params?: GetCoursesParams): Promise<PaginationResponse<AdminCourse>> => {
+  getAdminCourses: async (params?: GetCoursesParams): Promise<ApiPagination<AdminCourse>> => {
     // TODO: Uncomment khi kết nối Spring Boot
     // const response = await axiosInstance.get<PaginationResponse<AdminCourse>>('/admin/courses', { params });
     // return response.data;
@@ -153,16 +150,13 @@ const courseService = {
     const paginatedCourses = mockAdminCourses.slice(startIndex, startIndex + pageSize);
     
     return {
-      success: true,
-      data: paginatedCourses,
       meta: {
-        page,
+        current: page - 1,
         pageSize,
-        totalItems: mockAdminCourses.length,
-        totalPages: Math.ceil(mockAdminCourses.length / pageSize),
-        hasNextPage: startIndex + pageSize < mockAdminCourses.length,
-        hasPrevPage: page > 1,
+        pages: Math.ceil(mockAdminCourses.length / pageSize),
+        total: mockAdminCourses.length,
       },
+      result: paginatedCourses,
     };
   },
 

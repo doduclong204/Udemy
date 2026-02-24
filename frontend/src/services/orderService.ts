@@ -3,7 +3,7 @@ import { API_ENDPOINTS } from '@/constant/common.constant';
 import { 
   Order, 
   ApiResponse, 
-  PaginationResponse, 
+  ApiPagination, 
   CreateOrderRequest, 
   GetOrdersParams 
 } from '@/types';
@@ -14,7 +14,7 @@ const orderService = {
    * Lấy lịch sử đơn hàng của user
    * TODO: Implement thật với API sau
    */
-  getMyOrders: async (params?: GetOrdersParams): Promise<PaginationResponse<Order>> => {
+  getMyOrders: async (params?: GetOrdersParams): Promise<ApiPagination<Order>> => {
     // TODO: Uncomment khi kết nối Spring Boot
     // const response = await axiosInstance.get<PaginationResponse<Order>>('/orders/my-orders', { params });
     // return response.data;
@@ -27,16 +27,13 @@ const orderService = {
     const userOrders = mockOrders.filter(o => o.studentId === 'student-1').slice(0, 5);
     
     return {
-      success: true,
-      data: userOrders,
       meta: {
-        page,
+        current: page - 1,
         pageSize,
-        totalItems: userOrders.length,
-        totalPages: 1,
-        hasNextPage: false,
-        hasPrevPage: false,
+        pages: 1,
+        total: userOrders.length,
       },
+      result: userOrders,
     };
   },
 
@@ -89,7 +86,7 @@ const orderService = {
    * Lấy tất cả đơn hàng (Admin)
    * TODO: Implement thật với API sau
    */
-  getAdminOrders: async (params?: GetOrdersParams): Promise<PaginationResponse<Order>> => {
+  getAdminOrders: async (params?: GetOrdersParams): Promise<ApiPagination<Order>> => {
     // TODO: Uncomment khi kết nối Spring Boot
     // const response = await axiosInstance.get<PaginationResponse<Order>>('/admin/orders', { params });
     // return response.data;
@@ -109,16 +106,13 @@ const orderService = {
     const paginatedOrders = filteredOrders.slice(startIndex, startIndex + pageSize);
     
     return {
-      success: true,
-      data: paginatedOrders,
       meta: {
-        page,
+        current: page - 1,
         pageSize,
-        totalItems: filteredOrders.length,
-        totalPages: Math.ceil(filteredOrders.length / pageSize),
-        hasNextPage: startIndex + pageSize < filteredOrders.length,
-        hasPrevPage: page > 1,
+        pages: Math.ceil(filteredOrders.length / pageSize),
+        total: filteredOrders.length,
       },
+      result: paginatedOrders,
     };
   },
 

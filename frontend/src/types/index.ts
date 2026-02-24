@@ -1,23 +1,20 @@
-// ==================== API Response Types ====================
+// ==================== API Response Types 
 
 export interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  message?: string;
   statusCode?: number;
+  message?: any;
+  error?: string;
+  data: T;
 }
 
-export interface PaginationResponse<T> {
-  success: boolean;
-  data: T[];
+export interface ApiPagination<T> {
   meta: {
-    page: number;
+    current: number;
     pageSize: number;
-    totalItems: number;
-    totalPages: number;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
+    pages: number;
+    total: number;
   };
+  result: T[];
 }
 
 export interface ErrorResponse {
@@ -30,7 +27,8 @@ export interface ErrorResponse {
 // ==================== Auth Types
 
 export interface User {
-  id: string;
+  _id?: string;
+  id?: string;
   username: string;
   name: string;
   avatar?: string;

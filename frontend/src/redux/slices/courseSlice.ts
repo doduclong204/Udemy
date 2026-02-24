@@ -119,12 +119,12 @@ const courseSlice = createSlice({
       })
       .addCase(fetchCoursesAsync.fulfilled, (state, action) => {
         state.loading = false;
-        state.courses = action.payload.data;
+        state.courses = action.payload.data ?? action.payload.result;
         state.pagination = {
-          page: action.payload.meta.page,
-          pageSize: action.payload.meta.pageSize,
-          totalItems: action.payload.meta.totalItems,
-          totalPages: action.payload.meta.totalPages,
+          page: (action.payload.meta.current ?? action.payload.meta.page) + 1,
+          pageSize: action.payload.meta.pageSize ?? action.payload.meta.pageSize,
+          totalItems: action.payload.meta.total ?? action.payload.meta.totalItems,
+          totalPages: action.payload.meta.pages ?? action.payload.meta.totalPages,
         };
       })
       .addCase(fetchCoursesAsync.rejected, (state, action) => {
@@ -158,12 +158,12 @@ const courseSlice = createSlice({
       })
       .addCase(fetchAdminCoursesAsync.fulfilled, (state, action) => {
         state.loading = false;
-        state.adminCourses = action.payload.data;
+        state.adminCourses = action.payload.data ?? action.payload.result;
         state.pagination = {
-          page: action.payload.meta.page,
-          pageSize: action.payload.meta.pageSize,
-          totalItems: action.payload.meta.totalItems,
-          totalPages: action.payload.meta.totalPages,
+          page: (action.payload.meta.current ?? action.payload.meta.page) + 1,
+          pageSize: action.payload.meta.pageSize ?? action.payload.meta.pageSize,
+          totalItems: action.payload.meta.total ?? action.payload.meta.totalItems,
+          totalPages: action.payload.meta.pages ?? action.payload.meta.totalPages,
         };
       })
       .addCase(fetchAdminCoursesAsync.rejected, (state, action) => {

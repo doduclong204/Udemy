@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, Mail, MoreVertical, Eye, Ban, UserCheck, UserPlus, Edit, Trash2 } from 'lucide-react';
-import { adminStudents } from '@/data/adminMockData';
+import userService from '@/services/userService';
+import { Student } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -56,13 +57,15 @@ export default function AdminStudents() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [students, setStudents] = useState(adminStudents);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<typeof adminStudents[0] | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [newStudent, setNewStudent] = useState({
     name: '',
     email: '',
@@ -81,51 +84,75 @@ export default function AdminStudents() {
   });
   const itemsPerPage = 15;
 
-  const filteredStudents = students.filter(student => {
-    const matchesSearch = 
-      student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || student.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // Server-side filtered & paginated
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const paginatedStudents = students;
 
-  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
-  const paginatedStudents = filteredStudents.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const fetchStudents = async () => {
+    setIsLoading(true);
+    try {
+      const res = await userService.getStudents({
+        page: currentPage,
+        pageSize: itemsPerPage,
+        search: searchQuery || undefined,
+        status: statusFilter === 'all' ? undefined : statusFilter,
+      });
+
+      // userService returns ApiPagination<Student>
+      setStudents(res.result);
+      setTotalItems(res.meta.total);
+    } catch (err) {
+      console.error('Fetch students error', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStudents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, statusFilter]);
+
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      setCurrentPage(1);
+      fetchStudents();
+    }, 350);
+    return () => clearTimeout(delay);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   const handleAddStudent = () => {
     if (!newStudent.name.trim() || !newStudent.email.trim() || !newStudent.password.trim()) {
       toast.error('Vui lòng điền đầy đủ thông tin!');
       return;
     }
-
-    const student = {
-      id: `STU${String(students.length + 1).padStart(3, '0')}`,
-      name: newStudent.name,
-      email: newStudent.email,
-      avatar: '',
-      enrolledCourses: 0,
-      completedCourses: 0,
-      totalSpent: 0,
-      joinedAt: new Date().toISOString(),
-      lastActive: new Date().toISOString(),
-      status: 'Active' as const,
-    };
-
-    setStudents([student, ...students]);
-    setNewStudent({ name: '', email: '', password: '', role: 'user' });
-    setIsAddDialogOpen(false);
-    toast.success('Thêm học viên thành công!');
+    (async () => {
+      try {
+        await userService.createUser({
+          name: newStudent.name,
+          email: newStudent.email,
+          password: newStudent.password,
+          role: newStudent.role,
+        });
+        setNewStudent({ name: '', email: '', password: '', role: 'user' });
+        setIsAddDialogOpen(false);
+        toast.success('Thêm học viên thành công!');
+        fetchStudents();
+      } catch (err: any) {
+        console.error('Create user error', err);
+        const message = err?.message || err?.response?.data?.message || 'Thêm học viên thất bại';
+        toast.error(message);
+      }
+    })();
   };
 
-  const handleViewStudent = (student: typeof adminStudents[0]) => {
+  const handleViewStudent = (student: Student) => {
     setSelectedStudent(student);
     setIsViewDialogOpen(true);
   };
 
-  const handleEditClick = (student: typeof adminStudents[0]) => {
+  const handleEditClick = (student: Student) => {
     setSelectedStudent(student);
     setEditStudent({
       name: student.name,
@@ -140,18 +167,26 @@ export default function AdminStudents() {
       toast.error('Vui lòng điền đầy đủ thông tin!');
       return;
     }
-
-    setStudents(students.map(s => 
-      s.id === selectedStudent?.id 
-        ? { ...s, name: editStudent.name, email: editStudent.email }
-        : s
-    ));
-    setIsEditDialogOpen(false);
-    setSelectedStudent(null);
-    toast.success('Cập nhật học viên thành công!');
+    (async () => {
+      try {
+        if (!selectedStudent) return;
+        await userService.updateUser(selectedStudent.id, {
+          name: editStudent.name,
+          email: editStudent.email,
+          role: editStudent.role,
+        });
+        setIsEditDialogOpen(false);
+        setSelectedStudent(null);
+        toast.success('Cập nhật học viên thành công!');
+        fetchStudents();
+      } catch (err) {
+        console.error(err);
+        toast.error('Cập nhật thất bại');
+      }
+    })();
   };
 
-  const handleEmailClick = (student: typeof adminStudents[0]) => {
+  const handleEmailClick = (student: Student) => {
     setSelectedStudent(student);
     setEmailContent({ subject: '', message: '' });
     setIsEmailDialogOpen(true);
@@ -168,27 +203,41 @@ export default function AdminStudents() {
     setEmailContent({ subject: '', message: '' });
   };
 
-  const handleDeleteClick = (student: typeof adminStudents[0]) => {
+  const handleDeleteClick = (student: Student) => {
     setSelectedStudent(student);
     setIsDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = () => {
-    if (selectedStudent) {
-      setStudents(students.filter(s => s.id !== selectedStudent.id));
-      toast.success('Đã xóa học viên!');
-      setIsDeleteDialogOpen(false);
-      setSelectedStudent(null);
-    }
+    (async () => {
+      if (!selectedStudent) return;
+      try {
+        await userService.deleteStudent(selectedStudent.id);
+        toast.success('Đã xóa học viên!');
+        setIsDeleteDialogOpen(false);
+        setSelectedStudent(null);
+        fetchStudents();
+      } catch (err) {
+        console.error(err);
+        toast.error('Xóa thất bại');
+      }
+    })();
   };
 
   const handleToggleStatus = (studentId: string) => {
-    setStudents(students.map(s => 
-      s.id === studentId 
-        ? { ...s, status: s.status === 'Active' ? 'Inactive' as const : 'Active' as const }
-        : s
-    ));
-    toast.success('Đã cập nhật trạng thái học viên!');
+    (async () => {
+      try {
+        const student = students.find(s => s.id === studentId);
+        if (!student) return;
+        const newStatus = student.status === 'Active' ? 'Inactive' : 'Active';
+        await userService.updateStudentStatus(studentId, newStatus as 'Active' | 'Inactive');
+        toast.success('Đã cập nhật trạng thái học viên!');
+        fetchStudents();
+      } catch (err) {
+        console.error(err);
+        toast.error('Cập nhật trạng thái thất bại');
+      }
+    })();
   };
 
   return (
@@ -362,7 +411,7 @@ export default function AdminStudents() {
         {/* Pagination */}
         <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-admin-border gap-4">
           <p className="text-sm text-admin-muted-foreground">
-            Hiển thị {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredStudents.length)} / {filteredStudents.length}
+            Hiển thị {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} / {totalItems}
           </p>
           <div className="flex gap-2">
             <Button

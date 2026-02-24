@@ -4,7 +4,6 @@ import {
   Enrollment, 
   Course, 
   ApiResponse, 
-  PaginationResponse, 
   EnrollCourseRequest, 
   UpdateProgressRequest 
 } from '@/types';

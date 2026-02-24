@@ -5,7 +5,7 @@ import {
   AdminReview, 
   CreateReviewRequest, 
   ApiResponse, 
-  PaginationResponse, 
+  ApiPagination, 
   GetReviewsParams 
 } from '@/types';
 import { reviews as mockReviews } from '@/data/mockData';
@@ -16,7 +16,7 @@ const reviewService = {
    * Lấy reviews của khóa học
    * TODO: Implement thật với API sau
    */
-  getCourseReviews: async (courseId: string, params?: GetReviewsParams): Promise<PaginationResponse<Review>> => {
+  getCourseReviews: async (courseId: string, params?: GetReviewsParams): Promise<ApiPagination<Review>> => {
     // TODO: Uncomment khi kết nối Spring Boot
     // const response = await axiosInstance.get<PaginationResponse<Review>>(`${API_ENDPOINTS.COURSES.BASE}/${courseId}/reviews`, { params });
     // return response.data;
@@ -30,16 +30,13 @@ const reviewService = {
     const paginatedReviews = mockReviews.slice(startIndex, startIndex + pageSize);
     
     return {
-      success: true,
-      data: paginatedReviews,
       meta: {
-        page,
+        current: page - 1,
         pageSize,
-        totalItems: mockReviews.length,
-        totalPages: Math.ceil(mockReviews.length / pageSize),
-        hasNextPage: startIndex + pageSize < mockReviews.length,
-        hasPrevPage: page > 1,
+        pages: Math.ceil(mockReviews.length / pageSize),
+        total: mockReviews.length,
       },
+      result: paginatedReviews,
     };
   },
 
@@ -85,7 +82,7 @@ const reviewService = {
    * Lấy tất cả reviews (Admin)
    * TODO: Implement thật với API sau
    */
-  getAdminReviews: async (params?: GetReviewsParams): Promise<PaginationResponse<AdminReview>> => {
+  getAdminReviews: async (params?: GetReviewsParams): Promise<ApiPagination<AdminReview>> => {
     // TODO: Uncomment khi kết nối Spring Boot
     // const response = await axiosInstance.get<PaginationResponse<AdminReview>>('/admin/reviews', { params });
     // return response.data;
@@ -99,16 +96,13 @@ const reviewService = {
     const paginatedReviews = mockAdminReviews.slice(startIndex, startIndex + pageSize);
     
     return {
-      success: true,
-      data: paginatedReviews,
       meta: {
-        page,
+        current: page - 1,
         pageSize,
-        totalItems: mockAdminReviews.length,
-        totalPages: Math.ceil(mockAdminReviews.length / pageSize),
-        hasNextPage: startIndex + pageSize < mockAdminReviews.length,
-        hasPrevPage: page > 1,
+        pages: Math.ceil(mockAdminReviews.length / pageSize),
+        total: mockAdminReviews.length,
       },
+      result: paginatedReviews,
     };
   },
 
