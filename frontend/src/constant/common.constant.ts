@@ -98,6 +98,9 @@ export const API_ENDPOINTS = {
   ORDERS: {
     BASE: '/orders',
   },
+  COUPONS: {
+    BASE: '/coupons',
+  },
   LESSONS: {
     BASE: '/lessons',
   },
