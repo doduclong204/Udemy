@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, FolderOpen, Search, MoreVertical, Eye } from 'lucide-react';
+import categoryService from '@/services/categoryService';
+import { Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,27 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  icon: string;
-  courseCount: number;
-}
-
 const iconOptions = ['💻', '🎨', '📊', '🎵', '📸', '✏️', '📱', '🎬', '💼', '🏋️', '🗣️', '🔬'];
-
-const initialCategories: Category[] = [
-  { id: '1', name: 'Lập trình', slug: 'lap-trinh', description: 'Các khóa học về lập trình và phát triển phần mềm', icon: '💻', courseCount: 45 },
-  { id: '2', name: 'Thiết kế', slug: 'thiet-ke', description: 'Khóa học thiết kế đồ họa, UI/UX', icon: '🎨', courseCount: 32 },
-  { id: '3', name: 'Kinh doanh', slug: 'kinh-doanh', description: 'Quản lý, marketing và khởi nghiệp', icon: '💼', courseCount: 28 },
-  { id: '4', name: 'Marketing', slug: 'marketing', description: 'Digital marketing, SEO, quảng cáo', icon: '📊', courseCount: 21 },
-  { id: '5', name: 'Nhiếp ảnh', slug: 'nhiep-anh', description: 'Chụp ảnh và chỉnh sửa hình ảnh', icon: '📸', courseCount: 15 },
-  { id: '6', name: 'Âm nhạc', slug: 'am-nhac', description: 'Học nhạc cụ, sản xuất âm nhạc', icon: '🎵', courseCount: 12 },
-  { id: '7', name: 'Fitness', slug: 'fitness', description: 'Sức khỏe và thể dục', icon: '🏋️', courseCount: 8 },
-  { id: '8', name: 'Ngôn ngữ', slug: 'ngon-ngu', description: 'Học ngoại ngữ', icon: '🗣️', courseCount: 18 },
-];
 
 const generateSlug = (name: string) => {
   return name
@@ -65,9 +47,11 @@ const generateSlug = (name: string) => {
 };
 
 export default function AdminCategories() {
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -80,87 +64,127 @@ export default function AdminCategories() {
   });
   const itemsPerPage = 10;
 
-  const filteredCategories = categories.filter(cat =>
-    cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cat.slug.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Server-side filtered & paginated
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const paginatedCategories = categories;
 
-  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
-  const paginatedCategories = filteredCategories.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const fetchCategories = async () => {
+    setIsLoading(true);
+    try {
+      const res = await categoryService.getCategories({
+        page: currentPage,
+        pageSize: itemsPerPage,
+        search: searchQuery || undefined,
+      });
 
-  const handleAdd = () => {
+      // categoryService returns ApiPagination<Category>
+      setCategories(res.result);
+      setTotalItems(res.meta.total);
+    } catch (err) {
+      console.error('Fetch categories error', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
+
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      setCurrentPage(1);
+      fetchCategories();
+    }, 350);
+    return () => clearTimeout(delay);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
+  const handleAddCategory = () => {
     if (!formData.name.trim()) {
       toast.error('Vui lòng nhập tên danh mục!');
       return;
     }
 
-    const newCategory: Category = {
-      id: String(Date.now()),
-      name: formData.name,
-      slug: generateSlug(formData.name),
-      description: formData.description,
-      icon: formData.icon,
-      courseCount: 0,
-    };
-
-    setCategories([...categories, newCategory]);
-    setFormData({ name: '', description: '', icon: '💻' });
-    setIsAddDialogOpen(false);
-    toast.success('Thêm danh mục thành công!');
+    (async () => {
+      try {
+        await categoryService.createCategory({
+          name: formData.name,
+          description: formData.description,
+          icon: formData.icon,
+        });
+        setFormData({ name: '', description: '', icon: '💻' });
+        setIsAddDialogOpen(false);
+        toast.success('Thêm danh mục thành công!');
+        fetchCategories();
+      } catch (err: any) {
+        console.error('Create category error', err);
+        const message = err?.message || err?.response?.data?.message || 'Thêm danh mục thất bại';
+        toast.error(message);
+      }
+    })();
   };
 
-  const handleEdit = () => {
-    if (!formData.name.trim()) {
-      toast.error('Vui lòng nhập tên danh mục!');
-      return;
-    }
-
-    setCategories(categories.map(cat =>
-      cat.id === selectedCategory?.id
-        ? {
-            ...cat,
-            name: formData.name,
-            slug: generateSlug(formData.name),
-            description: formData.description,
-            icon: formData.icon,
-          }
-        : cat
-    ));
-    setIsEditDialogOpen(false);
-    setSelectedCategory(null);
-    toast.success('Cập nhật danh mục thành công!');
-  };
-
-  const handleDelete = () => {
-    if (selectedCategory) {
-      setCategories(categories.filter(cat => cat.id !== selectedCategory.id));
-      setIsDeleteDialogOpen(false);
-      setSelectedCategory(null);
-      toast.success('Đã xóa danh mục!');
-    }
-  };
-
-  const openViewDialog = (category: Category) => {
+  const handleViewCategory = (category: Category) => {
     setSelectedCategory(category);
     setIsViewDialogOpen(true);
   };
 
-  const openEditDialog = (category: Category) => {
+  const handleEditClick = (category: Category) => {
     setSelectedCategory(category);
     setFormData({
       name: category.name,
-      description: category.description,
-      icon: category.icon,
+      description: category.description || '',
+      icon: category.icon || '💻',
     });
     setIsEditDialogOpen(true);
   };
 
-  const openDeleteDialog = (category: Category) => {
+  const handleEditCategory = () => {
+    if (!formData.name.trim()) {
+      toast.error('Vui lòng nhập tên danh mục!');
+      return;
+    }
+
+    (async () => {
+      try {
+        if (!selectedCategory) return;
+        await categoryService.updateCategory(selectedCategory._id, {
+          name: formData.name,
+          description: formData.description,
+          icon: formData.icon,
+        });
+        setIsEditDialogOpen(false);
+        setSelectedCategory(null);
+        toast.success('Cập nhật danh mục thành công!');
+        fetchCategories();
+      } catch (err) {
+        console.error(err);
+        toast.error('Cập nhật thất bại');
+      }
+    })();
+  };
+
+  const handleDeleteClick = (category: Category) => {
     setSelectedCategory(category);
     setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    (async () => {
+      if (!selectedCategory) return;
+      try {
+        await categoryService.deleteCategory(selectedCategory._id);
+        toast.success('Đã xóa danh mục!');
+        setIsDeleteDialogOpen(false);
+        setSelectedCategory(null);
+        fetchCategories();
+      } catch (err) {
+        console.error(err);
+        toast.error('Xóa thất bại');
+      }
+    })();
   };
 
   return (
@@ -168,7 +192,7 @@ export default function AdminCategories() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-admin-foreground">Quản lý danh mục khóa học</h1>
-          <p className="text-admin-muted-foreground">Tổng cộng {categories.length} danh mục</p>
+          <p className="text-admin-muted-foreground">Tổng cộng {totalItems} danh mục</p>
         </div>
         <Button 
           onClick={() => {
@@ -189,16 +213,13 @@ export default function AdminCategories() {
           <Input
             placeholder="Tìm danh mục..."
             value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 bg-admin-accent border-admin-border text-admin-foreground"
           />
         </div>
       </div>
 
-      {filteredCategories.length === 0 ? (
+      {paginatedCategories.length === 0 ? (
         <div className="bg-admin-card border border-admin-border rounded-xl p-12 text-center">
           <FolderOpen className="w-16 h-16 text-admin-muted-foreground mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-admin-foreground mb-2">
@@ -236,7 +257,7 @@ export default function AdminCategories() {
               </thead>
               <tbody>
                 {paginatedCategories.map((category, index) => (
-                  <tr key={category.id} className="border-t border-admin-border hover:bg-admin-accent/50">
+                  <tr key={category._id} className="border-t border-admin-border hover:bg-admin-accent/50">
                     <td className="py-4 px-4 text-sm text-admin-muted-foreground">
                       {(currentPage - 1) * itemsPerPage + index + 1}
                     </td>
@@ -252,7 +273,7 @@ export default function AdminCategories() {
                       </div>
                     </td>
                     <td className="py-4 px-4 text-sm text-admin-muted-foreground font-mono">{category.slug}</td>
-                    <td className="py-4 px-4 text-sm text-admin-foreground">{category.courseCount}</td>
+                    <td className="py-4 px-4 text-sm text-admin-foreground">{category.totalCourses}</td>
                     <td className="py-4 px-4">
                       <div className="flex items-center justify-end">
                         <DropdownMenu>
@@ -262,16 +283,16 @@ export default function AdminCategories() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem onClick={() => openViewDialog(category)}>
+                            <DropdownMenuItem onClick={() => handleViewCategory(category)}>
                               <Eye className="w-4 h-4 mr-2" />
                               Xem chi tiết
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openEditDialog(category)}>
+                            <DropdownMenuItem onClick={() => handleEditClick(category)}>
                               <Pencil className="w-4 h-4 mr-2" />
                               Chỉnh sửa
                             </DropdownMenuItem>
                             <DropdownMenuItem 
-                              onClick={() => openDeleteDialog(category)}
+                              onClick={() => handleDeleteClick(category)}
                               className="text-red-400 hover:text-red-300"
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
@@ -289,7 +310,7 @@ export default function AdminCategories() {
             {/* Pagination */}
             <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-admin-border gap-4">
               <p className="text-sm text-admin-muted-foreground">
-                Hiển thị {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredCategories.length)} / {filteredCategories.length}
+                Hiển thị {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} / {totalItems}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -317,7 +338,7 @@ export default function AdminCategories() {
           {/* Mobile Cards */}
           <div className="space-y-4 md:hidden">
             {paginatedCategories.map((category, index) => (
-              <div key={category.id} className="bg-admin-card border border-admin-border rounded-xl p-4">
+              <div key={category._id} className="bg-admin-card border border-admin-border rounded-xl p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <span className="text-3xl">{category.icon}</span>
@@ -333,16 +354,16 @@ export default function AdminCategories() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => openViewDialog(category)}>
+                      <DropdownMenuItem onClick={() => handleViewCategory(category)}>
                         <Eye className="w-4 h-4 mr-2" />
                         Xem chi tiết
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => openEditDialog(category)}>
+                      <DropdownMenuItem onClick={() => handleEditClick(category)}>
                         <Pencil className="w-4 h-4 mr-2" />
                         Chỉnh sửa
                       </DropdownMenuItem>
                       <DropdownMenuItem 
-                        onClick={() => openDeleteDialog(category)}
+                        onClick={() => handleDeleteClick(category)}
                         className="text-red-400 hover:text-red-300"
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
@@ -355,7 +376,7 @@ export default function AdminCategories() {
                   <p className="text-sm text-admin-muted-foreground mt-2">{category.description}</p>
                 )}
                 <div className="flex items-center justify-between mt-4 pt-3 border-t border-admin-border">
-                  <span className="text-sm text-admin-foreground">{category.courseCount} khóa học</span>
+                  <span className="text-sm text-admin-foreground">{category.totalCourses} khóa học</span>
                   <span className="text-xs text-admin-muted-foreground">#{(currentPage - 1) * itemsPerPage + index + 1}</span>
                 </div>
               </div>
@@ -364,7 +385,7 @@ export default function AdminCategories() {
             {/* Mobile Pagination */}
             <div className="flex items-center justify-between p-4 bg-admin-card border border-admin-border rounded-xl">
               <p className="text-sm text-admin-muted-foreground">
-                {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredCategories.length)} / {filteredCategories.length}
+                {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} / {totalItems}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -412,7 +433,7 @@ export default function AdminCategories() {
               </div>
               <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
                 <p className="text-xs text-slate-400 mb-1">Số khóa học</p>
-                <p className="text-white font-semibold">{selectedCategory.courseCount} khóa học</p>
+                <p className="text-white font-semibold">{selectedCategory.totalCourses} khóa học</p>
               </div>
             </div>
           )}
@@ -477,7 +498,7 @@ export default function AdminCategories() {
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]">
               Hủy
             </Button>
-            <Button onClick={handleAdd} className="bg-admin-primary hover:bg-admin-primary/90">
+            <Button onClick={handleAddCategory} className="bg-admin-primary hover:bg-admin-primary/90">
               Lưu
             </Button>
           </DialogFooter>
@@ -537,7 +558,7 @@ export default function AdminCategories() {
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]">
               Hủy
             </Button>
-            <Button onClick={handleEdit} className="bg-admin-primary hover:bg-admin-primary/90">
+            <Button onClick={handleEditCategory} className="bg-admin-primary hover:bg-admin-primary/90">
               Lưu
             </Button>
           </DialogFooter>
@@ -556,7 +577,7 @@ export default function AdminCategories() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]">Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white">
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700 text-white">
               Xóa
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -135,24 +135,32 @@ export interface GetCoursesParams {
   sortOrder?: 'asc' | 'desc';
 }
 
+
 // ==================== Category Types ====================
 
 export interface Category {
-  id: string;
+  _id: string; 
   name: string;
-  icon: string;
-  courseCount: number;
-  subcategories?: string[];
+  slug: string;  
+  icon?: string;
+  description?: string;
+  totalCourses: number;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
 }
 
 export interface CreateCategoryRequest {
   name: string;
-  icon: string;
-  subcategories?: string[];
+  icon?: string;
+  description?: string;
 }
 
-export interface UpdateCategoryRequest extends Partial<CreateCategoryRequest> {
-  id: string;
+export interface UpdateCategoryRequest {
+  name?: string;
+  icon?: string;
+  description?: string;
 }
 
 // ==================== Lesson Types ====================
@@ -309,16 +317,50 @@ export interface ChangePasswordRequest {
 
 // ==================== Coupon Types ====================
 
+export enum CouponStatus {
+  ACTIVE = 'ACTIVE',
+  EXPIRED = 'EXPIRED',
+  EXHAUSTED = 'EXHAUSTED'
+}
+
 export interface Coupon {
-  id: string;
+  _id: string; 
   code: string;
-  discount: number;
-  type: 'percentage' | 'fixed';
-  usageLimit: number;
+  discountType: string;
+  discountValue: number;
+  maxUsage: number;
   usedCount: number;
-  minOrder: number;
+  minOrderAmount: number;
+  couponStatus: CouponStatus;
   expiresAt: string;
-  status: 'Active' | 'Expired' | 'Used';
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+}
+
+export interface CreateCouponRequest {
+  code: string;
+  discountType: string;
+  discountValue: number;
+  maxUsage: number;
+  minOrderAmount: number;
+  couponStatus: CouponStatus;
+  expiresAt: string;
+}
+
+export interface UpdateCouponRequest {
+  discountType?: string;
+  discountValue?: number;
+  maxUsage?: number;
+  minOrderAmount?: number;
+  couponStatus?: CouponStatus;
+  expiresAt?: string;
+}
+
+export interface CouponCheckRequest {
+  code: string;
+  orderAmount: number;
 }
 
 // ==================== Dashboard Types ====================

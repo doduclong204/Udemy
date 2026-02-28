@@ -55,12 +55,6 @@ export function Header() {
   };
 
   return (
-    console.log('Header Redux debug:', {
-    isAuthenticated,
-    isAdmin,
-    role: user?.role,
-    fullUser: user ? JSON.stringify(user, null, 2) : 'null'  // in chi tiết user
-  }),
     <header className="sticky top-0 z-50 bg-background border-b border-border shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 gap-4">

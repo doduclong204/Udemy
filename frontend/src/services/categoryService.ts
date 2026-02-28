@@ -1,92 +1,74 @@
 import axiosInstance from '@/config/api';
 import { API_ENDPOINTS } from '@/constant/common.constant';
-import { Category, ApiResponse, CreateCategoryRequest, UpdateCategoryRequest } from '@/types';
-import { categories as mockCategories } from '@/data/mockData';
+import { 
+  Category, 
+  ApiResponse, 
+  ApiPagination, 
+  CreateCategoryRequest, 
+  UpdateCategoryRequest 
+} from '@/types';
 
 const categoryService = {
   /**
-   * Lấy tất cả categories
-   * TODO: Implement thật với API sau
+   * Lấy danh sách categories có phân trang và lọc
+   * Khớp với Controller: getCategories(@Filter Specification<Category> spec, Pageable pageable)
    */
-  getCategories: async (): Promise<Category[]> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.get<ApiResponse<Category[]>>(API_ENDPOINTS.CATEGORIES.BASE);
-    // return response.data.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockCategories;
+  getCategories: async (params?: { page?: number; pageSize?: number; search?: string }): Promise<ApiPagination<Category>> => {
+    const page = params?.page || 1;
+    const pageSize = params?.pageSize || 10;
+
+    const response = await axiosInstance.get<ApiResponse<ApiPagination<Category>>>(API_ENDPOINTS.CATEGORIES.BASE, {
+      params: {
+        // Spring Boot page tính từ 0
+        page: Math.max(0, page - 1),
+        size: pageSize,
+        // Cú pháp spring-filter: name ~ '*từ_khóa*'
+        filter: params?.search ? `name~'*${params.search}*'` : undefined,
+      },
+    });
+
+    // Trả về data.data vì cấu trúc là ApiResponse -> ApiPagination
+    return response.data.data;
   },
 
   /**
-   * Lấy category theo ID
-   * TODO: Implement thật với API sau
+   * Lấy chi tiết category theo ID
    */
-  getCategoryById: async (id: string): Promise<Category | null> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.get<ApiResponse<Category>>(`${API_ENDPOINTS.CATEGORIES.BASE}/${id}`);
-    // return response.data.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockCategories.find(c => c.id === id) || null;
+  getCategoryById: async (id: string): Promise<Category> => {
+    const response = await axiosInstance.get<ApiResponse<Category>>(`${API_ENDPOINTS.CATEGORIES.BASE}/${id}`);
+    return response.data.data;
+  },
+
+  /**
+   * Lấy category theo Slug (dùng cho phía người dùng xem khóa học theo danh mục)
+   */
+  getCategoryBySlug: async (slug: string): Promise<Category> => {
+    const response = await axiosInstance.get<ApiResponse<Category>>(`${API_ENDPOINTS.CATEGORIES.BASE}/slug/${slug}`);
+    return response.data.data;
   },
 
   /**
    * Tạo category mới (Admin)
-   * TODO: Implement thật với API sau
    */
   createCategory: async (data: CreateCategoryRequest): Promise<Category> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.post<ApiResponse<Category>>(API_ENDPOINTS.CATEGORIES.BASE, data);
-    // return response.data.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    return {
-      id: `category-${Date.now()}`,
-      name: data.name,
-      icon: data.icon,
-      courseCount: 0,
-      subcategories: data.subcategories,
-    };
+    const response = await axiosInstance.post<ApiResponse<Category>>(API_ENDPOINTS.CATEGORIES.BASE, data);
+    return response.data.data;
   },
 
   /**
    * Cập nhật category (Admin)
-   * TODO: Implement thật với API sau
+   * Khớp với Controller: updateCategory(@PathVariable String id, @RequestBody CategoryUpdateRequest request)
    */
-  updateCategory: async (data: UpdateCategoryRequest): Promise<Category> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.put<ApiResponse<Category>>(`${API_ENDPOINTS.CATEGORIES.BASE}/${data.id}`, data);
-    // return response.data.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const existingCategory = mockCategories.find(c => c.id === data.id);
-    if (!existingCategory) {
-      throw new Error('Category not found');
-    }
-    
-    return {
-      ...existingCategory,
-      ...data,
-    } as Category;
+  updateCategory: async (id: string, data: UpdateCategoryRequest): Promise<Category> => {
+    const response = await axiosInstance.put<ApiResponse<Category>>(`${API_ENDPOINTS.CATEGORIES.BASE}/${id}`, data);
+    return response.data.data;
   },
 
   /**
    * Xóa category (Admin)
-   * TODO: Implement thật với API sau
    */
   deleteCategory: async (id: string): Promise<void> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // await axiosInstance.delete(`${API_ENDPOINTS.CATEGORIES.BASE}/${id}`);
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 500));
-    console.log('Category deleted:', id);
+    await axiosInstance.delete(`${API_ENDPOINTS.CATEGORIES.BASE}/${id}`);
   },
 };
 
