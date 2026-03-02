@@ -1,7 +1,12 @@
-import { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, GripVertical, Upload, X, Video, FileText } from 'lucide-react';
-import { adminCourses } from '@/data/adminMockData';
+import { useDispatch } from 'react-redux';
+import { AppDispatch } from '@/redux/store';
+import { createAdminCourseAsync, updateAdminCourseAsync } from '@/redux/slices/courseSlice';
+import categoryService from '@/services/categoryService';
+import courseService from '@/services/courseService';
+import { Category, CreateCourseRequest, UpdateCourseRequest } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -35,49 +40,188 @@ interface Section {
   lectures: Lecture[];
 }
 
+const DEFAULT_SECTIONS: Section[] = [
+  {
+    id: '1',
+    title: 'Phần 1: Giới thiệu',
+    lectures: [
+      { id: '1-1', title: 'Bài 1: Tổng quan khóa học', duration: '10:00', isPreview: true, type: 'VIDEO' },
+      { id: '1-2', title: 'Bài 2: Chuẩn bị môi trường', duration: '15:00', isPreview: false, type: 'VIDEO' },
+    ],
+  },
+];
+
+// Chuyển seconds → "mm:ss"
+const secondsToMMSS = (secs?: number): string => {
+  if (!secs) return '00:00';
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
+
+const PLACEHOLDER_THUMBNAIL = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='225' viewBox='0 0 400 225'%3E%3Crect width='400' height='225' fill='%23374151'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236B7280' font-size='14' font-family='sans-serif'%3EThumbnail%3C/text%3E%3C/svg%3E`;
+const PLACEHOLDER_BANNER = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='400' viewBox='0 0 1200 400'%3E%3Crect width='1200' height='400' fill='%23374151'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236B7280' font-size='18' font-family='sans-serif'%3EBanner%3C/text%3E%3C/svg%3E`;
+
 export default function AdminCourseForm() {
+  const dispatch = useDispatch<AppDispatch>();
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditing = Boolean(id);
-  
-  const existingCourse = isEditing ? adminCourses.find(c => c.id === id) : null;
+
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCourse, setLoadingCourse] = useState(false);
 
   const [formData, setFormData] = useState({
-    title: existingCourse?.title || '',
-    subtitle: existingCourse?.subtitle || '',
-    description: existingCourse?.description || '',
-    category: existingCourse?.category || '',
-    level: existingCourse?.level || '',
-    price: existingCourse?.price?.toString() || '',
-    discountPrice: existingCourse?.discountPrice?.toString() || '',
-    isFeatured: existingCourse?.isFeatured || false,
-    isBestseller: existingCourse?.isBestseller || false,
+    title: '',
+    subtitle: '',
+    description: '',
+    category: '',   // _id của category
+    level: '',      // BASIC | INTERMEDIATE | ADVANCED
+    price: '',
+    discountPrice: '',
+    isFeatured: false,
+    isBestseller: false,
   });
 
-  const [learningPoints, setLearningPoints] = useState<string[]>(
-    ['', '', '', '']
-  );
+  const [learningPoints, setLearningPoints] = useState<string[]>(['', '', '', '']);
+  const [sections, setSections] = useState<Section[]>(DEFAULT_SECTIONS);
 
-  const [sections, setSections] = useState<Section[]>([
-    {
-      id: '1',
-      title: 'Phần 1: Giới thiệu',
-      lectures: [
-        { id: '1-1', title: 'Bài 1: Tổng quan khóa học', duration: '10:00', isPreview: true, type: 'VIDEO' },
-        { id: '1-2', title: 'Bài 2: Chuẩn bị môi trường', duration: '15:00', isPreview: false, type: 'VIDEO' },
-      ],
-    },
-  ]);
+  // Load categories
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const res = await categoryService.getCategories({ page: 1, pageSize: 100 });
+        setCategories(res.result);
+      } catch (err: any) {
+        console.error('Failed to load categories', err);
+        if (err.response?.status === 403) {
+          toast.error('Bạn không có quyền truy cập tài nguyên này');
+        }
+      }
+    };
+    loadCategories();
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Load course data khi edit - fetch từ API thay vì mock data
+  useEffect(() => {
+    if (!isEditing || !id) return;
+
+    const loadCourse = async () => {
+      setLoadingCourse(true);
+      try {
+        const course = await courseService.getCourseById(id) as any;
+        if (!course) return;
+
+        setFormData({
+          title: course.title || '',
+          subtitle: course.smallDescription || course.subtitle || '',
+          description: course.description || '',
+          category: course.categoryId || course.category || '',
+          level: course.level || '',
+          price: course.price?.toString() || '',
+          discountPrice: course.discountPrice?.toString() || '',
+          isFeatured: course.outstanding || course.isFeatured || false,
+          isBestseller: course.isBestseller || false,
+        });
+
+        // Map sections từ API nếu có
+        if (course.sections && course.sections.length > 0) {
+          setSections(
+            course.sections.map((s: any) => ({
+              id: s._id || s.id || Date.now().toString(),
+              title: s.title,
+              lectures: (s.lectures || []).map((l: any) => ({
+                id: l._id || l.id || Date.now().toString(),
+                title: l.title,
+                duration: secondsToMMSS(l.duration),
+                isPreview: l.isFree || false,
+                type: (l.type as LectureType) || 'VIDEO',
+                videoFileName: l.videoUrl || '',
+                articleContent: l.content || '',
+              })),
+            }))
+          );
+        }
+      } catch (err) {
+        console.error('Failed to load course', err);
+        toast.error('Không thể tải thông tin khóa học');
+      } finally {
+        setLoadingCourse(false);
+      }
+    };
+
+    loadCourse();
+  }, [id, isEditing]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success(isEditing ? 'Cập nhật khoá học thành công!' : 'Tạo khoá học thành công!');
-    navigate('/admin/courses');
+
+    const coursePayload = isEditing
+      ? {
+          id: id!,
+          title: formData.title,
+          smallDescription: formData.subtitle,
+          description: formData.description,
+          price: parseInt(formData.price) || 0,
+          discountPrice: formData.discountPrice ? parseInt(formData.discountPrice) : undefined,
+          level: formData.level as any,
+          categoryId: formData.category,
+          outstanding: formData.isFeatured,
+          sections: sections.map(s => ({
+            title: s.title,
+            lectures: s.lectures.map(l => ({
+              title: l.title,
+              type: l.type,
+              videoUrl: l.videoFileName,
+              content: l.articleContent,
+              duration: l.type === 'VIDEO'
+                ? parseInt(l.duration.split(':')[0]) * 60 + parseInt(l.duration.split(':')[1] || '0')
+                : undefined,
+              isFree: l.isPreview,
+            })),
+          })),
+        } as UpdateCourseRequest & { id: string }
+      : {
+          title: formData.title,
+          smallDescription: formData.subtitle,
+          description: formData.description,
+          thumbnail: PLACEHOLDER_THUMBNAIL,
+          banner: PLACEHOLDER_BANNER,
+          price: parseInt(formData.price) || 0,
+          discountPrice: formData.discountPrice ? parseInt(formData.discountPrice) : undefined,
+          level: formData.level as any,
+          categoryId: formData.category,
+          sections: sections.map(s => ({
+            title: s.title,
+            lectures: s.lectures.map(l => ({
+              title: l.title,
+              type: l.type,
+              videoUrl: l.videoFileName,
+              content: l.articleContent,
+              duration: l.type === 'VIDEO'
+                ? parseInt(l.duration.split(':')[0]) * 60 + parseInt(l.duration.split(':')[1] || '0')
+                : undefined,
+              isFree: l.isPreview,
+            })),
+          })),
+        } as CreateCourseRequest;
+
+    try {
+      if (isEditing) {
+        await dispatch(updateAdminCourseAsync(coursePayload as any)).unwrap();
+        toast.success('Cập nhật khoá học thành công!');
+      } else {
+        await dispatch(createAdminCourseAsync(coursePayload as any)).unwrap();
+        toast.success('Tạo khoá học thành công!');
+      }
+      navigate('/admin/courses');
+    } catch (error: any) {
+      toast.error(isEditing ? 'Cập nhật thất bại!' : 'Tạo khóa học thất bại!');
+      console.error('Course submit error', error);
+    }
   };
 
-  const addLearningPoint = () => {
-    setLearningPoints([...learningPoints, '']);
-  };
+  const addLearningPoint = () => setLearningPoints([...learningPoints, '']);
 
   const removeLearningPoint = (index: number) => {
     setLearningPoints(learningPoints.filter((_, i) => i !== index));
@@ -90,12 +234,11 @@ export default function AdminCourseForm() {
   };
 
   const addSection = () => {
-    const newSection: Section = {
+    setSections([...sections, {
       id: Date.now().toString(),
       title: `Phần ${sections.length + 1}: Tiêu đề mới`,
       lectures: [],
-    };
-    setSections([...sections, newSection]);
+    }]);
   };
 
   const removeSection = (sectionId: string) => {
@@ -111,19 +254,16 @@ export default function AdminCourseForm() {
       if (s.id === sectionId) {
         return {
           ...s,
-          lectures: [
-            ...s.lectures,
-            {
-              id: `${sectionId}-${Date.now()}`,
-              title: `Bài ${s.lectures.length + 1}: Tiêu đề bài giảng`,
-              duration: '00:00',
-              isPreview: false,
-              type: 'VIDEO' as LectureType,
-              videoFile: null,
-              videoFileName: '',
-              articleContent: '',
-            },
-          ],
+          lectures: [...s.lectures, {
+            id: `${sectionId}-${Date.now()}`,
+            title: `Bài ${s.lectures.length + 1}: Tiêu đề bài giảng`,
+            duration: '00:00',
+            isPreview: false,
+            type: 'VIDEO' as LectureType,
+            videoFile: null,
+            videoFileName: '',
+            articleContent: '',
+          }],
         };
       }
       return s;
@@ -135,15 +275,14 @@ export default function AdminCourseForm() {
       if (s.id === sectionId) {
         return {
           ...s,
-          lectures: s.lectures.map(l => 
-            l.id === lectureId ? { 
-              ...l, 
+          lectures: s.lectures.map(l =>
+            l.id === lectureId ? {
+              ...l,
               type: l.type === 'VIDEO' ? 'ARTICLE' as LectureType : 'VIDEO' as LectureType,
-              // Reset content when switching type
               videoFile: null,
               videoFileName: '',
               articleContent: '',
-              duration: l.type === 'VIDEO' ? '' : '00:00'
+              duration: l.type === 'VIDEO' ? '' : '00:00',
             } : l
           ),
         };
@@ -157,7 +296,7 @@ export default function AdminCourseForm() {
       if (s.id === sectionId) {
         return {
           ...s,
-          lectures: s.lectures.map(l => 
+          lectures: s.lectures.map(l =>
             l.id === lectureId ? { ...l, articleContent: content } : l
           ),
         };
@@ -167,7 +306,6 @@ export default function AdminCourseForm() {
   };
 
   const handleVideoUpload = (sectionId: string, lectureId: string, file: File) => {
-    // Tính duration từ video file
     const video = document.createElement('video');
     video.preload = 'metadata';
     video.onloadedmetadata = () => {
@@ -176,18 +314,12 @@ export default function AdminCourseForm() {
       const minutes = Math.floor(duration / 60);
       const seconds = Math.floor(duration % 60);
       const durationStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-      
-      setSections(sections.map(s => {
+      setSections(prev => prev.map(s => {
         if (s.id === sectionId) {
           return {
             ...s,
-            lectures: s.lectures.map(l => 
-              l.id === lectureId ? { 
-                ...l, 
-                videoFile: file, 
-                videoFileName: file.name,
-                duration: durationStr 
-              } : l
+            lectures: s.lectures.map(l =>
+              l.id === lectureId ? { ...l, videoFile: file, videoFileName: file.name, duration: durationStr } : l
             ),
           };
         }
@@ -202,13 +334,8 @@ export default function AdminCourseForm() {
       if (s.id === sectionId) {
         return {
           ...s,
-          lectures: s.lectures.map(l => 
-            l.id === lectureId ? { 
-              ...l, 
-              videoFile: null, 
-              videoFileName: '',
-              duration: '00:00' 
-            } : l
+          lectures: s.lectures.map(l =>
+            l.id === lectureId ? { ...l, videoFile: null, videoFileName: '', duration: '00:00' } : l
           ),
         };
       }
@@ -219,10 +346,7 @@ export default function AdminCourseForm() {
   const removeLecture = (sectionId: string, lectureId: string) => {
     setSections(sections.map(s => {
       if (s.id === sectionId) {
-        return {
-          ...s,
-          lectures: s.lectures.filter(l => l.id !== lectureId),
-        };
+        return { ...s, lectures: s.lectures.filter(l => l.id !== lectureId) };
       }
       return s;
     }));
@@ -233,7 +357,7 @@ export default function AdminCourseForm() {
       if (s.id === sectionId) {
         return {
           ...s,
-          lectures: s.lectures.map(l => 
+          lectures: s.lectures.map(l =>
             l.id === lectureId ? { ...l, [field]: value } : l
           ),
         };
@@ -241,6 +365,14 @@ export default function AdminCourseForm() {
       return s;
     }));
   };
+
+  if (loadingCourse) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-admin-muted-foreground">Đang tải thông tin khóa học...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -304,38 +436,34 @@ export default function AdminCourseForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label className="text-admin-foreground">Danh mục</Label>
-                <Select 
-                  value={formData.category} 
+                <Select
+                  value={formData.category}
                   onValueChange={(value) => setFormData({ ...formData, category: value })}
                 >
                   <SelectTrigger className="mt-1.5 bg-admin-accent border-admin-border text-admin-foreground">
                     <SelectValue placeholder="Chọn danh mục" />
                   </SelectTrigger>
                   <SelectContent className="bg-admin-card border-admin-border z-50">
-                    <SelectItem value="Lập trình">Lập trình</SelectItem>
-                    <SelectItem value="Kinh doanh">Kinh doanh</SelectItem>
-                    <SelectItem value="Thiết kế">Thiết kế</SelectItem>
-                    <SelectItem value="Marketing">Marketing</SelectItem>
-                    <SelectItem value="CNTT & Phần mềm">CNTT & Phần mềm</SelectItem>
-                    <SelectItem value="Phát triển bản thân">Phát triển bản thân</SelectItem>
+                    {categories.map(cat => (
+                      <SelectItem key={cat._id} value={cat._id}>{cat.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
                 <Label className="text-admin-foreground">Trình độ</Label>
-                <Select 
-                  value={formData.level} 
+                <Select
+                  value={formData.level}
                   onValueChange={(value) => setFormData({ ...formData, level: value })}
                 >
                   <SelectTrigger className="mt-1.5 bg-admin-accent border-admin-border text-admin-foreground">
                     <SelectValue placeholder="Chọn trình độ" />
                   </SelectTrigger>
                   <SelectContent className="bg-admin-card border-admin-border z-50">
-                    <SelectItem value="Beginner">Cơ bản</SelectItem>
-                    <SelectItem value="Intermediate">Trung cấp</SelectItem>
-                    <SelectItem value="Advanced">Nâng cao</SelectItem>
-                    <SelectItem value="All Levels">Tất cả trình độ</SelectItem>
+                    <SelectItem value="BASIC">Cơ bản</SelectItem>
+                    <SelectItem value="INTERMEDIATE">Trung cấp</SelectItem>
+                    <SelectItem value="ADVANCED">Nâng cao</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -476,7 +604,6 @@ export default function AdminCourseForm() {
           <div className="space-y-4">
             {sections.map((section) => (
               <div key={section.id} className="border border-admin-border rounded-lg overflow-hidden">
-                {/* Section Header */}
                 <div className="bg-admin-accent p-4 flex items-center gap-3">
                   <GripVertical className="w-4 h-4 text-admin-muted-foreground cursor-grab" />
                   <Input
@@ -505,7 +632,6 @@ export default function AdminCourseForm() {
                   </Button>
                 </div>
 
-                {/* Lectures */}
                 {section.lectures.length > 0 && (
                   <div className="p-4 space-y-3">
                     {section.lectures.map((lecture) => (
@@ -519,28 +645,21 @@ export default function AdminCourseForm() {
                             placeholder="Tiêu đề bài giảng"
                           />
                           
-                          {/* Toggle Lecture Type Button */}
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
                             onClick={() => toggleLectureType(section.id, lecture.id)}
                             className={`flex items-center gap-1.5 px-2 h-8 border-admin-border ${
-                              lecture.type === 'ARTICLE' 
-                                ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' 
+                              lecture.type === 'ARTICLE'
+                                ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
                                 : 'bg-purple-500/10 text-purple-400 border-purple-500/30'
                             }`}
                           >
                             {lecture.type === 'VIDEO' ? (
-                              <>
-                                <Video className="w-3.5 h-3.5" />
-                                <span className="text-xs">Video</span>
-                              </>
+                              <><Video className="w-3.5 h-3.5" /><span className="text-xs">Video</span></>
                             ) : (
-                              <>
-                                <FileText className="w-3.5 h-3.5" />
-                                <span className="text-xs">Article</span>
-                              </>
+                              <><FileText className="w-3.5 h-3.5" /><span className="text-xs">Article</span></>
                             )}
                           </Button>
                           
@@ -562,10 +681,8 @@ export default function AdminCourseForm() {
                           </Button>
                         </div>
                         
-                        {/* Content Area - Video or Article */}
                         <div className="ml-7">
                           {lecture.type === 'VIDEO' ? (
-                            // Video Upload Area
                             <div className="flex items-center gap-3">
                               {lecture.videoFileName ? (
                                 <div className="flex items-center gap-2 flex-1 bg-admin-accent px-3 py-2 rounded-lg border border-admin-border">
@@ -590,9 +707,7 @@ export default function AdminCourseForm() {
                                     className="hidden"
                                     onChange={(e) => {
                                       const file = e.target.files?.[0];
-                                      if (file) {
-                                        handleVideoUpload(section.id, lecture.id, file);
-                                      }
+                                      if (file) handleVideoUpload(section.id, lecture.id, file);
                                     }}
                                   />
                                   <div className="flex items-center justify-center gap-2">
@@ -603,7 +718,6 @@ export default function AdminCourseForm() {
                               )}
                             </div>
                           ) : (
-                            // Article Content Area
                             <div className="flex flex-col gap-2">
                               <Textarea
                                 value={lecture.articleContent || ''}
