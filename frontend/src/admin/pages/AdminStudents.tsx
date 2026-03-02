@@ -38,6 +38,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+
+import { ROLE, RoleType } from '@/constant/common.constant';
 import { toast } from 'sonner';
 
 const formatCurrency = (value: number) => {
@@ -66,17 +68,30 @@ export default function AdminStudents() {
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [newStudent, setNewStudent] = useState({
+
+  // use constant roles
+
+
+  const [newStudent, setNewStudent] = useState<{
+    name: string;
+    email: string;
+    password: string;
+    role: RoleType;
+  }>({
     name: '',
     email: '',
     password: '',
-    role: 'user',
+    role: ROLE.USER,
   });
   
-  const [editStudent, setEditStudent] = useState({
+  const [editStudent, setEditStudent] = useState<{
+    name: string;
+    email: string;
+    role: RoleType;
+  }>({
     name: '',
     email: '',
-    role: 'user',
+    role: ROLE.USER,
   });
   const [emailContent, setEmailContent] = useState({
     subject: '',
@@ -133,9 +148,9 @@ export default function AdminStudents() {
           name: newStudent.name,
           email: newStudent.email,
           password: newStudent.password,
-          role: newStudent.role,
+          role: newStudent.role?.toString().toUpperCase(),
         });
-        setNewStudent({ name: '', email: '', password: '', role: 'user' });
+        setNewStudent({ name: '', email: '', password: '', role: ROLE.USER });
         setIsAddDialogOpen(false);
         toast.success('Thêm học viên thành công!');
         fetchStudents();
@@ -157,7 +172,7 @@ export default function AdminStudents() {
     setEditStudent({
       name: student.name,
       email: student.email,
-      role: 'user',
+      role: (student.role?.toString().toUpperCase() as RoleType) || ROLE.USER,
     });
     setIsEditDialogOpen(true);
   };
@@ -173,7 +188,7 @@ export default function AdminStudents() {
         await userService.updateUser(selectedStudent.id, {
           name: editStudent.name,
           email: editStudent.email,
-          role: editStudent.role,
+          role: editStudent.role?.toString().toUpperCase(),
         });
         setIsEditDialogOpen(false);
         setSelectedStudent(null);
@@ -477,13 +492,13 @@ export default function AdminStudents() {
             </div>
             <div className="space-y-2">
               <Label>Vai trò</Label>
-              <Select value={newStudent.role} onValueChange={(value) => setNewStudent({ ...newStudent, role: value })}>
+              <Select value={newStudent.role} onValueChange={(value) => setNewStudent({ ...newStudent, role: value as RoleType })}>
                 <SelectTrigger className="bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-[hsl(220,20%,15%)] border-[hsl(220,20%,28%)] text-white z-[10000]">
-                  <SelectItem value="user">Học viên</SelectItem>
-                  <SelectItem value="admin">Quản trị viên</SelectItem>
+                  <SelectItem value={ROLE.USER}>Học viên</SelectItem>
+                  <SelectItem value={ROLE.ADMIN}>Quản trị viên</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -585,13 +600,13 @@ export default function AdminStudents() {
             </div>
             <div className="space-y-2">
               <Label>Vai trò</Label>
-              <Select value={editStudent.role} onValueChange={(value) => setEditStudent({ ...editStudent, role: value })}>
+              <Select value={editStudent.role} onValueChange={(value) => setEditStudent({ ...editStudent, role: value as RoleType })}>
                 <SelectTrigger className="bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-[hsl(220,20%,15%)] border-[hsl(220,20%,28%)] text-white z-[10000]">
-                  <SelectItem value="user">Học viên</SelectItem>
-                  <SelectItem value="admin">Quản trị viên</SelectItem>
+                  <SelectItem value={ROLE.USER}>Học viên</SelectItem>
+                  <SelectItem value={ROLE.ADMIN}>Quản trị viên</SelectItem>
                 </SelectContent>
               </Select>
             </div>

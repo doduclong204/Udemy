@@ -140,6 +140,7 @@ const userService = {
         joinedAt: u.createdAt ?? '',
         lastActive: u.updatedAt ?? '',
         status: (u.active ?? u.status) ? 'Active' : 'Inactive',
+        role: u.role ? u.role.toString().toUpperCase() : undefined,
       }));
 
       return {
@@ -155,7 +156,8 @@ const userService = {
       // Fallback to mock
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      let filteredStudents = [...mockStudents];
+      // add a default role for mocks so the UI can display/update it
+      let filteredStudents = [...mockStudents].map(s => ({ ...s, role: 'USER' } as any));
       
       if (params?.search) {
         const search = params.search.toLowerCase();
@@ -223,8 +225,16 @@ const userService = {
    */
   createUser: async (data: { name: string; email: string; password?: string; role?: string }): Promise<any> => {
     // backend expects `username` (not email)
-    const payload = { ...data, username: data.email } as any;
+    const payload: any = { ...data, username: data.email };
     delete payload.email;
+
+    // normalize role to uppercase so backend stores USER/ADMIN
+    if (payload.role) {
+      payload.role = payload.role.toString().toUpperCase();
+    } else {
+      payload.role = 'USER';
+    }
+
     try {
       const response = await axiosInstance.post(`${API_ENDPOINTS.USERS.BASE}`, payload);
       return response.data?.data ?? response.data;
@@ -239,10 +249,15 @@ const userService = {
    */
   updateUser: async (id: string, data: Partial<{ name: string; email: string; role?: string }>): Promise<any> => {
     const payload: any = { ...data };
-    if ((payload as any).email) {
-      payload.username = (payload as any).email;
+    if (payload.email) {
+      payload.username = payload.email;
       delete payload.email;
     }
+
+    if (payload.role) {
+      payload.role = payload.role.toString().toUpperCase();
+    }
+
     const response = await axiosInstance.put(`${API_ENDPOINTS.USERS.BASE}/${id}`, payload);
     return response.data?.data ?? response.data;
   },

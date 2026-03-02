@@ -36,7 +36,8 @@ export function Header() {
     (state: RootState) => state.auth,
   );
   const isAdmin = useSelector(
-    (state: RootState) => state.auth.user?.role === "ADMIN",
+    (state: RootState) =>
+      !!state.auth.user?.role && state.auth.user.role.toUpperCase() === "ADMIN",
   );
 
   const { items } = useCart();
