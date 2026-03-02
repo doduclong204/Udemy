@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { Course, AdminCourse, PaginationResponse } from '@/types';
+import { Course, AdminCourse, CreateCourseRequest, UpdateCourseRequest, GetCoursesParams } from '@/types';
 import courseService from '@/services/courseService';
 import type { RootState } from '../store';
 
@@ -34,6 +34,9 @@ const initialState: CourseState = {
     totalPages: 0,
   },
 };
+
+// Helper: lấy id dù backend trả _id hay id
+const getId = (course: any): string => course._id || course.id || '';
 
 // Async Thunks
 export const fetchCoursesAsync = createAsyncThunk(
@@ -87,12 +90,48 @@ export const fetchPopularCoursesAsync = createAsyncThunk(
 // Admin Thunks
 export const fetchAdminCoursesAsync = createAsyncThunk(
   'courses/fetchAdminCourses',
-  async (params: { page?: number; pageSize?: number } = {}, { rejectWithValue }) => {
+  async (params: GetCoursesParams = {}, { rejectWithValue }) => {
     try {
       const response = await courseService.getAdminCourses(params);
       return response;
     } catch (error: any) {
       return rejectWithValue(error.message || 'Không thể tải danh sách khóa học');
+    }
+  }
+);
+
+export const createAdminCourseAsync = createAsyncThunk(
+  'courses/createAdminCourse',
+  async (data: CreateCourseRequest, { rejectWithValue }) => {
+    try {
+      const course = await courseService.createCourse(data);
+      return course;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Không thể tạo khóa học');
+    }
+  }
+);
+
+export const updateAdminCourseAsync = createAsyncThunk(
+  'courses/updateAdminCourse',
+  async (data: UpdateCourseRequest & { id: string }, { rejectWithValue }) => {
+    try {
+      const course = await courseService.updateCourse(data);
+      return course;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Không thể cập nhật khóa học');
+    }
+  }
+);
+
+export const deleteAdminCourseAsync = createAsyncThunk(
+  'courses/deleteAdminCourse',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      await courseService.deleteCourse(id);
+      return id;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Không thể xóa khóa học');
     }
   }
 );
@@ -119,18 +158,19 @@ const courseSlice = createSlice({
       })
       .addCase(fetchCoursesAsync.fulfilled, (state, action) => {
         state.loading = false;
-        state.courses = action.payload.data ?? action.payload.result;
+        state.courses = action.payload.result;
         state.pagination = {
-          page: (action.payload.meta.current ?? action.payload.meta.page) + 1,
-          pageSize: action.payload.meta.pageSize ?? action.payload.meta.pageSize,
-          totalItems: action.payload.meta.total ?? action.payload.meta.totalItems,
-          totalPages: action.payload.meta.pages ?? action.payload.meta.totalPages,
+          page: action.payload.meta.current + 1,
+          pageSize: action.payload.meta.pageSize,
+          totalItems: action.payload.meta.total,
+          totalPages: action.payload.meta.pages,
         };
       })
       .addCase(fetchCoursesAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Fetch Course By Id
       .addCase(fetchCourseByIdAsync.pending, (state) => {
         state.loading = true;
@@ -144,29 +184,83 @@ const courseSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Fetch Featured Courses
       .addCase(fetchFeaturedCoursesAsync.fulfilled, (state, action) => {
         state.featuredCourses = action.payload;
       })
+
       // Fetch Popular Courses
       .addCase(fetchPopularCoursesAsync.fulfilled, (state, action) => {
         state.popularCourses = action.payload;
       })
-      // Admin Courses
+
+      // Admin Fetch Courses
       .addCase(fetchAdminCoursesAsync.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(fetchAdminCoursesAsync.fulfilled, (state, action) => {
         state.loading = false;
-        state.adminCourses = action.payload.data ?? action.payload.result;
+        state.adminCourses = action.payload.result;
         state.pagination = {
-          page: (action.payload.meta.current ?? action.payload.meta.page) + 1,
-          pageSize: action.payload.meta.pageSize ?? action.payload.meta.pageSize,
-          totalItems: action.payload.meta.total ?? action.payload.meta.totalItems,
-          totalPages: action.payload.meta.pages ?? action.payload.meta.totalPages,
+          page: action.payload.meta.current + 1,
+          pageSize: action.payload.meta.pageSize,
+          totalItems: action.payload.meta.total,
+          totalPages: action.payload.meta.pages,
         };
       })
       .addCase(fetchAdminCoursesAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      // Create Admin Course
+      .addCase(createAdminCourseAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createAdminCourseAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        state.adminCourses.unshift(action.payload);
+      })
+      .addCase(createAdminCourseAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      // Update Admin Course
+      .addCase(updateAdminCourseAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateAdminCourseAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        // ✅ So sánh cả _id lẫn id phòng backend trả tên khác nhau
+        const updatedId = getId(action.payload);
+        const idx = state.adminCourses.findIndex(c => getId(c) === updatedId);
+        if (idx !== -1) {
+          state.adminCourses[idx] = action.payload;
+        }
+      })
+      .addCase(updateAdminCourseAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      // Delete Admin Course
+      .addCase(deleteAdminCourseAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteAdminCourseAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        // ✅ So sánh cả _id lẫn id
+        state.adminCourses = state.adminCourses.filter(
+          c => getId(c) !== action.payload
+        );
+      })
+      .addCase(deleteAdminCourseAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });

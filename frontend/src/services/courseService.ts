@@ -7,231 +7,132 @@ import {
   UpdateCourseRequest,
   ApiResponse, 
   ApiPagination,
-  Section,
+  SectionResponse,
   GetCoursesParams
 } from '@/types';
-import { courses as mockCourses, sections as mockSections } from '@/data/mockData';
-import { adminCourses as mockAdminCourses } from '@/data/adminMockData';
 
 const courseService = {
   /**
    * Lấy danh sách khóa học
-   * TODO: Implement thật với API sau
    */
   getCourses: async (params?: GetCoursesParams): Promise<ApiPagination<Course>> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.get<PaginationResponse<Course>>(API_ENDPOINTS.COURSES.BASE, { params });
-    // return response.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    let filteredCourses = [...mockCourses];
-    
-    if (params?.search) {
-      const search = params.search.toLowerCase();
-      filteredCourses = filteredCourses.filter(c => 
-        c.title.toLowerCase().includes(search) || 
-        c.instructor.toLowerCase().includes(search)
-      );
-    }
-    
-    if (params?.category) {
-      filteredCourses = filteredCourses.filter(c => c.category === params.category);
-    }
-    
-    if (params?.level) {
-      filteredCourses = filteredCourses.filter(c => c.level === params.level);
-    }
-    
     const page = params?.page || 1;
     const pageSize = params?.pageSize || 10;
-    const startIndex = (page - 1) * pageSize;
-    const paginatedCourses = filteredCourses.slice(startIndex, startIndex + pageSize);
-    
-    return {
-      meta: {
-        current: page - 1,
-        pageSize,
-        pages: Math.ceil(filteredCourses.length / pageSize),
-        total: filteredCourses.length,
+
+    const response = await axiosInstance.get<ApiResponse<ApiPagination<Course>>>(API_ENDPOINTS.COURSES.BASE, {
+      params: {
+        page: Math.max(0, page - 1),
+        size: pageSize,
+        filter: params?.search ? `title~'*${params.search}*'` : undefined,
+        category: params?.category,
+        level: params?.level,
       },
-      result: paginatedCourses,
-    };
+    });
+
+    return response.data.data;
   },
 
   /**
    * Lấy chi tiết khóa học theo ID
-   * TODO: Implement thật với API sau
    */
   getCourseById: async (id: string): Promise<Course | null> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.get<ApiResponse<Course>>(`${API_ENDPOINTS.COURSES.BASE}/${id}`);
-    // return response.data.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockCourses.find(c => c.id === id) || null;
+    const response = await axiosInstance.get<ApiResponse<Course>>(`${API_ENDPOINTS.COURSES.BASE}/${id}`);
+    return response.data.data;
   },
 
   /**
    * Lấy các sections/lessons của khóa học
-   * TODO: Implement thật với API sau
    */
-  getCourseSections: async (courseId: string): Promise<Section[]> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.get<ApiResponse<Section[]>>(`${API_ENDPOINTS.COURSES.BASE}/${courseId}/sections`);
-    // return response.data.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockSections as unknown as Section[];
+  getCourseSections: async (courseId: string): Promise<SectionResponse[]> => {
+    const response = await axiosInstance.get<ApiResponse<SectionResponse[]>>(
+      `${API_ENDPOINTS.COURSES.BASE}/${courseId}/sections`
+    );
+    return response.data.data;
   },
 
   /**
    * Lấy khóa học nổi bật
-   * TODO: Implement thật với API sau
    */
   getFeaturedCourses: async (): Promise<Course[]> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.get<ApiResponse<Course[]>>(API_ENDPOINTS.COURSES.FEATURED);
-    // return response.data.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockCourses.filter(c => c.badge === 'bestseller');
+    const response = await axiosInstance.get<ApiResponse<Course[]>>(API_ENDPOINTS.COURSES.FEATURED);
+    return response.data.data;
   },
 
   /**
    * Lấy khóa học phổ biến
-   * TODO: Implement thật với API sau
    */
   getPopularCourses: async (): Promise<Course[]> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.get<ApiResponse<Course[]>>(API_ENDPOINTS.COURSES.POPULAR);
-    // return response.data.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockCourses.sort((a, b) => b.studentCount - a.studentCount).slice(0, 8);
+    const response = await axiosInstance.get<ApiResponse<Course[]>>(API_ENDPOINTS.COURSES.POPULAR);
+    return response.data.data;
   },
 
   /**
    * Lấy khóa học theo category
-   * TODO: Implement thật với API sau
    */
   getCoursesByCategory: async (categoryId: string): Promise<Course[]> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.get<ApiResponse<Course[]>>(`${API_ENDPOINTS.COURSES.BY_CATEGORY}/${categoryId}`);
-    // return response.data.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockCourses.filter(c => c.category === categoryId);
+    const response = await axiosInstance.get<ApiResponse<Course[]>>(
+      `${API_ENDPOINTS.COURSES.BY_CATEGORY}/${categoryId}`
+    );
+    return response.data.data;
   },
 
   // ==================== Admin Methods ====================
 
   /**
    * Lấy danh sách khóa học (Admin)
-   * TODO: Implement thật với API sau
+   * Backend endpoint: GET /courses (không có /admin prefix)
    */
   getAdminCourses: async (params?: GetCoursesParams): Promise<ApiPagination<AdminCourse>> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.get<PaginationResponse<AdminCourse>>('/admin/courses', { params });
-    // return response.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
     const page = params?.page || 1;
     const pageSize = params?.pageSize || 10;
-    const startIndex = (page - 1) * pageSize;
-    const paginatedCourses = mockAdminCourses.slice(startIndex, startIndex + pageSize);
-    
-    return {
-      meta: {
-        current: page - 1,
-        pageSize,
-        pages: Math.ceil(mockAdminCourses.length / pageSize),
-        total: mockAdminCourses.length,
-      },
-      result: paginatedCourses,
-    };
+
+    const response = await axiosInstance.get<ApiResponse<ApiPagination<AdminCourse>>>(
+      API_ENDPOINTS.COURSES.BASE,
+      {
+        params: {
+          page: Math.max(0, page - 1),
+          size: pageSize,
+          filter: params?.search ? `title~'*${params.search}*'` : undefined,
+          category: params?.category,
+          level: params?.level,
+        },
+      }
+    );
+
+    return response.data.data;
   },
 
   /**
    * Tạo khóa học mới
-   * TODO: Implement thật với API sau
+   * Backend endpoint: POST /courses
    */
   createCourse: async (data: CreateCourseRequest): Promise<AdminCourse> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.post<ApiResponse<AdminCourse>>(API_ENDPOINTS.COURSES.BASE, data);
-    // return response.data.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const newCourse: AdminCourse = {
-      id: `course-${Date.now()}`,
-      title: data.title,
-      subtitle: data.subtitle,
-      description: data.description,
-      thumbnail: data.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=225&fit=crop',
-      category: data.category,
-      level: data.level,
-      price: data.price,
-      discountPrice: data.discountPrice,
-      students: 0,
-      rating: '0',
-      reviews: 0,
-      lectures: 0,
-      duration: '0 giờ',
-      status: 'Draft',
-      isFeatured: false,
-      isBestseller: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    
-    return newCourse;
+    const response = await axiosInstance.post<ApiResponse<AdminCourse>>(
+      API_ENDPOINTS.COURSES.BASE,
+      data
+    );
+    return response.data.data;
   },
 
   /**
    * Cập nhật khóa học
-   * TODO: Implement thật với API sau
+   * Backend endpoint: PUT /courses/:id
    */
-  updateCourse: async (data: UpdateCourseRequest): Promise<AdminCourse> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.put<ApiResponse<AdminCourse>>(`${API_ENDPOINTS.COURSES.BASE}/${data.id}`, data);
-    // return response.data.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const existingCourse = mockAdminCourses.find(c => c.id === data.id);
-    if (!existingCourse) {
-      throw new Error('Course not found');
-    }
-    
-    return {
-      ...existingCourse,
-      ...data,
-      updatedAt: new Date().toISOString(),
-    } as AdminCourse;
+  updateCourse: async (data: UpdateCourseRequest & { id: string }): Promise<AdminCourse> => {
+    const { id, ...payload } = data;
+    const response = await axiosInstance.put<ApiResponse<AdminCourse>>(
+      `${API_ENDPOINTS.COURSES.BASE}/${id}`,
+      payload
+    );
+    return response.data.data;
   },
 
   /**
    * Xóa khóa học
-   * TODO: Implement thật với API sau
+   * Backend endpoint: DELETE /courses/:id
    */
   deleteCourse: async (id: string): Promise<void> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // await axiosInstance.delete(`${API_ENDPOINTS.COURSES.BASE}/${id}`);
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 500));
-    console.log('Course deleted:', id);
+    await axiosInstance.delete(`${API_ENDPOINTS.COURSES.BASE}/${id}`);
   },
 };
 
