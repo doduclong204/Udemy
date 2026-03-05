@@ -1,16 +1,34 @@
-import { useState } from 'react';
-import { Plus, Search, MoreVertical, Eye, Pencil, Trash2, Bell, Send, Users } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { useEffect, useRef, useState } from "react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Plus,
+  Search,
+  MoreVertical,
+  Eye,
+  Pencil,
+  Trash2,
+  Bell,
+  Send,
+  Users,
+  ChevronDown,
+} from "lucide-react";
+import notificationService from "@/services/notificationService";
+import {
+  NotificationResponse,
+  NotificationStatus,
+  NotificationType,
+  NotificationTarget,
+  NotificationCreationRequest,
+} from "@/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +36,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,261 +46,450 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { toast } from 'sonner';
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: 'info' | 'success' | 'warning' | 'course' | 'promo';
-  target: 'all' | 'students' | 'new_users';
-  status: 'sent' | 'draft';
-  sentAt: string | null;
-  createdAt: string;
-  readCount: number;
-  totalRecipients: number;
+// ==================== Helpers ====================
+
+const formatDateTime = (dateString: string | null | undefined) => {
+  if (!dateString) return "Chưa gửi";
+  return new Date(dateString).toLocaleString("vi-VN");
+};
+
+const INPUT_CLASS =
+  "bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white placeholder:text-slate-500";
+const BTN_CANCEL =
+  "border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]";
+const DROPDOWN_BG =
+  "bg-[hsl(220,25%,12%)] border border-[hsl(220,20%,28%)] rounded-lg shadow-xl z-[200]";
+const ITEM_BASE =
+  "w-full text-left px-3 py-2 text-sm transition-colors cursor-pointer";
+const ITEM_DEFAULT = "text-slate-300 hover:bg-[hsl(220,20%,25%)]";
+const ITEM_SEL = "bg-admin-primary/20 text-white";
+
+// ==================== Label maps ====================
+
+const TYPE_LABELS: Record<NotificationType, string> = {
+  PROMOTION: "Khuyến mãi",
+  COURSE: "Khóa học",
+  SYSTEM: "Hệ thống",
+};
+
+const TYPE_COLORS: Record<NotificationType, string> = {
+  PROMOTION: "bg-purple-500/10 text-purple-400",
+  COURSE: "bg-blue-500/10 text-blue-400",
+  SYSTEM: "bg-gray-500/10 text-gray-400",
+};
+
+const TARGET_LABELS: Record<NotificationTarget, string> = {
+  ALL: "Tất cả người dùng",
+  ENROLLED: "Học viên đã đăng ký",
+  NEW_USER: "Người dùng mới",
+};
+
+const STATUS_COLORS: Record<NotificationStatus, string> = {
+  SENT: "bg-green-500/10 text-green-500",
+  DRAFT: "bg-gray-500/10 text-gray-400",
+};
+
+const STATUS_LABELS: Record<NotificationStatus, string> = {
+  SENT: "Đã gửi",
+  DRAFT: "Bản nháp",
+};
+
+// ==================== Custom Select ====================
+
+function CustomSelect<T extends string>({
+  value,
+  onChange,
+  options,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: string }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  const selected = options.find((o) => o.value === value);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`w-full flex items-center justify-between rounded-md border px-3 py-2 text-sm ${INPUT_CLASS}`}
+      >
+        <span>{selected?.label}</span>
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-slate-500 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <div className={`absolute top-full mt-1 w-full ${DROPDOWN_BG}`}>
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onMouseDown={() => {
+                onChange(opt.value);
+                setOpen(false);
+              }}
+              className={`${ITEM_BASE} ${value === opt.value ? ITEM_SEL : ITEM_DEFAULT}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
-const initialNotifications: Notification[] = [
-  {
-    id: '1',
-    title: 'Khuyến mãi cuối năm 2024',
-    message: 'Giảm 50% tất cả khóa học từ ngày 20-31/12. Đừng bỏ lỡ!',
-    type: 'promo',
-    target: 'all',
-    status: 'sent',
-    sentAt: '2024-12-15T10:00:00',
-    createdAt: '2024-12-14T08:00:00',
-    readCount: 1250,
-    totalRecipients: 2500,
-  },
-  {
-    id: '2',
-    title: 'Khóa học mới: React Advanced',
-    message: 'Khóa học React nâng cao đã được cập nhật với 20 bài giảng mới về hooks và performance.',
-    type: 'course',
-    target: 'students',
-    status: 'sent',
-    sentAt: '2024-12-10T14:30:00',
-    createdAt: '2024-12-10T14:00:00',
-    readCount: 890,
-    totalRecipients: 1500,
-  },
-  {
-    id: '3',
-    title: 'Chào mừng thành viên mới',
-    message: 'Cảm ơn bạn đã tham gia LearnHub! Khám phá 1000+ khóa học chất lượng.',
-    type: 'info',
-    target: 'new_users',
-    status: 'sent',
-    sentAt: '2024-12-08T09:00:00',
-    createdAt: '2024-12-07T16:00:00',
-    readCount: 320,
-    totalRecipients: 400,
-  },
-  {
-    id: '4',
-    title: 'Bảo trì hệ thống',
-    message: 'Hệ thống sẽ bảo trì từ 2:00 - 4:00 ngày 20/12. Xin lỗi vì sự bất tiện.',
-    type: 'warning',
-    target: 'all',
-    status: 'draft',
-    sentAt: null,
-    createdAt: '2024-12-16T10:00:00',
-    readCount: 0,
-    totalRecipients: 0,
-  },
-  {
-    id: '5',
-    title: 'Hoàn thành khóa học - Chứng chỉ',
-    message: 'Chúc mừng! Bạn đã hoàn thành khóa học và nhận được chứng chỉ.',
-    type: 'success',
-    target: 'students',
-    status: 'sent',
-    sentAt: '2024-12-05T11:00:00',
-    createdAt: '2024-12-05T10:30:00',
-    readCount: 150,
-    totalRecipients: 150,
-  },
+// ==================== Form Dialog ====================
+
+const TYPE_OPTIONS: { value: NotificationType; label: string }[] = [
+  { value: "PROMOTION", label: "Khuyến mãi" },
+  { value: "COURSE", label: "Khóa học" },
+  { value: "SYSTEM", label: "Hệ thống" },
 ];
 
-const typeLabels: Record<Notification['type'], string> = {
-  info: 'Thông tin',
-  success: 'Thành công',
-  warning: 'Cảnh báo',
-  course: 'Khóa học',
-  promo: 'Khuyến mãi',
-};
+const TARGET_OPTIONS: { value: NotificationTarget; label: string }[] = [
+  { value: "ALL", label: "Tất cả người dùng" },
+  { value: "ENROLLED", label: "Học viên đã đăng ký" },
+  { value: "NEW_USER", label: "Người dùng mới" },
+];
 
-const targetLabels: Record<Notification['target'], string> = {
-  all: 'Tất cả người dùng',
-  students: 'Học viên đã đăng ký',
-  new_users: 'Người dùng mới',
-};
+interface FormData {
+  title: string;
+  message: string;
+  type: NotificationType;
+  targetType: NotificationTarget;
+}
 
-const statusLabels: Record<Notification['status'], string> = {
-  sent: 'Đã gửi',
-  draft: 'Bản nháp',
-};
+interface NotificationFormDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (data: FormData, sendNow: boolean) => void;
+  initialData?: FormData;
+  isEdit?: boolean;
+  isLoading?: boolean;
+}
 
-const formatDateTime = (dateString: string | null) => {
-  if (!dateString) return 'Chưa gửi';
-  return new Date(dateString).toLocaleString('vi-VN');
-};
-
-export default function AdminNotifications() {
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    message: '',
-    type: 'info' as Notification['type'],
-    target: 'all' as Notification['target'],
-  });
-  const itemsPerPage = 10;
-
-  const filteredNotifications = notifications.filter(n => {
-    const matchesSearch = 
-      n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      n.message.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || n.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const totalPages = Math.ceil(filteredNotifications.length / itemsPerPage);
-  const paginatedNotifications = filteredNotifications.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+function NotificationFormDialog({
+  open,
+  onClose,
+  onSubmit,
+  initialData,
+  isEdit,
+  isLoading,
+}: NotificationFormDialogProps) {
+  const [form, setForm] = useState<FormData>(
+    initialData ?? {
+      title: "",
+      message: "",
+      type: "SYSTEM",
+      targetType: "ALL",
+    },
   );
 
-  const handleAdd = (sendNow: boolean) => {
-    if (!formData.title.trim() || !formData.message.trim()) {
-      toast.error('Vui lòng nhập đầy đủ tiêu đề và nội dung!');
+  useEffect(() => {
+    if (open)
+      setForm(
+        initialData ?? {
+          title: "",
+          message: "",
+          type: "SYSTEM",
+          targetType: "ALL",
+        },
+      );
+  }, [open]); // eslint-disable-line
+
+  const set = (k: keyof FormData, v: string) =>
+    setForm((prev) => ({ ...prev, [k]: v }));
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
+      <DialogContent className="admin-dialog sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-white">
+            {isEdit ? "Chỉnh sửa thông báo" : "Tạo thông báo mới"}
+          </DialogTitle>
+          <DialogDescription className="text-slate-400">
+            {isEdit
+              ? "Cập nhật nội dung thông báo bản nháp"
+              : "Nhập thông tin thông báo gửi đến người dùng"}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label className="text-white">
+              Tiêu đề <span className="text-red-400">*</span>
+            </Label>
+            <Input
+              placeholder="Nhập tiêu đề thông báo"
+              value={form.title}
+              onChange={(e) => set("title", e.target.value)}
+              className={INPUT_CLASS}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-white">
+              Nội dung <span className="text-red-400">*</span>
+            </Label>
+            <Textarea
+              placeholder="Nhập nội dung thông báo..."
+              value={form.message}
+              onChange={(e) => set("message", e.target.value)}
+              className={`${INPUT_CLASS} resize-none`}
+              rows={4}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-white">Loại thông báo</Label>
+              <CustomSelect<NotificationType>
+                value={form.type}
+                onChange={(v) => set("type", v)}
+                options={TYPE_OPTIONS}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-white">Đối tượng</Label>
+              <CustomSelect<NotificationTarget>
+                value={form.targetType}
+                onChange={(v) => set("targetType", v)}
+                options={TARGET_OPTIONS}
+              />
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className={BTN_CANCEL}
+            disabled={isLoading}
+          >
+            Hủy
+          </Button>
+          {!isEdit && (
+            <Button
+              variant="outline"
+              onClick={() => onSubmit(form, false)}
+              className={BTN_CANCEL}
+              disabled={isLoading}
+            >
+              Lưu nháp
+            </Button>
+          )}
+          <Button
+            type="button"
+            onClick={() => onSubmit(form, true)}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-medium"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              "Đang xử lý..."
+            ) : isEdit ? (
+              "Lưu thay đổi"
+            ) : (
+              <>
+                <Send className="w-4 h-4 mr-2" />
+                Gửi ngay
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ==================== Main Component ====================
+
+export default function AdminNotifications() {
+  // ── List state ──────────────────────────────────────────
+  const [notifications, setNotifications] = useState<NotificationResponse[]>(
+    [],
+  );
+  const [totalItems, setTotalItems] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<NotificationStatus | "all">(
+    "all",
+  );
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  // ── Dialog state ──────────────────────────────────────────
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [selected, setSelected] = useState<NotificationResponse | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ── Fetch ─────────────────────────────────────────────────
+
+  const fetchNotifications = async () => {
+    setIsLoading(true);
+    try {
+      const res = await notificationService.getAdminNotifications({
+        page: currentPage,
+        pageSize: itemsPerPage,
+        search: searchQuery || undefined,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+      });
+      setNotifications(res.result);
+      setTotalItems(res.meta.total);
+    } catch {
+      toast.error("Không thể tải danh sách thông báo");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [currentPage]); // eslint-disable-line
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setCurrentPage(1);
+      fetchNotifications();
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchQuery, statusFilter]); // eslint-disable-line
+
+  // ── Stats ──────────────────────────────────────────────────
+
+  const sentCount = notifications.filter((n) => n.status === "SENT").length;
+  const draftCount = notifications.filter((n) => n.status === "DRAFT").length;
+  const totalRead = notifications.reduce((s, n) => s + (n.totalRead ?? 0), 0);
+
+  // ── Handlers ──────────────────────────────────────────────
+
+  const handleFormSubmit = async (data: FormData, sendNow: boolean) => {
+    if (!data.title.trim() || !data.message.trim()) {
+      toast.error("Vui lòng nhập đầy đủ tiêu đề và nội dung!");
       return;
     }
-
-    const newNotification: Notification = {
-      id: String(Date.now()),
-      title: formData.title,
-      message: formData.message,
-      type: formData.type,
-      target: formData.target,
-      status: sendNow ? 'sent' : 'draft',
-      sentAt: sendNow ? new Date().toISOString() : null,
-      createdAt: new Date().toISOString(),
-      readCount: 0,
-      totalRecipients: sendNow ? (formData.target === 'all' ? 2500 : formData.target === 'students' ? 1500 : 400) : 0,
-    };
-
-    setNotifications([newNotification, ...notifications]);
-    setFormData({ title: '', message: '', type: 'info', target: 'all' });
-    setIsAddDialogOpen(false);
-    toast.success(sendNow ? 'Đã gửi thông báo!' : 'Đã lưu bản nháp!');
+    setIsSubmitting(true);
+    try {
+      const payload: NotificationCreationRequest = {
+        type: data.type,
+        title: data.title,
+        message: data.message,
+        targetType: data.targetType,
+        status: sendNow ? "SENT" : "DRAFT",
+      };
+      await notificationService.createNotification(payload);
+      toast.success(sendNow ? "Đã gửi thông báo!" : "Đã lưu bản nháp!");
+      setIsAddOpen(false);
+      fetchNotifications();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Tạo thông báo thất bại");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleEdit = () => {
-    if (!formData.title.trim() || !formData.message.trim()) {
-      toast.error('Vui lòng nhập đầy đủ tiêu đề và nội dung!');
+  const handleEditSubmit = async (data: FormData, _sendNow: boolean) => {
+    if (!selected) return;
+    if (!data.title.trim() || !data.message.trim()) {
+      toast.error("Vui lòng nhập đầy đủ tiêu đề và nội dung!");
       return;
     }
-
-    setNotifications(notifications.map(n =>
-      n.id === selectedNotification?.id
-        ? { ...n, title: formData.title, message: formData.message, type: formData.type, target: formData.target }
-        : n
-    ));
-    setIsEditDialogOpen(false);
-    setSelectedNotification(null);
-    toast.success('Cập nhật thông báo thành công!');
-  };
-
-  const handleSendDraft = (notification: Notification) => {
-    setNotifications(notifications.map(n =>
-      n.id === notification.id
-        ? { 
-            ...n, 
-            status: 'sent' as const, 
-            sentAt: new Date().toISOString(),
-            totalRecipients: n.target === 'all' ? 2500 : n.target === 'students' ? 1500 : 400,
-          }
-        : n
-    ));
-    toast.success('Đã gửi thông báo!');
-  };
-
-  const handleDelete = () => {
-    if (selectedNotification) {
-      setNotifications(notifications.filter(n => n.id !== selectedNotification.id));
-      setIsDeleteDialogOpen(false);
-      setSelectedNotification(null);
-      toast.success('Đã xóa thông báo!');
+    setIsSubmitting(true);
+    try {
+      await notificationService.updateNotification(selected._id, {
+        type: data.type,
+        title: data.title,
+        message: data.message,
+        targetType: data.targetType,
+      });
+      toast.success("Cập nhật thông báo thành công!");
+      setIsEditOpen(false);
+      setSelected(null);
+      fetchNotifications();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Cập nhật thất bại");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const openViewDialog = (notification: Notification) => {
-    setSelectedNotification(notification);
-    setIsViewDialogOpen(true);
-  };
-
-  const openEditDialog = (notification: Notification) => {
-    setSelectedNotification(notification);
-    setFormData({
-      title: notification.title,
-      message: notification.message,
-      type: notification.type,
-      target: notification.target,
-    });
-    setIsEditDialogOpen(true);
-  };
-
-  const openDeleteDialog = (notification: Notification) => {
-    setSelectedNotification(notification);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const getTypeColor = (type: Notification['type']) => {
-    switch (type) {
-      case 'success': return 'bg-green-500/10 text-green-500';
-      case 'warning': return 'bg-yellow-500/10 text-yellow-500';
-      case 'course': return 'bg-blue-500/10 text-blue-500';
-      case 'promo': return 'bg-purple-500/10 text-purple-500';
-      default: return 'bg-gray-500/10 text-gray-400';
+  const handleSendDraft = async (n: NotificationResponse) => {
+    try {
+      await notificationService.sendNotification(n._id);
+      toast.success("Đã gửi thông báo!");
+      fetchNotifications();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Gửi thất bại");
     }
   };
 
-  const getStatusColor = (status: Notification['status']) => {
-    switch (status) {
-      case 'sent': return 'bg-green-500/10 text-green-500';
-      case 'draft': return 'bg-gray-500/10 text-gray-400';
+  const handleDeleteConfirm = async () => {
+    if (!selected) return;
+    try {
+      await notificationService.deleteNotification(selected._id);
+      toast.success("Đã xóa thông báo!");
+      setIsDeleteOpen(false);
+      setSelected(null);
+      fetchNotifications();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Xóa thất bại");
     }
   };
+
+  const openView = (n: NotificationResponse) => {
+    setSelected(n);
+    setIsViewOpen(true);
+  };
+  const openEdit = (n: NotificationResponse) => {
+    setSelected(n);
+    setIsEditOpen(true);
+  };
+  const openDelete = (n: NotificationResponse) => {
+    setSelected(n);
+    setIsDeleteOpen(true);
+  };
+
+  // ── Render ────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-admin-foreground">Quản lý Thông báo</h1>
-          <p className="text-admin-muted-foreground">Tổng cộng {notifications.length} thông báo</p>
+          <h1 className="text-2xl font-bold text-admin-foreground">
+            Quản lý Thông báo
+          </h1>
+          <p className="text-admin-muted-foreground">
+            Tổng cộng {totalItems} thông báo
+          </p>
         </div>
-        <Button 
-          onClick={() => {
-            setFormData({ title: '', message: '', type: 'info', target: 'all' });
-            setIsAddDialogOpen(true);
-          }} 
+        <Button
+          onClick={() => setIsAddOpen(true)}
           className="bg-admin-primary hover:bg-admin-primary/90"
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -292,24 +499,28 @@ export default function AdminNotifications() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-admin-card border border-admin-border rounded-xl p-4">
-          <p className="text-2xl font-bold text-admin-foreground">{notifications.length}</p>
-          <p className="text-sm text-admin-muted-foreground">Tổng thông báo</p>
-        </div>
-        <div className="bg-admin-card border border-admin-border rounded-xl p-4">
-          <p className="text-2xl font-bold text-green-500">{notifications.filter(n => n.status === 'sent').length}</p>
-          <p className="text-sm text-admin-muted-foreground">Đã gửi</p>
-        </div>
-        <div className="bg-admin-card border border-admin-border rounded-xl p-4">
-          <p className="text-2xl font-bold text-gray-400">{notifications.filter(n => n.status === 'draft').length}</p>
-          <p className="text-sm text-admin-muted-foreground">Bản nháp</p>
-        </div>
-        <div className="bg-admin-card border border-admin-border rounded-xl p-4">
-          <p className="text-2xl font-bold text-admin-foreground">
-            {notifications.reduce((sum, n) => sum + n.readCount, 0).toLocaleString()}
-          </p>
-          <p className="text-sm text-admin-muted-foreground">Lượt đọc</p>
-        </div>
+        {[
+          {
+            label: "Tổng thông báo",
+            value: totalItems,
+            color: "text-admin-foreground",
+          },
+          { label: "Đã gửi", value: sentCount, color: "text-green-500" },
+          { label: "Bản nháp", value: draftCount, color: "text-gray-400" },
+          {
+            label: "Lượt đọc",
+            value: totalRead.toLocaleString(),
+            color: "text-admin-foreground",
+          },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className="bg-admin-card border border-admin-border rounded-xl p-4"
+          >
+            <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+            <p className="text-sm text-admin-muted-foreground">{s.label}</p>
+          </div>
+        ))}
       </div>
 
       {/* Filters */}
@@ -327,28 +538,36 @@ export default function AdminNotifications() {
               className="pl-10 bg-admin-accent border-admin-border text-admin-foreground"
             />
           </div>
-          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
-            <SelectTrigger className="w-full sm:w-40 bg-admin-accent border-admin-border text-admin-foreground">
-              <SelectValue placeholder="Trạng thái" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả</SelectItem>
-              <SelectItem value="sent">Đã gửi</SelectItem>
-              <SelectItem value="draft">Bản nháp</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="relative w-full sm:w-44">
+            <CustomSelect<NotificationStatus | "all">
+              value={statusFilter}
+              onChange={(v) => {
+                setStatusFilter(v);
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: "all", label: "Tất cả" },
+                { value: "SENT", label: "Đã gửi" },
+                { value: "DRAFT", label: "Bản nháp" },
+              ]}
+            />
+          </div>
         </div>
       </div>
 
       {/* Table */}
-      {filteredNotifications.length === 0 ? (
+      {!isLoading && notifications.length === 0 ? (
         <div className="bg-admin-card border border-admin-border rounded-xl p-12 text-center">
           <Bell className="w-16 h-16 text-admin-muted-foreground mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-admin-foreground mb-2">
-            {searchQuery || statusFilter !== 'all' ? 'Không tìm thấy thông báo' : 'Chưa có thông báo nào'}
+            {searchQuery || statusFilter !== "all"
+              ? "Không tìm thấy thông báo"
+              : "Chưa có thông báo nào"}
           </h2>
-          <p className="text-admin-muted-foreground mb-6">
-            {searchQuery || statusFilter !== 'all' ? 'Thử tìm kiếm với từ khóa khác' : 'Bắt đầu bằng cách tạo thông báo đầu tiên'}
+          <p className="text-admin-muted-foreground">
+            {searchQuery || statusFilter !== "all"
+              ? "Thử tìm kiếm với từ khóa khác"
+              : "Bắt đầu bằng cách tạo thông báo đầu tiên"}
           </p>
         </div>
       ) : (
@@ -357,90 +576,145 @@ export default function AdminNotifications() {
             <table className="w-full">
               <thead className="bg-admin-accent">
                 <tr>
-                  <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground">Thông báo</th>
-                  <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground hidden md:table-cell">Loại</th>
-                  <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground hidden lg:table-cell">Đối tượng</th>
-                  <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground hidden sm:table-cell">Trạng thái</th>
-                  <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground hidden lg:table-cell">Thống kê</th>
-                  <th className="text-right py-4 px-4 text-sm font-medium text-admin-muted-foreground">Hành động</th>
+                  {[
+                    "Thông báo",
+                    "Loại",
+                    "Đối tượng",
+                    "Trạng thái",
+                    "Thống kê",
+                    "Hành động",
+                  ].map((h, i) => (
+                    <th
+                      key={h}
+                      className={`py-4 px-4 text-sm font-medium text-admin-muted-foreground
+                      ${i === 5 ? "text-right" : "text-left"}
+                      ${i === 1 ? "hidden md:table-cell" : ""}
+                      ${i === 2 ? "hidden lg:table-cell" : ""}
+                      ${i === 3 ? "hidden sm:table-cell" : ""}
+                      ${i === 4 ? "hidden lg:table-cell" : ""}`}
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {paginatedNotifications.map((notification) => (
-                  <tr key={notification.id} className="border-t border-admin-border hover:bg-admin-accent/50">
-                    <td className="py-4 px-4">
-                      <div className="max-w-xs">
-                        <p className="font-medium text-admin-foreground truncate">{notification.title}</p>
-                        <p className="text-sm text-admin-muted-foreground truncate">{notification.message}</p>
-                        <p className="text-xs text-admin-muted-foreground mt-1">{formatDateTime(notification.sentAt || notification.createdAt)}</p>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 hidden md:table-cell">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(notification.type)}`}>
-                        {typeLabels[notification.type]}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 hidden lg:table-cell">
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-admin-muted-foreground" />
-                        <span className="text-sm text-admin-foreground">{targetLabels[notification.target]}</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 hidden sm:table-cell">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(notification.status)}`}>
-                        {statusLabels[notification.status]}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 hidden lg:table-cell">
-                      {notification.status === 'sent' ? (
-                        <div className="text-sm">
-                          <p className="text-admin-foreground">{notification.readCount.toLocaleString()} / {notification.totalRecipients.toLocaleString()}</p>
-                          <p className="text-xs text-admin-muted-foreground">
-                            {Math.round((notification.readCount / notification.totalRecipients) * 100)}% đã đọc
-                          </p>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-admin-muted-foreground">-</span>
-                      )}
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center justify-end">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreVertical className="w-4 h-4 text-admin-muted-foreground" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem onClick={() => openViewDialog(notification)}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              Xem chi tiết
-                            </DropdownMenuItem>
-                            {notification.status === 'draft' && (
-                              <>
-                                <DropdownMenuItem onClick={() => openEditDialog(notification)}>
-                                  <Pencil className="w-4 h-4 mr-2" />
-                                  Chỉnh sửa
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleSendDraft(notification)} className="text-green-400 hover:text-green-300">
-                                  <Send className="w-4 h-4 mr-2" />
-                                  Gửi ngay
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                            <DropdownMenuItem 
-                              onClick={() => openDeleteDialog(notification)}
-                              className="text-red-400 hover:text-red-300"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Xóa
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                {isLoading ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="py-12 text-center text-admin-muted-foreground"
+                    >
+                      Đang tải...
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  notifications.map((n) => (
+                    <tr
+                      key={n._id}
+                      className="border-t border-admin-border hover:bg-admin-accent/50"
+                    >
+                      <td className="py-4 px-4">
+                        <div className="max-w-xs">
+                          <p className="font-medium text-admin-foreground truncate">
+                            {n.title}
+                          </p>
+                          <p className="text-sm text-admin-muted-foreground truncate">
+                            {n.message}
+                          </p>
+                          <p className="text-xs text-admin-muted-foreground mt-1">
+                            {formatDateTime(n.createdAt)}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 hidden md:table-cell">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${TYPE_COLORS[n.type]}`}
+                        >
+                          {TYPE_LABELS[n.type]}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 hidden lg:table-cell">
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4 text-admin-muted-foreground shrink-0" />
+                          <span className="text-sm text-admin-foreground">
+                            {TARGET_LABELS[n.targetType]}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 hidden sm:table-cell">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${STATUS_COLORS[n.status]}`}
+                        >
+                          {STATUS_LABELS[n.status]}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 hidden lg:table-cell">
+                        {n.status === "SENT" && n.totalSent > 0 ? (
+                          <div className="text-sm">
+                            <p className="text-admin-foreground">
+                              {(n.totalRead ?? 0).toLocaleString()} /{" "}
+                              {n.totalSent.toLocaleString()}
+                            </p>
+                            <p className="text-xs text-admin-muted-foreground">
+                              {Math.round(
+                                ((n.totalRead ?? 0) / n.totalSent) * 100,
+                              )}
+                              % đã đọc
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-admin-muted-foreground">
+                            -
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex justify-end">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                              >
+                                <MoreVertical className="w-4 h-4 text-admin-muted-foreground" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem onClick={() => openView(n)}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                Xem chi tiết
+                              </DropdownMenuItem>
+                              {n.status === "DRAFT" && (
+                                <>
+                                  <DropdownMenuItem onClick={() => openEdit(n)}>
+                                    <Pencil className="w-4 h-4 mr-2" />
+                                    Chỉnh sửa
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleSendDraft(n)}
+                                    className="text-green-400 hover:text-green-300"
+                                  >
+                                    <Send className="w-4 h-4 mr-2" />
+                                    Gửi ngay
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              <DropdownMenuItem
+                                onClick={() => openDelete(n)}
+                                className="text-red-400 hover:text-red-300"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Xóa
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -448,13 +722,15 @@ export default function AdminNotifications() {
           {/* Pagination */}
           <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-admin-border gap-4">
             <p className="text-sm text-admin-muted-foreground">
-              Hiển thị {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredNotifications.length)} / {filteredNotifications.length}
+              Hiển thị{" "}
+              {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)} -{" "}
+              {Math.min(currentPage * itemsPerPage, totalItems)} / {totalItems}
             </p>
             <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
                 className="border-admin-border text-admin-foreground hover:bg-admin-accent"
               >
@@ -463,8 +739,10 @@ export default function AdminNotifications() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
+                disabled={currentPage === totalPages || totalPages === 0}
                 className="border-admin-border text-admin-foreground hover:bg-admin-accent"
               >
                 Sau
@@ -474,53 +752,95 @@ export default function AdminNotifications() {
         </div>
       )}
 
-      {/* View Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="bg-[hsl(220,25%,14%)] border-[hsl(220,20%,30%)] sm:max-w-lg">
+      {/* ===== Add Dialog ===== */}
+      <NotificationFormDialog
+        open={isAddOpen}
+        onClose={() => setIsAddOpen(false)}
+        onSubmit={handleFormSubmit}
+        isLoading={isSubmitting}
+      />
+
+      {/* ===== Edit Dialog ===== */}
+      <NotificationFormDialog
+        open={isEditOpen}
+        onClose={() => {
+          setIsEditOpen(false);
+          setSelected(null);
+        }}
+        onSubmit={handleEditSubmit}
+        initialData={
+          selected
+            ? {
+                title: selected.title,
+                message: selected.message,
+                type: selected.type,
+                targetType: selected.targetType,
+              }
+            : undefined
+        }
+        isEdit
+        isLoading={isSubmitting}
+      />
+
+      {/* ===== View Dialog ===== */}
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="admin-dialog sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-white">Chi tiết thông báo</DialogTitle>
           </DialogHeader>
-          {selectedNotification && (
+          {selected && (
             <div className="space-y-4 py-4">
               <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
                 <p className="text-xs text-slate-400 mb-1">Tiêu đề</p>
-                <p className="text-white text-lg font-semibold">{selectedNotification.title}</p>
+                <p className="text-white text-lg font-semibold">
+                  {selected.title}
+                </p>
               </div>
               <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
                 <p className="text-xs text-slate-400 mb-1">Nội dung</p>
-                <p className="text-white">{selectedNotification.message}</p>
+                <p className="text-white">{selected.message}</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">Loại</p>
-                  <p className="text-white">{typeLabels[selectedNotification.type]}</p>
-                </div>
-                <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">Đối tượng</p>
-                  <p className="text-white">{targetLabels[selectedNotification.target]}</p>
-                </div>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: "Loại", value: TYPE_LABELS[selected.type] },
+                  {
+                    label: "Đối tượng",
+                    value: TARGET_LABELS[selected.targetType],
+                  },
+                  {
+                    label: "Trạng thái",
+                    value: STATUS_LABELS[selected.status],
+                  },
+                  {
+                    label: "Ngày tạo",
+                    value: formatDateTime(selected.createdAt),
+                  },
+                ].map((f) => (
+                  <div
+                    key={f.label}
+                    className="bg-slate-700/50 border border-slate-600/50 p-3 rounded-lg"
+                  >
+                    <p className="text-xs text-slate-400 mb-1">{f.label}</p>
+                    <p className="text-sm text-white font-medium">{f.value}</p>
+                  </div>
+                ))}
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">Trạng thái</p>
-                  <p className="text-white">{statusLabels[selectedNotification.status]}</p>
-                </div>
-                <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">Thời gian gửi</p>
-                  <p className="text-white">{formatDateTime(selectedNotification.sentAt)}</p>
-                </div>
-              </div>
-              {selectedNotification.status === 'sent' && (
+              {selected.status === "SENT" && selected.totalSent > 0 && (
                 <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
                   <p className="text-xs text-slate-400 mb-2">Thống kê</p>
                   <div className="flex justify-between mb-2">
-                    <span className="text-slate-400">Đã đọc</span>
-                    <span className="text-white font-semibold">{selectedNotification.readCount.toLocaleString()} / {selectedNotification.totalRecipients.toLocaleString()}</span>
+                    <span className="text-slate-400 text-sm">Đã đọc</span>
+                    <span className="text-white font-semibold text-sm">
+                      {(selected.totalRead ?? 0).toLocaleString()} /{" "}
+                      {selected.totalSent.toLocaleString()}
+                    </span>
                   </div>
                   <div className="w-full bg-slate-600/50 rounded-full h-2">
-                    <div 
-                      className="bg-admin-primary h-2 rounded-full transition-all"
-                      style={{ width: `${(selectedNotification.readCount / selectedNotification.totalRecipients) * 100}%` }}
+                    <div
+                      className="bg-admin-primary h-2 rounded-full"
+                      style={{
+                        width: `${((selected.totalRead ?? 0) / selected.totalSent) * 100}%`,
+                      }}
                     />
                   </div>
                 </div>
@@ -528,172 +848,35 @@ export default function AdminNotifications() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)} className="border-slate-600 text-white hover:bg-slate-700">
+            <Button
+              variant="outline"
+              onClick={() => setIsViewOpen(false)}
+              className={BTN_CANCEL}
+            >
               Đóng
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Add Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="admin-dialog sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Tạo thông báo mới</DialogTitle>
-            <DialogDescription>
-              Nhập thông tin thông báo muốn gửi đến người dùng
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Tiêu đề *</Label>
-              <Input
-                placeholder="Nhập tiêu đề thông báo"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Nội dung *</Label>
-              <Textarea
-                placeholder="Nhập nội dung thông báo..."
-                value={formData.message}
-                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                className="bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white resize-none"
-                rows={4}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Loại thông báo</Label>
-                <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v as Notification['type'] })}>
-                  <SelectTrigger className="bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="info">Thông tin</SelectItem>
-                    <SelectItem value="success">Thành công</SelectItem>
-                    <SelectItem value="warning">Cảnh báo</SelectItem>
-                    <SelectItem value="course">Khóa học</SelectItem>
-                    <SelectItem value="promo">Khuyến mãi</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Đối tượng</Label>
-                <Select value={formData.target} onValueChange={(v) => setFormData({ ...formData, target: v as Notification['target'] })}>
-                  <SelectTrigger className="bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tất cả người dùng</SelectItem>
-                    <SelectItem value="students">Học viên đã đăng ký</SelectItem>
-                    <SelectItem value="new_users">Người dùng mới</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-          <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]">
-              Hủy
-            </Button>
-            <Button variant="outline" onClick={() => handleAdd(false)} className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]">
-              Lưu nháp
-            </Button>
-            <Button onClick={() => handleAdd(true)} className="bg-admin-primary hover:bg-admin-primary/90">
-              <Send className="w-4 h-4 mr-2" />
-              Gửi ngay
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="admin-dialog sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Chỉnh sửa thông báo</DialogTitle>
-            <DialogDescription>
-              Cập nhật thông tin thông báo
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Tiêu đề *</Label>
-              <Input
-                placeholder="Nhập tiêu đề thông báo"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Nội dung *</Label>
-              <Textarea
-                placeholder="Nhập nội dung thông báo..."
-                value={formData.message}
-                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                className="bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white resize-none"
-                rows={4}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Loại thông báo</Label>
-                <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v as Notification['type'] })}>
-                  <SelectTrigger className="bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="info">Thông tin</SelectItem>
-                    <SelectItem value="success">Thành công</SelectItem>
-                    <SelectItem value="warning">Cảnh báo</SelectItem>
-                    <SelectItem value="course">Khóa học</SelectItem>
-                    <SelectItem value="promo">Khuyến mãi</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Đối tượng</Label>
-                <Select value={formData.target} onValueChange={(v) => setFormData({ ...formData, target: v as Notification['target'] })}>
-                  <SelectTrigger className="bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tất cả người dùng</SelectItem>
-                    <SelectItem value="students">Học viên đã đăng ký</SelectItem>
-                    <SelectItem value="new_users">Người dùng mới</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]">
-              Hủy
-            </Button>
-            <Button onClick={handleEdit} className="bg-admin-primary hover:bg-admin-primary/90">
-              Lưu thay đổi
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      {/* ===== Delete Dialog ===== */}
+      <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent className="admin-dialog">
           <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa thông báo</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa thông báo "{selectedNotification?.title}"? 
-              Hành động này không thể hoàn tác.
+            <AlertDialogTitle className="text-white">
+              Xác nhận xóa thông báo
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              Bạn có chắc chắn muốn xóa thông báo "{selected?.title}"? Hành động
+              này không thể hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]">Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white">
+            <AlertDialogCancel className={BTN_CANCEL}>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
               Xóa
             </AlertDialogAction>
           </AlertDialogFooter>

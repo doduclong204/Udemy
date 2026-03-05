@@ -104,4 +104,10 @@ export const API_ENDPOINTS = {
   LESSONS: {
     BASE: '/lessons',
   },
+  NOTIFICATIONS: {   
+    BASE: '/notifications',
+  },
+  SETTINGS: {
+  BASE: '/settings',
+},
 } as const;
