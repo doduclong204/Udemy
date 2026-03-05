@@ -267,6 +267,7 @@ export interface SectionResponse {
 // ==================== Course Types ====================
 
 export interface Course {
+  _id?: string;
   id: string;
   title: string;
   thumbnail?: string;
