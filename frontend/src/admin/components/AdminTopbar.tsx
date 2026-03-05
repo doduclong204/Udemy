@@ -1,14 +1,14 @@
-import { Menu, Bell, LogOut, Home } from 'lucide-react';
-import { useAdminAuth } from '@/contexts/AdminAuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { Menu, Bell, LogOut, Home } from "lucide-react";
+import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useNavigate, Link } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface AdminTopbarProps {
   onMenuClick: () => void;
@@ -19,14 +19,14 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    navigate("/login", { replace: true });
     adminLogout();
-    navigate('/admin/login');
   };
 
   return (
     <header className="h-16 bg-admin-card border-b border-admin-border flex items-center justify-between px-4 lg:px-6">
       <div className="flex items-center gap-4">
-        <button 
+        <button
           onClick={onMenuClick}
           className="lg:hidden p-2 hover:bg-admin-accent rounded-lg"
         >
@@ -51,12 +51,16 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
               <Avatar className="w-8 h-8">
                 <AvatarImage src={admin?.avatar} />
                 <AvatarFallback className="bg-admin-primary text-white">
-                  {admin?.name?.charAt(0) || 'A'}
+                  {admin?.name?.charAt(0) || "A"}
                 </AvatarFallback>
               </Avatar>
               <div className="hidden sm:block text-left">
-                <p className="text-sm font-medium text-admin-foreground">{admin?.name}</p>
-                <p className="text-xs text-admin-muted-foreground">{admin?.email}</p>
+                <p className="text-sm font-medium text-admin-foreground">
+                  {admin?.name}
+                </p>
+                <p className="text-xs text-admin-muted-foreground">
+                  {admin?.email}
+                </p>
               </div>
             </button>
           </DropdownMenuTrigger>
@@ -68,9 +72,9 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={handleLogout}
-              className="flex items-center gap-2 text-red-400 hover:bg-red-500/10 cursor-pointer"
+            <DropdownMenuItem
+              onSelect={() => handleLogout()}
+              className="flex items-center gap-2 text-red-400 focus:bg-red-500/10 focus:text-red-400 cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
               Đăng xuất
