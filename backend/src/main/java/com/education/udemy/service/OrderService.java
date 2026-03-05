@@ -1,5 +1,6 @@
 package com.education.udemy.service;
 
+import com.education.udemy.dto.request.order.AdminOrderCreationRequest;
 import com.education.udemy.dto.request.order.OrderCreationRequest;
 import com.education.udemy.dto.request.order.OrderUpdateRequest;
 import com.education.udemy.dto.response.api.ApiPagination;
@@ -44,6 +45,61 @@ public class OrderService {
     CouponService couponService;
     CouponRepository couponRepository;
     EnrollmentService enrollmentService;
+
+    @Transactional
+    public OrderResponse adminCreate(AdminOrderCreationRequest request) {
+        log.info("Admin creating order for userId: {}", request.getUserId());
+
+        User targetUser = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        List<Course> courses = courseRepository.findAllById(request.getCourseIds());
+        if (courses.isEmpty()) {
+            throw new AppException(ErrorCode.COURSE_NOT_FOUND);
+        }
+
+        BigDecimal totalAmount = courses.stream()
+                .map(Course::getPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        Coupon appliedCoupon = null;
+        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
+            appliedCoupon = couponRepository.findByCode(request.getCouponCode())
+                    .orElseThrow(() -> new AppException(ErrorCode.COUPON_NOT_FOUND));
+            discountAmount = couponService.calculateDiscount(request.getCouponCode(), totalAmount);
+        }
+        BigDecimal finalAmount = totalAmount.subtract(discountAmount);
+
+        Order order = Order.builder()
+                .orderCode("ORD-" + System.currentTimeMillis())
+                .totalAmount(totalAmount)
+                .discountAmount(discountAmount)
+                .finalAmount(finalAmount)
+                .paymentMethod(request.getPaymentMethod())
+                .paymentStatus(OrderStatus.PENDING)
+                .user(targetUser)
+                .coupon(appliedCoupon)
+                .build();
+
+        List<OrderItem> orderItems = courses.stream().map(course ->
+                OrderItem.builder()
+                        .course(course)
+                        .price(course.getPrice())
+                        .finalPrice(course.getPrice())
+                        .order(order)
+                        .build()
+        ).toList();
+
+        order.setOrderItems(orderItems);
+        Order savedOrder = orderRepository.save(order);
+
+        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
+            couponService.updateCouponUsage(request.getCouponCode());
+        }
+
+        return orderMapper.toOrderResponse(savedOrder);
+    }
 
     @Transactional
     public OrderResponse create(OrderCreationRequest request) {

@@ -1,5 +1,6 @@
 package com.education.udemy.controller;
 
+import com.education.udemy.dto.request.order.AdminOrderCreationRequest;
 import com.education.udemy.dto.request.order.OrderCreationRequest;
 import com.education.udemy.dto.request.order.OrderUpdateRequest;
 import com.education.udemy.dto.response.api.ApiPagination;
@@ -30,6 +31,13 @@ import org.springframework.web.bind.annotation.*;
 public class OrderController {
 
     OrderService orderService;
+
+    @PostMapping("/admin")
+    @ApiMessage("Admin create order success")
+    public ResponseEntity<OrderResponse> adminCreate(
+            @RequestBody @Valid AdminOrderCreationRequest request) {
+        return ResponseEntity.ok(orderService.adminCreate(request));
+    }
 
     @PostMapping
     @ApiMessage("Create order success")
