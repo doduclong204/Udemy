@@ -1,148 +1,80 @@
 import axiosInstance from '@/config/api';
 import { API_ENDPOINTS } from '@/constant/common.constant';
-import { 
-  Review, 
-  AdminReview, 
-  CreateReviewRequest, 
-  ApiResponse, 
-  ApiPagination, 
-  GetReviewsParams 
+import {
+  ApiResponse,
+  ApiPagination,
+  ReviewResponse,
+  ReviewRequest,
+  GetReviewsParams,
 } from '@/types';
-import { reviews as mockReviews } from '@/data/mockData';
-import { adminReviews as mockAdminReviews } from '@/data/adminMockData';
 
 const reviewService = {
-  /**
-   * Lấy reviews của khóa học
-   * TODO: Implement thật với API sau
-   */
-  getCourseReviews: async (courseId: string, params?: GetReviewsParams): Promise<ApiPagination<Review>> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.get<PaginationResponse<Review>>(`${API_ENDPOINTS.COURSES.BASE}/${courseId}/reviews`, { params });
-    // return response.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const page = params?.page || 1;
-    const pageSize = params?.pageSize || 10;
-    const startIndex = (page - 1) * pageSize;
-    const paginatedReviews = mockReviews.slice(startIndex, startIndex + pageSize);
-    
-    return {
-      meta: {
-        current: page - 1,
-        pageSize,
-        pages: Math.ceil(mockReviews.length / pageSize),
-        total: mockReviews.length,
-      },
-      result: paginatedReviews,
-    };
-  },
-
-  /**
-   * Tạo review mới
-   * TODO: Implement thật với API sau
-   */
-  createReview: async (data: CreateReviewRequest): Promise<Review> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.post<ApiResponse<Review>>(API_ENDPOINTS.REVIEWS.BASE, data);
-    // return response.data.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    return {
-      id: `review-${Date.now()}`,
-      userName: 'Current User',
-      userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
-      rating: data.rating,
-      date: 'Just now',
-      comment: data.comment,
-      helpful: 0,
-    };
-  },
-
-  /**
-   * Đánh dấu review hữu ích
-   * TODO: Implement thật với API sau
-   */
-  markHelpful: async (reviewId: string): Promise<void> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // await axiosInstance.post(`${API_ENDPOINTS.REVIEWS.BASE}/${reviewId}/helpful`);
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 300));
-    console.log('Marked helpful:', reviewId);
-  },
-
   // ==================== Admin Methods ====================
 
   /**
    * Lấy tất cả reviews (Admin)
-   * TODO: Implement thật với API sau
+   * GET /reviews?page=0&size=10&filter=...
    */
-  getAdminReviews: async (params?: GetReviewsParams): Promise<ApiPagination<AdminReview>> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.get<PaginationResponse<AdminReview>>('/admin/reviews', { params });
-    // return response.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+  getAdminReviews: async (
+    params?: GetReviewsParams & { search?: string; rating?: number }
+  ): Promise<ApiPagination<ReviewResponse>> => {
     const page = params?.page || 1;
     const pageSize = params?.pageSize || 10;
-    const startIndex = (page - 1) * pageSize;
-    const paginatedReviews = mockAdminReviews.slice(startIndex, startIndex + pageSize);
-    
-    return {
-      meta: {
-        current: page - 1,
-        pageSize,
-        pages: Math.ceil(mockAdminReviews.length / pageSize),
-        total: mockAdminReviews.length,
-      },
-      result: paginatedReviews,
-    };
+
+    const filters: string[] = [];
+    if (params?.search) filters.push(`comment~'*${params.search}*'`);
+    if (params?.rating) filters.push(`rating:${params.rating}`);
+    if (params?.courseId) filters.push(`course.id:'${params.courseId}'`);
+
+    const response = await axiosInstance.get<ApiResponse<ApiPagination<ReviewResponse>>>(
+      API_ENDPOINTS.REVIEWS.BASE,
+      {
+        params: {
+          page: Math.max(0, page - 1),
+          size: pageSize,
+          filter: filters.length > 0 ? filters.join(' and ') : undefined,
+        },
+      }
+    );
+    return response.data.data;
   },
 
   /**
    * Ẩn/hiện review (Admin)
-   * TODO: Implement thật với API sau
+   * PUT /reviews/:id  với { reviewStatus: true/false }
    */
-  toggleReviewVisibility: async (reviewId: string): Promise<void> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // await axiosInstance.put(`/admin/reviews/${reviewId}/toggle-visibility`);
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 500));
-    console.log('Toggled visibility:', reviewId);
+  toggleReviewVisibility: async (
+    reviewId: string,
+    currentStatus: boolean
+  ): Promise<ReviewResponse> => {
+    const response = await axiosInstance.put<ApiResponse<ReviewResponse>>(
+      `${API_ENDPOINTS.REVIEWS.BASE}/${reviewId}`,
+      { reviewStatus: !currentStatus } satisfies ReviewRequest
+    );
+    return response.data.data;
   },
 
   /**
-   * Trả lời review (Admin)
-   * TODO: Implement thật với API sau
+   * Admin reply review
+   * PUT /reviews/:id  với { adminReply: "..." }
    */
-  replyToReview: async (reviewId: string, reply: string): Promise<void> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // await axiosInstance.post(`/admin/reviews/${reviewId}/reply`, { reply });
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 500));
-    console.log('Reply sent:', reviewId, reply);
+  replyToReview: async (
+    reviewId: string,
+    adminReply: string
+  ): Promise<ReviewResponse> => {
+    const response = await axiosInstance.put<ApiResponse<ReviewResponse>>(
+      `${API_ENDPOINTS.REVIEWS.BASE}/${reviewId}`,
+      { adminReply } satisfies ReviewRequest
+    );
+    return response.data.data;
   },
 
   /**
    * Xóa review (Admin)
-   * TODO: Implement thật với API sau
+   * DELETE /reviews/:id
    */
   deleteReview: async (reviewId: string): Promise<void> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // await axiosInstance.delete(`/admin/reviews/${reviewId}`);
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 500));
-    console.log('Review deleted:', reviewId);
+    await axiosInstance.delete(`${API_ENDPOINTS.REVIEWS.BASE}/${reviewId}`);
   },
 };
 
