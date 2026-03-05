@@ -36,27 +36,58 @@ public class NotificationService {
     NotificationMapper notificationMapper;
 
     @Transactional
-    public NotificationResponse createAndSend(NotificationCreationRequest request) {
-        log.info("Admin tạo và gửi thông báo hệ thống");
+    public NotificationResponse createNotification(NotificationCreationRequest request) {
+        log.info("Tạo thông báo với status: {}", request.getStatus());
 
         Notification notification = notificationMapper.toNotification(request);
-        notification.setStatus(NotificationStatus.SENT);
+
+        if (notification.getStatus() == null) {
+            notification.setStatus(NotificationStatus.DRAFT);
+        }
+
         notification = notificationRepository.save(notification);
 
-        List<User> allUsers = userRepository.findAll();
+        if (notification.getStatus() == NotificationStatus.SENT) {
+            List<User> allUsers = userRepository.findAll();
+            Notification finalNotification = notification;
+            List<UserNotification> userNotifications = allUsers.stream()
+                    .map(user -> UserNotification.builder()
+                            .notification(finalNotification)
+                            .user(user)
+                            .isRead(false)
+                            .build())
+                    .toList();
+            userNotificationRepository.saveAll(userNotifications);
+        }
 
-        Notification finalNotification = notification;
+        return getDetail(notification.getId());
+    }
+
+    @Transactional
+    public NotificationResponse sendNotification(String id) {
+        log.info("Gửi thông báo draft: {}", id);
+
+        Notification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.NOTIFICATION_NOT_FOUND));
+
+        if (notification.getStatus() != NotificationStatus.DRAFT) {
+            throw new AppException(ErrorCode.NOTIFICATION_ALREADY_SENT);
+        }
+
+        notification.setStatus(NotificationStatus.SENT);
+        notificationRepository.save(notification);
+
+        List<User> allUsers = userRepository.findAll();
         List<UserNotification> userNotifications = allUsers.stream()
                 .map(user -> UserNotification.builder()
-                        .notification(finalNotification)
+                        .notification(notification)
                         .user(user)
                         .isRead(false)
                         .build())
                 .toList();
-
         userNotificationRepository.saveAll(userNotifications);
 
-        return getDetail(notification.getId());
+        return getDetail(id);
     }
 
     public ApiPagination<NotificationResponse> getAll(Specification<Notification> spec, Pageable pageable) {

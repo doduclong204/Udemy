@@ -65,6 +65,7 @@ public enum ErrorCode {
     // NOTIFICATION
     NOTIFICATION_NOT_FOUND(404, "Notification not found", HttpStatus.NOT_FOUND),
     NOTIFICATION_SEND_FAILED(400, "Failed to send notification", HttpStatus.BAD_REQUEST),
+    NOTIFICATION_ALREADY_SENT(400, "Notification has already been sent",  HttpStatus.BAD_REQUEST),
 
     // WISHLIST
     WISHLIST_EXISTED(409, "Course is already in your wishlist", HttpStatus.CONFLICT),

@@ -1,6 +1,7 @@
 package com.education.udemy.controller;
 
 import com.education.udemy.dto.request.notification.NotificationCreationRequest;
+import com.education.udemy.dto.response.api.ApiResponse;
 import com.education.udemy.dto.response.notification.NotificationResponse;
 import com.education.udemy.entity.Notification;
 import com.education.udemy.service.NotificationService;
@@ -33,7 +34,14 @@ public class NotificationController {
     @PostMapping
     @ApiMessage("Create and broadcast notification success")
     public ResponseEntity<NotificationResponse> createNotification(@RequestBody @Valid NotificationCreationRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(this.notificationService.createAndSend(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(this.notificationService.createNotification(request));
+    }
+
+    @PostMapping("/{id}/send")
+    public ResponseEntity<ApiResponse<NotificationResponse>> sendNotification(@PathVariable String id) {
+        return ResponseEntity.ok(ApiResponse.<NotificationResponse>builder()
+                .data(notificationService.sendNotification(id))
+                .build());
     }
 
     @GetMapping
