@@ -1,64 +1,96 @@
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save, Upload, Globe, Mail, Phone, MapPin, Facebook, Youtube } from 'lucide-react';
-import { siteSettings } from '@/data/adminMockData';
+import { Save, Upload, Globe, Mail, Phone, MapPin, Facebook, Youtube, Loader2 } from 'lucide-react';
+import settingService from '@/services/settingService';
+import { SettingRequest } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+  Form, FormControl, FormField,
+  FormItem, FormLabel, FormMessage,
 } from '@/components/ui/form';
 
-const settingsSchema = z.object({
-  siteName: z.string().min(1, 'Tên website không được để trống').max(100, 'Tối đa 100 ký tự'),
-  description: z.string().max(500, 'Mô tả tối đa 500 ký tự').optional(),
-  logo: z.string().optional(),
-  primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Mã màu không hợp lệ'),
-  contactEmail: z.string().email('Email không hợp lệ'),
-  contactPhone: z.string().min(10, 'Số điện thoại không hợp lệ').max(15, 'Số điện thoại không hợp lệ'),
-  address: z.string().max(200, 'Địa chỉ tối đa 200 ký tự').optional(),
-  facebook: z.string().url('URL không hợp lệ').optional().or(z.literal('')),
-  youtube: z.string().url('URL không hợp lệ').optional().or(z.literal('')),
-  footerText: z.string().max(200, 'Tối đa 200 ký tự').optional(),
+// ── Schema ────────────────────────────────────────────────
+const schema = z.object({
+  siteName:        z.string().min(1, 'Tên website không được để trống').max(100),
+  siteDescription: z.string().max(500, 'Mô tả tối đa 500 ký tự').optional(),
+  logo:            z.string().optional(),
+  favicon:         z.string().optional(),
+  primaryColor:    z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Mã màu không hợp lệ').optional(),
+  contactEmail:    z.string().email('Email không hợp lệ').optional().or(z.literal('')),
+  contactPhone:    z.string().max(15).optional(),
+  contactAddress:  z.string().max(200).optional(),
+  facebookLink:    z.string().url('URL không hợp lệ').optional().or(z.literal('')),
+  youtubeLink:     z.string().url('URL không hợp lệ').optional().or(z.literal('')),
+  footerText:      z.string().max(200).optional(),
 });
 
-type SettingsFormData = z.infer<typeof settingsSchema>;
+type FormData = z.infer<typeof schema>;
 
+const toRequest = (d: FormData): SettingRequest => ({
+  siteName:        d.siteName,
+  siteDescription: d.siteDescription,
+  logo:            d.logo ?? '',
+  favicon:         d.favicon,
+  primaryColor:    d.primaryColor,
+  contactEmail:    d.contactEmail,
+  contactPhone:    d.contactPhone,
+  contactAddress:  d.contactAddress,
+  facebookLink:    d.facebookLink,
+  youtubeLink:     d.youtubeLink,
+  footerText:      d.footerText,
+});
+
+// ── Component ─────────────────────────────────────────────
 export default function AdminSettings() {
-  const form = useForm<SettingsFormData>({
-    resolver: zodResolver(settingsSchema),
+  const form = useForm<FormData>({
+    resolver: zodResolver(schema),
     defaultValues: {
-      siteName: siteSettings.siteName,
-      description: siteSettings.description,
-      logo: siteSettings.logo,
-      primaryColor: siteSettings.primaryColor,
-      contactEmail: siteSettings.contactEmail,
-      contactPhone: siteSettings.contactPhone,
-      address: siteSettings.address,
-      facebook: siteSettings.facebook || '',
-      youtube: siteSettings.youtube || '',
-      footerText: siteSettings.footerText || '© 2025 LearnHub Việt Nam',
+      siteName: '', siteDescription: '', logo: '', favicon: '',
+      primaryColor: '#A435F0', contactEmail: '', contactPhone: '',
+      contactAddress: '', facebookLink: '', youtubeLink: '', footerText: '',
     },
   });
 
-  const onSubmit = async (data: SettingsFormData) => {
+  // ── load settings on mount ──
+  useEffect(() => {
+    (async () => {
+      try {
+        const s = await settingService.getSettings();
+        form.reset({
+          siteName:        s.siteName        ?? '',
+          siteDescription: s.siteDescription ?? '',
+          logo:            s.logo            ?? '',
+          favicon:         s.favicon         ?? '',
+          primaryColor:    s.primaryColor    ?? '#A435F0',
+          contactEmail:    s.contactEmail    ?? '',
+          contactPhone:    s.contactPhone    ?? '',
+          contactAddress:  s.contactAddress  ?? '',
+          facebookLink:    s.facebookLink    ?? '',
+          youtubeLink:     s.youtubeLink     ?? '',
+          footerText:      s.footerText      ?? '',
+        });
+      } catch {
+        toast.error('Không thể tải cài đặt');
+      }
+    })();
+  }, []); // eslint-disable-line
+
+  const onSubmit = async (data: FormData) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('Settings saved:', data);
+      await settingService.updateSettings(toRequest(data));
       toast.success('Đã lưu cài đặt thành công!');
-    } catch (error) {
-      toast.error('Có lỗi xảy ra. Vui lòng thử lại.');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
     }
   };
+
+  const isLoading = form.formState.isSubmitting;
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -69,266 +101,189 @@ export default function AdminSettings() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Site Identity */}
-          <div className="bg-admin-card border border-admin-border rounded-xl p-6 space-y-6">
-            <h2 className="text-lg font-semibold text-admin-foreground flex items-center gap-2">
-              <Globe className="w-5 h-5" />
-              Thông tin website
-            </h2>
 
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="siteName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-admin-foreground">Tên website *</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        className="bg-admin-accent border-admin-border text-admin-foreground"
-                        placeholder="LearnHub"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          {/* ── Site Identity ── */}
+          <Section icon={<Globe className="w-5 h-5" />} title="Thông tin website">
+            <FormField control={form.control} name="siteName" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-admin-foreground">Tên website <Req /></FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="LearnHub" className={INPUT} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
 
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-admin-foreground">Mô tả ngắn</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        rows={3}
-                        className="bg-admin-accent border-admin-border text-admin-foreground"
-                        placeholder="Nền tảng học trực tuyến hàng đầu Việt Nam"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField control={form.control} name="siteDescription" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-admin-foreground">Mô tả ngắn</FormLabel>
+                <FormControl>
+                  <Textarea {...field} rows={3} placeholder="Nền tảng học trực tuyến hàng đầu Việt Nam" className={`${INPUT} resize-none`} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
 
-              <div>
-                <Label className="text-admin-foreground">Logo</Label>
-                <div className="mt-1.5 flex items-center gap-4">
-                  <div className="w-24 h-24 bg-admin-accent rounded-lg flex items-center justify-center border border-admin-border">
-                    {form.watch('logo') ? (
-                      <img src={form.watch('logo')} alt="Logo" className="w-16 h-16 object-contain" />
-                    ) : (
-                      <span className="text-admin-muted-foreground text-xs">Chưa có logo</span>
-                    )}
-                  </div>
-                  <Button 
-                    type="button"
-                    variant="outline" 
-                    className="border-admin-border text-admin-foreground hover:bg-admin-accent"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Tải lên logo mới
+            {/* Logo */}
+            <div>
+              <Label className="text-admin-foreground">Logo</Label>
+              <div className="mt-1.5 flex items-center gap-4">
+                <div className="w-24 h-24 bg-admin-accent rounded-lg flex items-center justify-center border border-admin-border overflow-hidden">
+                  {form.watch('logo') ? (
+                    <img src={form.watch('logo')} alt="Logo" className="w-full h-full object-contain p-2" />
+                  ) : (
+                    <span className="text-admin-muted-foreground text-xs text-center px-2">Chưa có logo</span>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Button type="button" variant="outline" className="border-admin-border text-admin-foreground hover:bg-admin-accent">
+                    <Upload className="w-4 h-4 mr-2" />Tải lên logo
                   </Button>
+                  <FormField control={form.control} name="logo" render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input {...field} placeholder="Hoặc dán URL logo..." className={INPUT} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
                 </div>
               </div>
-
-              <FormField
-                control={form.control}
-                name="primaryColor"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-admin-foreground">Màu chủ đạo</FormLabel>
-                    <div className="flex items-center gap-4">
-                      <input
-                        type="color"
-                        value={field.value}
-                        onChange={field.onChange}
-                        className="w-12 h-12 rounded-lg cursor-pointer border-0"
-                      />
-                      <FormControl>
-                        <Input
-                          {...field}
-                          className="w-32 bg-admin-accent border-admin-border text-admin-foreground font-mono"
-                          placeholder="#A435F0"
-                        />
-                      </FormControl>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
-          </div>
 
-          {/* Contact Information */}
-          <div className="bg-admin-card border border-admin-border rounded-xl p-6 space-y-6">
-            <h2 className="text-lg font-semibold text-admin-foreground flex items-center gap-2">
-              <Mail className="w-5 h-5" />
-              Thông tin liên hệ
-            </h2>
-
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="contactEmail"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-admin-foreground flex items-center gap-2">
-                      <Mail className="w-4 h-4" />
-                      Email liên hệ *
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="email"
-                        className="bg-admin-accent border-admin-border text-admin-foreground"
-                        placeholder="support@learnhub.vn"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="contactPhone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-admin-foreground flex items-center gap-2">
-                      <Phone className="w-4 h-4" />
-                      Số điện thoại *
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="tel"
-                        className="bg-admin-accent border-admin-border text-admin-foreground"
-                        placeholder="1900 1234"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-admin-foreground flex items-center gap-2">
-                      <MapPin className="w-4 h-4" />
-                      Địa chỉ
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        className="bg-admin-accent border-admin-border text-admin-foreground"
-                        placeholder="Tầng 10, Tòa nhà ABC, Quận 1, TP.HCM"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
-
-          {/* Social Media */}
-          <div className="bg-admin-card border border-admin-border rounded-xl p-6 space-y-6">
-            <h2 className="text-lg font-semibold text-admin-foreground">Mạng xã hội</h2>
-
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="facebook"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-admin-foreground flex items-center gap-2">
-                      <Facebook className="w-4 h-4" />
-                      Facebook
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        className="bg-admin-accent border-admin-border text-admin-foreground"
-                        placeholder="https://facebook.com/learnhub"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="youtube"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-admin-foreground flex items-center gap-2">
-                      <Youtube className="w-4 h-4" />
-                      YouTube
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        className="bg-admin-accent border-admin-border text-admin-foreground"
-                        placeholder="https://youtube.com/learnhub"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
-
-          {/* Footer Settings */}
-          <div className="bg-admin-card border border-admin-border rounded-xl p-6 space-y-6">
-            <h2 className="text-lg font-semibold text-admin-foreground">Cài đặt Footer</h2>
-
-            <FormField
-              control={form.control}
-              name="footerText"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-admin-foreground">Dòng bản quyền</FormLabel>
+            {/* Primary Color */}
+            <FormField control={form.control} name="primaryColor" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-admin-foreground">Màu chủ đạo</FormLabel>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={field.value ?? '#A435F0'}
+                    onChange={field.onChange}
+                    className="w-12 h-10 rounded-lg cursor-pointer border-0 bg-transparent"
+                  />
                   <FormControl>
-                    <Input
-                      {...field}
-                      className="bg-admin-accent border-admin-border text-admin-foreground"
-                      placeholder="© 2025 LearnHub Việt Nam"
-                    />
+                    <Input {...field} placeholder="#A435F0" className={`w-32 font-mono ${INPUT}`} />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )} />
+          </Section>
 
-          {/* Save Button */}
+          {/* ── Contact ── */}
+          <Section icon={<Mail className="w-5 h-5" />} title="Thông tin liên hệ">
+            <FormField control={form.control} name="contactEmail" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-admin-foreground flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5" />Email liên hệ
+                </FormLabel>
+                <FormControl>
+                  <Input {...field} type="email" placeholder="support@learnhub.vn" className={INPUT} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="contactPhone" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-admin-foreground flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5" />Số điện thoại
+                </FormLabel>
+                <FormControl>
+                  <Input {...field} type="tel" placeholder="1900 1234" className={INPUT} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="contactAddress" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-admin-foreground flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5" />Địa chỉ
+                </FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Tầng 10, Tòa nhà ABC, Quận 1, TP.HCM" className={INPUT} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+          </Section>
+
+          {/* ── Social ── */}
+          <Section title="Mạng xã hội">
+            <FormField control={form.control} name="facebookLink" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-admin-foreground flex items-center gap-1.5">
+                  <Facebook className="w-3.5 h-3.5" />Facebook
+                </FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="https://facebook.com/learnhub" className={INPUT} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="youtubeLink" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-admin-foreground flex items-center gap-1.5">
+                  <Youtube className="w-3.5 h-3.5" />YouTube
+                </FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="https://youtube.com/learnhub" className={INPUT} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+          </Section>
+
+          {/* ── Footer ── */}
+          <Section title="Cài đặt Footer">
+            <FormField control={form.control} name="footerText" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-admin-foreground">Dòng bản quyền</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="© 2025 LearnHub Việt Nam" className={INPUT} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+          </Section>
+
+          {/* ── Save ── */}
           <div className="flex justify-end">
-            <Button
-              type="submit"
-              disabled={form.formState.isSubmitting}
-              className="bg-admin-primary hover:bg-admin-primary/90"
-            >
-              {form.formState.isSubmitting ? (
-                'Đang lưu...'
+            <Button type="submit" disabled={isLoading} className="!bg-blue-600 hover:!bg-blue-500 text-white min-w-[140px]">
+              {isLoading ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Đang lưu...</>
               ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Lưu thay đổi
-                </>
+                <><Save className="w-4 h-4 mr-2" />Lưu thay đổi</>
               )}
             </Button>
           </div>
         </form>
       </Form>
+    </div>
+  );
+}
+
+// ── Helpers ───────────────────────────────────────────────
+const INPUT = 'bg-admin-accent border-admin-border text-admin-foreground placeholder:text-admin-muted-foreground';
+const Req = () => <span className="text-red-400 ml-0.5">*</span>;
+
+function Section({
+  title, icon, children,
+}: {
+  title: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="bg-admin-card border border-admin-border rounded-xl p-6 space-y-5">
+      <h2 className="text-base font-semibold text-admin-foreground flex items-center gap-2">
+        {icon}
+        {title}
+      </h2>
+      <div className="space-y-4">{children}</div>
     </div>
   );
 }
