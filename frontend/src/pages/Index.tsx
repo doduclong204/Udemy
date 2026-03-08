@@ -1,57 +1,57 @@
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
-import { Hero } from '@/components/Hero';
-import { CourseCarousel } from '@/components/CourseCarousel';
-import { CategoryGrid } from '@/components/CategoryGrid';
-import { TrustedCompanies } from '@/components/TrustedCompanies';
-import { PromoBar } from '@/components/PromoBar';
-import { courses } from '@/data/mockData';
+import { useState, useEffect } from "react";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { Hero } from "@/components/Hero";
+import { CourseCarousel } from "@/components/CourseCarousel";
+import { CategoryGrid } from "@/components/CategoryGrid";
+import { TrustedCompanies } from "@/components/TrustedCompanies";
+import { PromoBar } from "@/components/PromoBar";
+import courseService from "@/services/courseService";
+import type { CourseSummaryResponse } from "@/types";
 
 const Index = () => {
-  const featuredCourses = courses.filter((c) => c.badge === 'bestseller');
-  const newCourses = courses.filter((c) => c.badge === 'new' || c.badge === 'hot');
-  const developmentCourses = courses.filter((c) => c.category === 'Development');
+  const [featuredCourses, setFeaturedCourses] = useState<CourseSummaryResponse[]>([]);
+  const [popularCourses, setPopularCourses] = useState<CourseSummaryResponse[]>([]);
+  const [allCourses, setAllCourses] = useState<CourseSummaryResponse[]>([]);
+
+  useEffect(() => {
+    courseService.getFeaturedCourses().then(setFeaturedCourses).catch(() => {});
+    courseService.getPopularCourses().then(setPopularCourses).catch(() => {});
+    courseService.getCourses({ pageSize: 20 }).then((res) => setAllCourses(res.result)).catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
       <PromoBar />
       <Header />
-      
+
       <main>
         <Hero />
-        
+
         <div className="container mx-auto px-4">
           <CourseCarousel
             title="Khóa học nổi bật"
             subtitle="Những khóa học được đánh giá cao nhất của chúng tôi"
             courses={featuredCourses}
           />
-          
+
           <CategoryGrid />
-          
+
           <CourseCarousel
             title="Học viên đang xem"
             subtitle="Khám phá những gì người khác đang học ngay bây giờ"
-            courses={courses}
+            courses={popularCourses}
           />
-          
+
           <TrustedCompanies />
-          
+
           <CourseCarousel
             title="Khóa học Lập trình hàng đầu"
             subtitle="Nắm vững các công nghệ lập trình mới nhất"
-            courses={developmentCourses}
+            courses={allCourses}
           />
-          
-          {newCourses.length > 0 && (
-            <CourseCarousel
-              title="Mới & Xu hướng"
-              subtitle="Những khóa học vừa được thêm vào danh mục"
-              courses={newCourses}
-            />
-          )}
-          
-          {/* CTA Section - Student Encouragement */}
+
+          {/* CTA Section */}
           <section className="py-16 my-12 bg-gradient-to-r from-udemy-purple to-udemy-purple-dark rounded-2xl text-center text-background">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               Hành trình học tập bắt đầu từ hôm nay
@@ -65,7 +65,7 @@ const Index = () => {
           </section>
         </div>
       </main>
-      
+
       <Footer />
     </div>
   );

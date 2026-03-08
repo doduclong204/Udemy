@@ -334,7 +334,7 @@ export interface CourseDetailResponse {
   ratingCount: number;
   totalStudents: number;
   totalLectures: number;
-  totalDuration: number; // seconds
+  totalDuration: number;
   instructorName: string;
   instructorBio?: string;
   categoryId: string;
@@ -344,6 +344,7 @@ export interface CourseDetailResponse {
   isInWishlist: boolean;
   isInCart: boolean;
   sections: SectionResponse[];
+  updatedAt?: string;
 }
 
 export interface CourseSummaryResponse {

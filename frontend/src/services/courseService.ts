@@ -1,25 +1,33 @@
-import axiosInstance from '@/config/api';
-import { API_ENDPOINTS } from '@/constant/common.constant';
-import { 
-  Course, 
-  AdminCourse, 
-  CreateCourseRequest, 
+import axiosInstance from "@/config/api";
+import { API_ENDPOINTS } from "@/constant/common.constant";
+import {
+  Course,
+  CourseDetailResponse,
+  CourseSummaryResponse,
+  AdminCourse,
+  CreateCourseRequest,
   UpdateCourseRequest,
-  ApiResponse, 
+  ApiResponse,
   ApiPagination,
   SectionResponse,
-  GetCoursesParams
-} from '@/types';
+  GetCoursesParams,
+} from "@/types";
 
 const courseService = {
+  // ==================== Client Methods ====================
+
   /**
-   * Lấy danh sách khóa học
+   * Lấy danh sách khóa học (client) - trả về CourseSummaryResponse
    */
-  getCourses: async (params?: GetCoursesParams): Promise<ApiPagination<Course>> => {
+  getCourses: async (
+    params?: GetCoursesParams,
+  ): Promise<ApiPagination<CourseSummaryResponse>> => {
     const page = params?.page || 1;
     const pageSize = params?.pageSize || 10;
 
-    const response = await axiosInstance.get<ApiResponse<ApiPagination<Course>>>(API_ENDPOINTS.COURSES.BASE, {
+    const response = await axiosInstance.get<
+      ApiResponse<ApiPagination<CourseSummaryResponse>>
+    >(API_ENDPOINTS.COURSES.BASE, {
       params: {
         page: Math.max(0, page - 1),
         size: pageSize,
@@ -33,19 +41,11 @@ const courseService = {
   },
 
   /**
-   * Lấy chi tiết khóa học theo ID
+   * Lấy chi tiết khóa học theo ID - trả về CourseDetailResponse (có sections, reviews...)
    */
-  getCourseById: async (id: string): Promise<Course | null> => {
-    const response = await axiosInstance.get<ApiResponse<Course>>(`${API_ENDPOINTS.COURSES.BASE}/${id}`);
-    return response.data.data;
-  },
-
-  /**
-   * Lấy các sections/lessons của khóa học
-   */
-  getCourseSections: async (courseId: string): Promise<SectionResponse[]> => {
-    const response = await axiosInstance.get<ApiResponse<SectionResponse[]>>(
-      `${API_ENDPOINTS.COURSES.BASE}/${courseId}/sections`
+  getCourseById: async (id: string): Promise<CourseDetailResponse> => {
+    const response = await axiosInstance.get<ApiResponse<CourseDetailResponse>>(
+      `${API_ENDPOINTS.COURSES.BASE}/${id}`,
     );
     return response.data.data;
   },
@@ -53,26 +53,32 @@ const courseService = {
   /**
    * Lấy khóa học nổi bật
    */
-  getFeaturedCourses: async (): Promise<Course[]> => {
-    const response = await axiosInstance.get<ApiResponse<Course[]>>(API_ENDPOINTS.COURSES.FEATURED);
+  getFeaturedCourses: async (): Promise<CourseSummaryResponse[]> => {
+    const response = await axiosInstance.get<
+      ApiResponse<CourseSummaryResponse[]>
+    >(API_ENDPOINTS.COURSES.FEATURED);
     return response.data.data;
   },
 
   /**
    * Lấy khóa học phổ biến
    */
-  getPopularCourses: async (): Promise<Course[]> => {
-    const response = await axiosInstance.get<ApiResponse<Course[]>>(API_ENDPOINTS.COURSES.POPULAR);
+  getPopularCourses: async (): Promise<CourseSummaryResponse[]> => {
+    const response = await axiosInstance.get<
+      ApiResponse<CourseSummaryResponse[]>
+    >(API_ENDPOINTS.COURSES.POPULAR);
     return response.data.data;
   },
 
   /**
    * Lấy khóa học theo category
    */
-  getCoursesByCategory: async (categoryId: string): Promise<Course[]> => {
-    const response = await axiosInstance.get<ApiResponse<Course[]>>(
-      `${API_ENDPOINTS.COURSES.BY_CATEGORY}/${categoryId}`
-    );
+  getCoursesByCategory: async (
+    categoryId: string,
+  ): Promise<CourseSummaryResponse[]> => {
+    const response = await axiosInstance.get<
+      ApiResponse<CourseSummaryResponse[]>
+    >(`${API_ENDPOINTS.COURSES.BY_CATEGORY}/${categoryId}`);
     return response.data.data;
   },
 
@@ -80,56 +86,55 @@ const courseService = {
 
   /**
    * Lấy danh sách khóa học (Admin)
-   * Backend endpoint: GET /courses (không có /admin prefix)
    */
-  getAdminCourses: async (params?: GetCoursesParams): Promise<ApiPagination<AdminCourse>> => {
+  getAdminCourses: async (
+    params?: GetCoursesParams,
+  ): Promise<ApiPagination<AdminCourse>> => {
     const page = params?.page || 1;
     const pageSize = params?.pageSize || 10;
 
-    const response = await axiosInstance.get<ApiResponse<ApiPagination<AdminCourse>>>(
-      API_ENDPOINTS.COURSES.BASE,
-      {
-        params: {
-          page: Math.max(0, page - 1),
-          size: pageSize,
-          filter: params?.search ? `title~'*${params.search}*'` : undefined,
-          category: params?.category,
-          level: params?.level,
-        },
-      }
-    );
+    const response = await axiosInstance.get<
+      ApiResponse<ApiPagination<AdminCourse>>
+    >(API_ENDPOINTS.COURSES.BASE, {
+      params: {
+        page: Math.max(0, page - 1),
+        size: pageSize,
+        filter: params?.search ? `title~'*${params.search}*'` : undefined,
+        category: params?.category,
+        level: params?.level,
+      },
+    });
 
     return response.data.data;
   },
 
   /**
    * Tạo khóa học mới
-   * Backend endpoint: POST /courses
    */
   createCourse: async (data: CreateCourseRequest): Promise<AdminCourse> => {
     const response = await axiosInstance.post<ApiResponse<AdminCourse>>(
       API_ENDPOINTS.COURSES.BASE,
-      data
+      data,
     );
     return response.data.data;
   },
 
   /**
    * Cập nhật khóa học
-   * Backend endpoint: PUT /courses/:id
    */
-  updateCourse: async (data: UpdateCourseRequest & { id: string }): Promise<AdminCourse> => {
+  updateCourse: async (
+    data: UpdateCourseRequest & { id: string },
+  ): Promise<AdminCourse> => {
     const { id, ...payload } = data;
     const response = await axiosInstance.put<ApiResponse<AdminCourse>>(
       `${API_ENDPOINTS.COURSES.BASE}/${id}`,
-      payload
+      payload,
     );
     return response.data.data;
   },
 
   /**
    * Xóa khóa học
-   * Backend endpoint: DELETE /courses/:id
    */
   deleteCourse: async (id: string): Promise<void> => {
     await axiosInstance.delete(`${API_ENDPOINTS.COURSES.BASE}/${id}`);
