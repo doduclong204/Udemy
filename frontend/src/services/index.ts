@@ -7,3 +7,4 @@ export { default as categoryService } from './categoryService';
 export { default as couponService } from './couponService';
 export { default as reviewService } from './reviewService';
 export { default as orderService } from './orderService';
+export { default as notificationService } from './notificationService';
