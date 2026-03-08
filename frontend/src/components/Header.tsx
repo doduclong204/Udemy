@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Search,
@@ -8,14 +8,12 @@ import {
   ChevronDown,
   Heart,
   LayoutDashboard,
-  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSelector, useDispatch } from "react-redux";
 import { logoutAsync } from "@/redux/slices/authSlice";
-import type { RootState, AppDispatch } from "@/redux/store"; // ← import AppDispatch ở đây
+import type { RootState, AppDispatch } from "@/redux/store";
 import { useCart } from "@/contexts/CartContext";
-import { categories } from "@/data/mockData";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 import {
   DropdownMenu,
@@ -23,15 +21,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import categoryService from "@/services/categoryService";
+import type { Category } from "@/types";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [categories, setCategories] = useState<Category[]>([]);
 
-  // Sử dụng AppDispatch để dispatch async thunk không lỗi TS
   const dispatch = useDispatch<AppDispatch>();
 
-  // Lấy state từ Redux
   const { user, isAuthenticated } = useSelector(
     (state: RootState) => state.auth,
   );
@@ -43,6 +42,13 @@ export function Header() {
   const { items } = useCart();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    categoryService
+      .getCategories({ pageSize: 50 })
+      .then((res) => setCategories(res.result))
+      .catch(() => {});
+  }, []);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -50,7 +56,6 @@ export function Header() {
     }
   };
 
-  // Logout dùng Redux async thunk
   const handleLogout = () => {
     dispatch(logoutAsync());
   };
@@ -74,7 +79,7 @@ export function Header() {
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56 max-h-96 overflow-y-auto">
               {categories.map((category) => (
-                <DropdownMenuItem key={category.id} asChild>
+                <DropdownMenuItem key={category._id} asChild>
                   <Link
                     to={`/search?category=${category.name}`}
                     className="flex items-center gap-2"
@@ -106,7 +111,6 @@ export function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-4">
-            {/* Admin Button - Only show when logged in as admin */}
             {isAuthenticated && isAdmin && (
               <Link
                 to="/admin"
@@ -155,7 +159,7 @@ export function Header() {
                     <p className="font-semibold">{user?.name}</p>
                     <p className="text-sm text-muted-foreground">
                       {user?.username}
-                    </p>{" "}
+                    </p>
                   </div>
                   <DropdownMenuItem asChild>
                     <Link to="/dashboard">Khóa học của tôi</Link>
@@ -223,7 +227,6 @@ export function Header() {
         {isMenuOpen && (
           <div className="lg:hidden border-t border-border py-4 animate-fade-in">
             <nav className="flex flex-col gap-3">
-              {/* Admin link in mobile menu */}
               {isAuthenticated && isAdmin && (
                 <Link
                   to="/admin"
@@ -294,7 +297,7 @@ export function Header() {
                 </p>
                 {categories.slice(0, 8).map((category) => (
                   <Link
-                    key={category.id}
+                    key={category._id}
                     to={`/search?category=${category.name}`}
                     className="flex items-center gap-2 px-4 py-2 hover:bg-secondary rounded-lg"
                     onClick={() => setIsMenuOpen(false)}
@@ -310,5 +313,4 @@ export function Header() {
       </div>
     </header>
   );
-  
 }
