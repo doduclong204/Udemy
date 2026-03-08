@@ -33,3 +33,5 @@ auth:
 upload:
   file:
     uri: file:///E:/Udemy/upload/
+    image-uri: file:///E:/Udemy/upload/images/
+    video-uri: file:///E:/Udemy/upload/videos/
