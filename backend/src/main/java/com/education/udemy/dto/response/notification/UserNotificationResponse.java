@@ -20,6 +20,7 @@ public class UserNotificationResponse {
     String relatedId;
     String relatedType;
 
+    @JsonProperty("isRead")
     boolean isRead;
     Instant readAt;
     Instant createdAt;

@@ -18,7 +18,7 @@ public class UserNotification extends BaseEntity {
     String id;
 
     @Column(name = "is_read", nullable = false)
-    boolean isRead = false;
+    boolean read = false;
 
     Instant readAt;
 

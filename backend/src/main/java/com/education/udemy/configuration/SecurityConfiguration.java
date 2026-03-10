@@ -41,6 +41,7 @@ public class SecurityConfiguration {
                                 .requestMatchers(HttpMethod.GET,
                                         "/categories/**")
                                 .permitAll()
+                                .requestMatchers(HttpMethod.GET, "/settings/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/tags/**")
                                 .permitAll()
                                 .requestMatchers(whileList).permitAll()

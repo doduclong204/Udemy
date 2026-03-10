@@ -40,4 +40,20 @@ public class UserNotificationController {
                 .message("success")
                 .build());
     }
+
+    @PatchMapping("/read-all")
+    @ApiMessage("Mark all notifications as read success")
+    public ResponseEntity<ApiString> markAllAsRead() {
+        this.userNotificationService.markAllAsRead();
+        return ResponseEntity.ok().body(ApiString.builder()
+                .message("success")
+                .build());
+    }
+
+    @DeleteMapping("/{id}")
+    @ApiMessage("Delete notification success")
+    public ResponseEntity<Void> deleteNotification(@PathVariable String id) {
+        this.userNotificationService.deleteNotification(id);
+        return ResponseEntity.noContent().build();
+    }
 }

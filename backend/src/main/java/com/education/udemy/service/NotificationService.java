@@ -54,7 +54,7 @@ public class NotificationService {
                     .map(user -> UserNotification.builder()
                             .notification(finalNotification)
                             .user(user)
-                            .isRead(false)
+                            .read(false)
                             .build())
                     .toList();
             userNotificationRepository.saveAll(userNotifications);
@@ -82,7 +82,7 @@ public class NotificationService {
                 .map(user -> UserNotification.builder()
                         .notification(notification)
                         .user(user)
-                        .isRead(false)
+                        .read(false)
                         .build())
                 .toList();
         userNotificationRepository.saveAll(userNotifications);
@@ -98,7 +98,7 @@ public class NotificationService {
                 .map(noti -> {
                     NotificationResponse res = notificationMapper.toNotificationResponse(noti);
                     res.setTotalSent(userNotificationRepository.countByNotificationId(noti.getId()));
-                    res.setTotalRead(userNotificationRepository.countByNotificationIdAndIsReadTrue(noti.getId()));
+                    res.setTotalRead(userNotificationRepository.countByNotificationIdAndReadTrue(noti.getId()));
                     return res;
                 })
                 .toList();
@@ -122,7 +122,7 @@ public class NotificationService {
 
         NotificationResponse res = notificationMapper.toNotificationResponse(noti);
         res.setTotalSent(userNotificationRepository.countByNotificationId(id));
-        res.setTotalRead(userNotificationRepository.countByNotificationIdAndIsReadTrue(id));
+        res.setTotalRead(userNotificationRepository.countByNotificationIdAndReadTrue(id));
         return res;
     }
 
@@ -152,7 +152,7 @@ public class NotificationService {
                 .map(user -> UserNotification.builder()
                         .notification(notification)
                         .user(user)
-                        .isRead(false)
+                        .read(false)
                         .build())
                 .toList();
         userNotificationRepository.saveAll(userNotifications);
