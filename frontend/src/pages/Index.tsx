@@ -15,9 +15,17 @@ const Index = () => {
   const [allCourses, setAllCourses] = useState<CourseSummaryResponse[]>([]);
 
   useEffect(() => {
-    courseService.getFeaturedCourses().then(setFeaturedCourses).catch(() => {});
-    courseService.getPopularCourses().then(setPopularCourses).catch(() => {});
-    courseService.getCourses({ pageSize: 20 }).then((res) => setAllCourses(res.result)).catch(() => {});
+    courseService.getCourses({ pageSize: 10, outstanding: true })
+      .then((res) => setFeaturedCourses(res.result))
+      .catch(() => {});
+
+    courseService.getCourses({ pageSize: 10, sort: 'totalStudents,desc' })
+      .then((res) => setPopularCourses(res.result))
+      .catch(() => {});
+
+    courseService.getCourses({ pageSize: 10, sort: 'createdAt,desc' })
+      .then((res) => setAllCourses(res.result))
+      .catch(() => {});
   }, []);
 
   return (
@@ -51,7 +59,6 @@ const Index = () => {
             courses={allCourses}
           />
 
-          {/* CTA Section */}
           <section className="py-16 my-12 bg-gradient-to-r from-udemy-purple to-udemy-purple-dark rounded-2xl text-center text-background">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               Hành trình học tập bắt đầu từ hôm nay

@@ -9,6 +9,9 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
+
+import { SettingsProvider } from "@/contexts/SettingsContext";
+
 import Index from "./pages/Index";
 import CourseDetail from "./pages/CourseDetail";
 import CoursePlayer from "./pages/CoursePlayer";
@@ -17,10 +20,8 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import Cart from "./pages/Cart";
-import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
-// Admin imports
 import { AdminLayout } from "./admin/layouts/AdminLayout";
 import AdminDashboard from "./admin/pages/AdminDashboard";
 import AdminCourses from "./admin/pages/AdminCourses";
@@ -38,54 +39,55 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <Provider store={store}>
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <CartProvider>
-        <WishlistProvider>
-          <AdminAuthProvider>
-            <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/" element={<Index />} />
-                <Route path="/course/:id" element={<CourseDetail />} />
-                <Route path="/course/:slug/learn" element={<CoursePlayer />} />
-                <Route path="/search" element={<Search />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/dashboard/wishlist" element={<Dashboard />} />
-                <Route path="/dashboard/settings" element={<Dashboard />} />
-                <Route path="/dashboard/messages" element={<Navigate to="/notifications" replace />} />
-                <Route path="/notifications" element={<Notifications />} />
-                <Route path="/cart" element={<Cart />} />
-                
-                {/* Admin Routes */}
-                <Route path="/admin" element={<AdminLayout />}>
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="courses" element={<AdminCourses />} />
-                  <Route path="courses/new" element={<AdminCourseForm />} />
-                  <Route path="courses/:id/edit" element={<AdminCourseForm />} />
-                  <Route path="categories" element={<AdminCategories />} />
-                  <Route path="students" element={<AdminStudents />} />
-                  <Route path="orders" element={<AdminOrders />} />
-                  <Route path="coupons" element={<AdminCoupons />} />
-                  <Route path="notifications" element={<AdminNotifications />} />
-                  <Route path="reviews" element={<AdminReviews />} />
-                  <Route path="settings" element={<AdminSettings />} />
-                </Route>
-                
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-            </TooltipProvider>
-          </AdminAuthProvider>
-        </WishlistProvider>
-      </CartProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <CartProvider>
+          <WishlistProvider>
+            <AdminAuthProvider>
+              <SettingsProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <BrowserRouter>
+                    <Routes>
+                      {/* Public Routes */}
+                      <Route path="/" element={<Index />} />
+                      <Route path="/course/:id" element={<CourseDetail />} />
+                      <Route path="/course/:slug/learn" element={<CoursePlayer />} />
+                      <Route path="/search" element={<Search />} />
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/signup" element={<Signup />} />
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/dashboard/wishlist" element={<Dashboard />} />
+                      <Route path="/dashboard/settings" element={<Dashboard />} />
+                      <Route path="/dashboard/notifications" element={<Dashboard />} />
+                      <Route path="/cart" element={<Cart />} />
+                      
+                      {/* Admin Routes */}
+                      <Route path="/admin" element={<AdminLayout />}>
+                        <Route index element={<AdminDashboard />} />
+                        <Route path="courses" element={<AdminCourses />} />
+                        <Route path="courses/new" element={<AdminCourseForm />} />
+                        <Route path="courses/:id/edit" element={<AdminCourseForm />} />
+                        <Route path="categories" element={<AdminCategories />} />
+                        <Route path="students" element={<AdminStudents />} />
+                        <Route path="orders" element={<AdminOrders />} />
+                        <Route path="coupons" element={<AdminCoupons />} />
+                        <Route path="notifications" element={<AdminNotifications />} />
+                        <Route path="reviews" element={<AdminReviews />} />
+                        <Route path="settings" element={<AdminSettings />} />
+                      </Route>
+                      
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </BrowserRouter>
+                </TooltipProvider>
+              </SettingsProvider>
+            </AdminAuthProvider>
+          </WishlistProvider>
+        </CartProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   </Provider>
 );
 

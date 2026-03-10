@@ -1,53 +1,63 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Course } from '@/data/mockData';
+import axiosInstance from '@/config/api';
+import { API_ENDPOINTS } from '@/constant/common.constant';
+import type { WishlistResponse, ApiResponse, ApiPagination } from '@/types';
 
 interface WishlistContextType {
-  wishlist: Course[];
-  addToWishlist: (course: Course) => void;
-  removeFromWishlist: (courseId: string) => void;
+  wishlist: WishlistResponse[];
+  loading: boolean;
+  addToWishlist: (courseId: string) => Promise<void>;
+  removeFromWishlist: (courseId: string) => Promise<void>;
   isInWishlist: (courseId: string) => boolean;
-  toggleWishlist: (course: Course) => void;
+  toggleWishlist: (courseId: string) => Promise<void>;
+  refetch: () => void;
 }
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
-  const [wishlist, setWishlist] = useState<Course[]>(() => {
-    const saved = localStorage.getItem('wishlist');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [wishlist, setWishlist] = useState<WishlistResponse[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem('wishlist', JSON.stringify(wishlist));
-  }, [wishlist]);
-
-  const addToWishlist = (course: Course) => {
-    setWishlist((prev) => {
-      if (prev.find((c) => c.id === course.id)) {
-        return prev;
-      }
-      return [...prev, course];
-    });
+  const fetchWishlist = () => {
+    setLoading(true);
+    axiosInstance
+      .get<ApiResponse<ApiPagination<WishlistResponse>>>(API_ENDPOINTS.WISHLIST.BASE, {
+        params: { page: 0, size: 100 },
+      })
+      .then((res) => setWishlist(res.data.data.result))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   };
 
-  const removeFromWishlist = (courseId: string) => {
-    setWishlist((prev) => prev.filter((c) => c.id !== courseId));
+  useEffect(() => {
+    fetchWishlist();
+  }, []);
+
+  const addToWishlist = async (courseId: string) => {
+    await axiosInstance.post(API_ENDPOINTS.WISHLIST.BASE, { courseId });
+    fetchWishlist();
+  };
+
+  const removeFromWishlist = async (courseId: string) => {
+    await axiosInstance.delete(`${API_ENDPOINTS.WISHLIST.BASE}/${courseId}`);
+    setWishlist((prev) => prev.filter((c) => c.courseId !== courseId));
   };
 
   const isInWishlist = (courseId: string) => {
-    return wishlist.some((c) => c.id === courseId);
+    return wishlist.some((c) => c.courseId === courseId);
   };
 
-  const toggleWishlist = (course: Course) => {
-    if (isInWishlist(course.id)) {
-      removeFromWishlist(course.id);
+  const toggleWishlist = async (courseId: string) => {
+    if (isInWishlist(courseId)) {
+      await removeFromWishlist(courseId);
     } else {
-      addToWishlist(course);
+      await addToWishlist(courseId);
     }
   };
 
   return (
-    <WishlistContext.Provider value={{ wishlist, addToWishlist, removeFromWishlist, isInWishlist, toggleWishlist }}>
+    <WishlistContext.Provider value={{ wishlist, loading, addToWishlist, removeFromWishlist, isInWishlist, toggleWishlist, refetch: fetchWishlist }}>
       {children}
     </WishlistContext.Provider>
   );

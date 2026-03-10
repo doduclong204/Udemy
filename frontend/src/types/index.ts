@@ -368,6 +368,7 @@ export interface GetCoursesParams {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   outstanding?: boolean;
+  sort?: string;
 }
 
 // ==================== Enrollment Types ====================
