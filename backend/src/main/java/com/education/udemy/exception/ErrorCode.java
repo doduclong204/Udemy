@@ -18,10 +18,12 @@ public enum ErrorCode {
     USER_NOT_AUTHENTICATED(401, "User is not authenticated", HttpStatus.UNAUTHORIZED),
 
     // USER
-    USER_EXISTED(409, "User existed", HttpStatus.CONFLICT),  // 409 Conflict tốt hơn cho existed
+    USER_EXISTED(409, "User existed", HttpStatus.CONFLICT),
     USER_NOT_EXISTED(404, "User not existed", HttpStatus.NOT_FOUND),
     USERNAME_INVALID(400, "Username must be at least {min} characters", HttpStatus.BAD_REQUEST),
     INVALID_PASSWORD(400, "Password must be at least {min} characters", HttpStatus.BAD_REQUEST),
+    PASSWORD_INCORRECT(400, "Current password is incorrect", HttpStatus.BAD_REQUEST),
+    PASSWORD_NOT_MATCH(400, "Passwords do not match", HttpStatus.BAD_REQUEST),
 
     // CATEGORY
     CATEGORY_EXISTED(409, "Category existed", HttpStatus.CONFLICT),
@@ -59,8 +61,8 @@ public enum ErrorCode {
     INVALID_ROLE_NAME(400, "Role name is invalid", HttpStatus.BAD_REQUEST),
 
     // CART
-    CART_NOT_FOUND(404, "Cart not found", HttpStatus.NOT_FOUND),                    // thêm mới (dự phòng)
-    CART_ITEM_NOT_FOUND(404, "Cart item not found", HttpStatus.NOT_FOUND),          // thay thế cho CARTDETAIL_NOT_EXISTED
+    CART_NOT_FOUND(404, "Cart not found", HttpStatus.NOT_FOUND),
+    CART_ITEM_NOT_FOUND(404, "Cart item not found", HttpStatus.NOT_FOUND),
     COURSE_ALREADY_IN_CART(409, "Course already exists in cart", HttpStatus.CONFLICT),
     // NOTIFICATION
     NOTIFICATION_NOT_FOUND(404, "Notification not found", HttpStatus.NOT_FOUND),

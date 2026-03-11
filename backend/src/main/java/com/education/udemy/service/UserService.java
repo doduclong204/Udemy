@@ -1,5 +1,6 @@
 package com.education.udemy.service;
 
+import com.education.udemy.dto.request.user.ChangePasswordRequest;
 import java.util.List;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -122,20 +123,6 @@ public class UserService {
                 userRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED)));
     }
 
-    // public List<UserResponse> saveFromFileExcel(MultipartFile file) {
-    // List<User> entites = new ArrayList<User>();
-    // try {
-    // List<User> data = userExcelImport.excelToStuList(file.getInputStream());
-    // entites = userRepository.saveAll(data);
-    // } catch (IOException ex) {
-    // throw new RuntimeException("Excel data is failed to store: " +
-    // ex.getMessage());
-    // }
-    // List<UserResponse> res =
-    // entites.stream().map(userMapper::toUserResponse).toList();
-    // return res;
-    // }
-
     public User handleGetUserByUsername(String username) {
         return this.userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
@@ -168,5 +155,22 @@ public class UserService {
 
         user.setActive(active);
         return userMapper.toUserResponse(userRepository.save(user));
+    }
+
+    public void changePassword(ChangePasswordRequest request) {
+        log.info("Change password");
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new AppException(ErrorCode.PASSWORD_INCORRECT);
+        }
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new AppException(ErrorCode.PASSWORD_NOT_MATCH);
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 }

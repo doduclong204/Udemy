@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.education.udemy.dto.request.user.UserCreationRequest;
 import com.education.udemy.dto.request.user.UserUpdateRequest;
+import com.education.udemy.dto.request.user.ChangePasswordRequest;
 import com.education.udemy.dto.response.api.ApiPagination;
 import com.education.udemy.dto.response.api.ApiString;
 import com.education.udemy.dto.response.user.UserResponse;
@@ -80,44 +81,12 @@ public class UserController {
         return ResponseEntity.ok().body(this.userService.updateUserStatus(id, active));
     }
 
-//     @CrossOrigin(origins = "*", exposedHeaders = "Content-Disposition")
-//     @GetMapping("/excel/export")
-//     @ApiMessage("Export all users success")
-//     public void exportToExcel(HttpServletResponse response) throws IOException {
-//         response.setContentType("application/octet-stream");
-//         DateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss");
-//         String currentDateTime = dateFormatter.format(new Date());
-//
-//         String headerKey = "Content-Disposition";
-//         String headerValue = "attachment; filename=users_" + currentDateTime + ".xlsx";
-//         response.setHeader(headerKey, headerValue);
-//
-//         List<UserResponse> listUsers = this.userService.getAllUsers();
-//
-//         UserExcelExporter excelExporter = new UserExcelExporter(listUsers);
-//
-//         excelExporter.export(response);
-//     }
-//
-//     @PostMapping("/excel/import")
-//     @ApiMessage("Import all users success")
-//     public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file) {
-//         String message = "";
-//         if (userExcelImport.hasExcelFormat(file)) {
-//             try {
-//                 List<UserResponse> res = userService.saveFromFileExcel(file);
-//                 message = "The Excel file is uploaded: " + file.getOriginalFilename();
-//
-//                 return ResponseEntity.ok().body(res);
-//             } catch (Exception exp) {
-//                 message = "The Excel file is not upload: " + file.getOriginalFilename() + "!";
-//                 // return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(message);
-//
-//                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(message);
-//             }
-//         }
-//         message = "Please upload an excel file!";
-//         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(message);
-//     }
+    @PatchMapping("/change-password")
+    @ApiMessage("Change password success")
+    ResponseEntity<ApiString> changePassword(@RequestBody @Valid ChangePasswordRequest request) {
+        this.userService.changePassword(request);
+        return ResponseEntity.ok().body(ApiString.builder()
+                .message("success")
+                .build());
+    }
 }
-
