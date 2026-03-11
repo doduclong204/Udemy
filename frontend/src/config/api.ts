@@ -6,9 +6,24 @@ const API_BASE_URL = 'http://localhost:8080/api/v1';
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
-  withCredentials: true, // gửi cookie refresh_token
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+  },
+  paramsSerializer: (params) => {
+    const parts: string[] = [];
+    Object.entries(params).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      if (key === 'filter' || key === 'sort') {
+        // Không encode filter và sort để Spring Boot parse đúng
+        parts.push(`${key}=${value}`);
+      } else if (Array.isArray(value)) {
+        value.forEach((v) => parts.push(`${key}=${encodeURIComponent(v)}`));
+      } else {
+        parts.push(`${key}=${encodeURIComponent(value)}`);
+      }
+    });
+    return parts.join('&');
   },
 });
 
@@ -37,8 +52,6 @@ axiosInstance.interceptors.response.use(
     if (response) {
       switch (response.status) {
         case 401: {
-          // Bỏ qua 401 từ các endpoint phụ (fetchAccount, refresh...)
-          // Chỉ force logout khi 401 từ các API thực sự cần auth
           const url: string = config?.url || '';
           const isSecondaryAuthEndpoint =
             url.includes('/auth/account') ||

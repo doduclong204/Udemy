@@ -58,7 +58,11 @@ const reviewService = {
     const pageSize = params?.pageSize || 10;
 
     const filters: string[] = [];
-    if (params?.search) filters.push(`comment~'*${params.search}*'`);
+    if (params?.search) {
+      filters.push(
+        `(comment~'*${params.search}*' or course.title~'*${params.search}*')`,
+      );
+    }
     if (params?.rating) filters.push(`rating:${params.rating}`);
     if (params?.courseId) filters.push(`course.id:'${params.courseId}'`);
 
