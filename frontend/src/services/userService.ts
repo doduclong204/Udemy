@@ -14,117 +14,73 @@ import { adminStudents as mockStudents } from '@/data/adminMockData';
 const userService = {
   /**
    * Lấy thông tin user hiện tại
-   * TODO: Implement thật với API sau
+   * GET /users/my-info
    */
   getCurrentUser: async (): Promise<User> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.get<ApiResponse<User>>(API_ENDPOINTS.USERS.PROFILE);
-    // return response.data.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const userStr = localStorage.getItem(STORAGE_KEYS.USER);
-    if (userStr) {
-      return JSON.parse(userStr);
-    }
-    
-    throw new Error('User not found');
+    const response = await axiosInstance.get<ApiResponse<User>>(
+      `${API_ENDPOINTS.USERS.BASE}/my-info`,
+    );
+    return response.data.data;
   },
 
   /**
    * Cập nhật profile
-   * TODO: Implement thật với API sau
+   * PUT /users/:id
    */
   updateProfile: async (data: UpdateProfileRequest): Promise<User> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.put<ApiResponse<User>>(API_ENDPOINTS.USERS.UPDATE_PROFILE, data);
-    // return response.data.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
     const userStr = localStorage.getItem(STORAGE_KEYS.USER);
-    if (!userStr) {
-      throw new Error('User not found');
-    }
-    
-    const currentUser = JSON.parse(userStr);
-    const updatedUser = { ...currentUser, ...data };
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updatedUser));
-    
-    return updatedUser;
+    const userId = userStr ? (JSON.parse(userStr)?._id ?? JSON.parse(userStr)?.id) : null;
+    if (!userId) throw new Error('User not found');
+
+    const response = await axiosInstance.put<ApiResponse<User>>(
+      `${API_ENDPOINTS.USERS.BASE}/${userId}`,
+      data,
+    );
+    const updated = response.data.data;
+
+    // Sync localStorage để refresh page vẫn đúng
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify({ ...JSON.parse(userStr!), ...updated }));
+
+    return updated;
   },
 
   /**
    * Đổi mật khẩu
-   * TODO: Implement thật với API sau
+   * PATCH /users/change-password
    */
   changePassword: async (data: ChangePasswordRequest): Promise<void> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // await axiosInstance.put(API_ENDPOINTS.USERS.CHANGE_PASSWORD, data);
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if (data.newPassword !== data.confirmPassword) {
-      throw new Error('Passwords do not match');
-    }
-    
-    if (data.newPassword.length < 6) {
-      throw new Error('Password must be at least 6 characters');
-    }
-    
-    console.log('Password changed successfully');
+    await axiosInstance.patch(`${API_ENDPOINTS.USERS.BASE}/change-password`, data);
   },
 
   /**
    * Lấy user theo ID
-   * TODO: Implement thật với API sau
+   * GET /users/:id
    */
   getUserById: async (id: string): Promise<User | null> => {
-    // TODO: Uncomment khi kết nối Spring Boot
-    // const response = await axiosInstance.get<ApiResponse<User>>(`${API_ENDPOINTS.USERS.BASE}/${id}`);
-    // return response.data.data;
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const student = mockStudents.find(s => s.id === id);
-    if (student) {
-      return {
-        id: student.id,
-        username: student.email,
-        name: student.name,
-        avatar: student.avatar,
-        role: 'user',
-      };
+    try {
+      const response = await axiosInstance.get<ApiResponse<User>>(
+        `${API_ENDPOINTS.USERS.BASE}/${id}`,
+      );
+      return response.data.data;
+    } catch {
+      return null;
     }
-    
-    return null;
   },
 
   // ==================== Admin Methods ====================
 
-  /**
-   * Lấy danh sách học viên (Admin)
-   * TODO: Implement thật với API sau
-   */
   getStudents: async (params?: GetStudentsParams): Promise<ApiPagination<Student>> => {
-    // Try real backend first
     try {
       const page = params?.page || 1;
       const pageSize = params?.pageSize || 10;
       const response = await axiosInstance.get<ApiResponse<any>>(`${API_ENDPOINTS.USERS.BASE}`, {
         params: {
-          // Spring pageable is 0-based
           page: Math.max(0, page - 1),
           size: pageSize,
           search: params?.search,
           status: params?.status,
         },
       });
-      // Backend returns ApiResponse<ApiPagination<UserResponse>>
       const payload = response.data.data as any;
       const list = payload?.result ?? [];
       const meta = payload?.meta ?? { current: page - 1, pageSize, pages: 1, total: Array.isArray(list) ? list.length : 0 };
@@ -152,30 +108,25 @@ const userService = {
         },
         result: students,
       };
-    } catch (err) {
-      // Fallback to mock
+    } catch {
       await new Promise(resolve => setTimeout(resolve, 500));
-
-      // add a default role for mocks so the UI can display/update it
       let filteredStudents = [...mockStudents].map(s => ({ ...s, role: 'USER' } as any));
-      
+
       if (params?.search) {
         const search = params.search.toLowerCase();
-        filteredStudents = filteredStudents.filter(s => 
-          s.name.toLowerCase().includes(search) || 
-          s.email.toLowerCase().includes(search)
+        filteredStudents = filteredStudents.filter(s =>
+          s.name.toLowerCase().includes(search) ||
+          s.email.toLowerCase().includes(search),
         );
       }
-      
       if (params?.status) {
         filteredStudents = filteredStudents.filter(s => s.status === params.status);
       }
-      
+
       const page = params?.page || 1;
       const pageSize = params?.pageSize || 10;
       const startIndex = (page - 1) * pageSize;
-      const paginatedStudents = filteredStudents.slice(startIndex, startIndex + pageSize);
-      
+
       return {
         meta: {
           current: page - 1,
@@ -183,57 +134,34 @@ const userService = {
           pages: Math.ceil(filteredStudents.length / pageSize),
           total: filteredStudents.length,
         },
-        result: paginatedStudents,
+        result: filteredStudents.slice(startIndex, startIndex + pageSize),
       };
     }
   },
 
-  /**
-   * Cập nhật trạng thái học viên (Admin)
-   * TODO: Implement thật với API sau
-   */
   updateStudentStatus: async (studentId: string, status: 'Active' | 'Inactive' | boolean): Promise<void> => {
-    // Backend expects a raw boolean in body indicating `active`
     const active = typeof status === 'boolean' ? status : status === 'Active';
     try {
       await axiosInstance.patch(`${API_ENDPOINTS.USERS.BASE}/${studentId}/status`, active);
-      return;
-    } catch (err) {
-      // fallback to mock
+    } catch {
       await new Promise(resolve => setTimeout(resolve, 500));
       console.log('Student status updated (mock):', studentId, active);
     }
   },
 
-  /**
-   * Xóa học viên (Admin)
-   * TODO: Implement thật với API sau
-   */
   deleteStudent: async (studentId: string): Promise<void> => {
     try {
       await axiosInstance.delete(`${API_ENDPOINTS.USERS.BASE}/${studentId}`);
-      return;
-    } catch (err) {
-      // fallback to mock
+    } catch {
       await new Promise(resolve => setTimeout(resolve, 500));
       console.log('Student deleted (mock):', studentId);
     }
   },
-  
-  /**
-   * Tạo user (Admin / Public)
-   */
+
   createUser: async (data: { name: string; email: string; password?: string; role?: string }): Promise<any> => {
-    // backend expects `username` (not email)
     const payload: any = { ...data, username: data.email };
     delete payload.email;
-
-    // normalize role to uppercase so backend stores USER/ADMIN
-    if (payload.role) {
-      payload.role = payload.role.toString().toUpperCase();
-    } else {
-      payload.role = 'USER';
-    }
+    payload.role = payload.role ? payload.role.toString().toUpperCase() : 'USER';
 
     try {
       const response = await axiosInstance.post(`${API_ENDPOINTS.USERS.BASE}`, payload);
@@ -244,19 +172,10 @@ const userService = {
     }
   },
 
-  /**
-   * Cập nhật user (Admin)
-   */
   updateUser: async (id: string, data: Partial<{ name: string; email: string; role?: string }>): Promise<any> => {
     const payload: any = { ...data };
-    if (payload.email) {
-      payload.username = payload.email;
-      delete payload.email;
-    }
-
-    if (payload.role) {
-      payload.role = payload.role.toString().toUpperCase();
-    }
+    if (payload.email) { payload.username = payload.email; delete payload.email; }
+    if (payload.role)  { payload.role = payload.role.toString().toUpperCase(); }
 
     const response = await axiosInstance.put(`${API_ENDPOINTS.USERS.BASE}/${id}`, payload);
     return response.data?.data ?? response.data;
