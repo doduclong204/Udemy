@@ -13,12 +13,26 @@ import enrollmentService from "@/services/enrollmentService";
 import userService from "@/services/userService";
 import uploadService from "@/services/uploadService";
 import userNotificationService from "@/services/userNotificationService";
-import type { EnrollmentResponse, UserNotificationResponse, NotificationType } from "@/types";
+import type {
+  EnrollmentResponse,
+  UserNotificationResponse,
+  NotificationType,
+} from "@/types";
 import { Button } from "@/components/ui/button";
 import {
-  BookOpen, Heart, Settings, Bell,
-  Play, Clock, Award, Loader2, Camera,
-  Info, CheckCircle, X, Check,
+  BookOpen,
+  Heart,
+  Settings,
+  Bell,
+  Play,
+  Clock,
+  Award,
+  Loader2,
+  Camera,
+  Info,
+  CheckCircle,
+  X,
+  Check,
 } from "lucide-react";
 
 type NotifPrefKey = "courseUpdates" | "promotions" | "browser" | "newsletter";
@@ -26,29 +40,32 @@ type NotifPrefs = Record<NotifPrefKey, boolean>;
 
 const DEFAULT_NOTIF_PREFS: NotifPrefs = {
   courseUpdates: true,
-  promotions:    true,
-  browser:       true,
-  newsletter:    false,
+  promotions: true,
+  browser: true,
+  newsletter: false,
 };
-
 
 const getIconStyle = (type: NotificationType) => {
   switch (type) {
-    case "COURSE":    return { icon: BookOpen,    className: "text-primary bg-primary/10" };
-    case "PROMOTION": return { icon: CheckCircle, className: "text-green-500 bg-green-500/10" };
-    case "SYSTEM":    return { icon: Info,        className: "text-blue-500 bg-blue-500/10" };
-    default:          return { icon: Bell,        className: "text-blue-500 bg-blue-500/10" };
+    case "COURSE":
+      return { icon: BookOpen, className: "text-primary bg-primary/10" };
+    case "PROMOTION":
+      return { icon: CheckCircle, className: "text-green-500 bg-green-500/10" };
+    case "SYSTEM":
+      return { icon: Info, className: "text-blue-500 bg-blue-500/10" };
+    default:
+      return { icon: Bell, className: "text-blue-500 bg-blue-500/10" };
   }
 };
 
 const formatTime = (iso: string) => {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 60)  return `${mins} phút trước`;
+  if (mins < 60) return `${mins} phút trước`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24)   return `${hrs} giờ trước`;
+  if (hrs < 24) return `${hrs} giờ trước`;
   const days = Math.floor(hrs / 24);
-  if (days < 7)   return `${days} ngày trước`;
+  if (days < 7) return `${days} ngày trước`;
   return new Date(iso).toLocaleDateString("vi-VN");
 };
 
@@ -58,11 +75,12 @@ export default function Dashboard() {
   const dispatch = useAppDispatch();
   const location = useLocation();
 
-  const currentPath     = location.pathname;
-  const isMyLearning    = currentPath === "/dashboard" || currentPath === "/dashboard/my-learning";
-  const isWishlist      = currentPath === "/dashboard/wishlist";
+  const currentPath = location.pathname;
+  const isMyLearning =
+    currentPath === "/dashboard" || currentPath === "/dashboard/my-learning";
+  const isWishlist = currentPath === "/dashboard/wishlist";
   const isNotifications = currentPath === "/dashboard/notifications";
-  const isSettings      = currentPath === "/dashboard/settings";
+  const isSettings = currentPath === "/dashboard/settings";
 
   // ── Enrollments ──────────────────────────────────────────────────────────────
   const [enrollments, setEnrollments] = useState<EnrollmentResponse[]>([]);
@@ -77,8 +95,8 @@ export default function Dashboard() {
   }, []);
 
   // ── Notifications ─────────────────────────────────────────────────────────────
-  const [userNotifs, setUserNotifs]         = useState<UserNotificationResponse[]>([]);
-  const [loadingNotifs, setLoadingNotifs]   = useState(false);
+  const [userNotifs, setUserNotifs] = useState<UserNotificationResponse[]>([]);
+  const [loadingNotifs, setLoadingNotifs] = useState(false);
 
   useEffect(() => {
     if (!isNotifications) return;
@@ -93,33 +111,35 @@ export default function Dashboard() {
   const handleMarkAsRead = async (id: string) => {
     try {
       await userNotificationService.markAsRead(id);
-      setUserNotifs((prev) => prev.map((n) => n._id === id ? { ...n, isRead: true } : n));
+      setUserNotifs((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n)),
+      );
       sonnerToast.success("Đã đánh dấu là đã đọc");
     } catch {
       sonnerToast.error("Có lỗi xảy ra");
     }
   };
 
-const handleMarkAllAsRead = async () => {
-  if (!userNotifs.some((n) => !n.isRead)) return;
-  try {
-    await userNotificationService.markAllAsRead();
-    setUserNotifs((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    sonnerToast.success("Đã đánh dấu tất cả là đã đọc");
-  } catch {
-    sonnerToast.error("Có lỗi xảy ra");
-  }
-};
+  const handleMarkAllAsRead = async () => {
+    if (!userNotifs.some((n) => !n.isRead)) return;
+    try {
+      await userNotificationService.markAllAsRead();
+      setUserNotifs((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      sonnerToast.success("Đã đánh dấu tất cả là đã đọc");
+    } catch {
+      sonnerToast.error("Có lỗi xảy ra");
+    }
+  };
 
-const handleRemoveNotif = async (id: string) => {
-  try {
-    await userNotificationService.deleteNotification(id);
-    setUserNotifs((prev) => prev.filter((n) => n._id !== id));
-    sonnerToast.success("Đã xóa thông báo");
-  } catch {
-    sonnerToast.error("Có lỗi xảy ra");
-  }
-};
+  const handleRemoveNotif = async (id: string) => {
+    try {
+      await userNotificationService.deleteNotification(id);
+      setUserNotifs((prev) => prev.filter((n) => n._id !== id));
+      sonnerToast.success("Đã xóa thông báo");
+    } catch {
+      sonnerToast.error("Có lỗi xảy ra");
+    }
+  };
 
   const unreadCount = userNotifs.filter((n) => !n.isRead).length;
 
@@ -134,7 +154,11 @@ const handleRemoveNotif = async (id: string) => {
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      toast({ title: "Ảnh quá lớn", description: "Tối đa 2MB", variant: "destructive" });
+      toast({
+        title: "Ảnh quá lớn",
+        description: "Tối đa 2MB",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -154,47 +178,54 @@ const handleRemoveNotif = async (id: string) => {
 
   // ── Settings form ─────────────────────────────────────────────────────────────
   const firstNameRef = useRef<HTMLInputElement>(null);
-  const lastNameRef  = useRef<HTMLInputElement>(null);
-  const phoneRef     = useRef<HTMLInputElement>(null);
-  const dobRef       = useRef<HTMLInputElement>(null);
-  const bioRef       = useRef<HTMLTextAreaElement>(null);
+  const lastNameRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
+  const dobRef = useRef<HTMLInputElement>(null);
+  const bioRef = useRef<HTMLTextAreaElement>(null);
   const currentPwRef = useRef<HTMLInputElement>(null);
-  const newPwRef     = useRef<HTMLInputElement>(null);
+  const newPwRef = useRef<HTMLInputElement>(null);
   const confirmPwRef = useRef<HTMLInputElement>(null);
   const [savingProfile, setSavingProfile] = useState(false);
-  const [savingPw,      setSavingPw]      = useState(false);
+  const [savingPw, setSavingPw] = useState(false);
 
   const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>(() => {
-  try {
-    const saved = localStorage.getItem("notif_prefs");
-    return saved ? JSON.parse(saved) : DEFAULT_NOTIF_PREFS;
-  } catch {
-    return DEFAULT_NOTIF_PREFS;
-  }
-});
-
-const toggleNotifPref = (key: NotifPrefKey) => {
-  setNotifPrefs((prev) => {
-    const next = { ...prev, [key]: !prev[key] };
-    localStorage.setItem("notif_prefs", JSON.stringify(next));
-    return next;
+    try {
+      const saved = localStorage.getItem("notif_prefs");
+      return saved ? JSON.parse(saved) : DEFAULT_NOTIF_PREFS;
+    } catch {
+      return DEFAULT_NOTIF_PREFS;
+    }
   });
-};
+
+  const toggleNotifPref = (key: NotifPrefKey) => {
+    setNotifPrefs((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem("notif_prefs", JSON.stringify(next));
+      return next;
+    });
+  };
 
   const handleSaveProfile = async () => {
     const firstName = firstNameRef.current?.value?.trim() ?? "";
-    const lastName  = lastNameRef.current?.value?.trim()  ?? "";
-    const name      = `${firstName} ${lastName}`.trim();
-    const phone     = phoneRef.current?.value?.trim() ?? "";
-    const bio       = bioRef.current?.value?.trim()   ?? "";
+    const lastName = lastNameRef.current?.value?.trim() ?? "";
+    const name = `${firstName} ${lastName}`.trim();
+    const phone = phoneRef.current?.value?.trim() ?? "";
+    const bio = bioRef.current?.value?.trim() ?? "";
 
     setSavingProfile(true);
     try {
       const updated = await userService.updateProfile({ name, phone, bio });
       dispatch(setUser(updated));
-      toast({ title: "Đã lưu thay đổi", description: "Hồ sơ của bạn đã được cập nhật." });
+      toast({
+        title: "Đã lưu thay đổi",
+        description: "Hồ sơ của bạn đã được cập nhật.",
+      });
     } catch {
-      toast({ title: "Lưu thất bại", description: "Vui lòng thử lại.", variant: "destructive" });
+      toast({
+        title: "Lưu thất bại",
+        description: "Vui lòng thử lại.",
+        variant: "destructive",
+      });
     } finally {
       setSavingProfile(false);
     }
@@ -202,25 +233,35 @@ const toggleNotifPref = (key: NotifPrefKey) => {
 
   const handleChangePassword = async () => {
     const currentPassword = currentPwRef.current?.value ?? "";
-    const newPassword     = newPwRef.current?.value     ?? "";
+    const newPassword = newPwRef.current?.value ?? "";
     const confirmPassword = confirmPwRef.current?.value ?? "";
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      toast({ title: "Vui lòng điền đầy đủ", variant: "destructive" }); return;
+      toast({ title: "Vui lòng điền đầy đủ", variant: "destructive" });
+      return;
     }
     if (newPassword !== confirmPassword) {
-      toast({ title: "Mật khẩu xác nhận không khớp", variant: "destructive" }); return;
+      toast({ title: "Mật khẩu xác nhận không khớp", variant: "destructive" });
+      return;
     }
     if (newPassword.length < 6) {
-      toast({ title: "Mật khẩu phải có ít nhất 6 ký tự", variant: "destructive" }); return;
+      toast({
+        title: "Mật khẩu phải có ít nhất 6 ký tự",
+        variant: "destructive",
+      });
+      return;
     }
 
     setSavingPw(true);
     try {
-      await userService.changePassword({ currentPassword, newPassword, confirmPassword });
+      await userService.changePassword({
+        currentPassword,
+        newPassword,
+        confirmPassword,
+      });
       toast({ title: "Đổi mật khẩu thành công" });
       if (currentPwRef.current) currentPwRef.current.value = "";
-      if (newPwRef.current)     newPwRef.current.value     = "";
+      if (newPwRef.current) newPwRef.current.value = "";
       if (confirmPwRef.current) confirmPwRef.current.value = "";
     } catch (err: any) {
       toast({ title: err?.message ?? "Có lỗi xảy ra", variant: "destructive" });
@@ -231,7 +272,7 @@ const toggleNotifPref = (key: NotifPrefKey) => {
 
   // ── Khóa tài khoản ───────────────────────────────────────────────────────────
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [lockingAccount,    setLockingAccount]    = useState(false);
+  const [lockingAccount, setLockingAccount] = useState(false);
 
   const handleLockAccount = async () => {
     const userId = user?._id ?? user?.id;
@@ -239,7 +280,10 @@ const toggleNotifPref = (key: NotifPrefKey) => {
     setLockingAccount(true);
     try {
       await userService.updateStudentStatus(userId, false);
-      toast({ title: "Tài khoản đã bị khóa", description: "Bạn sẽ được đăng xuất." });
+      toast({
+        title: "Tài khoản đã bị khóa",
+        description: "Bạn sẽ được đăng xuất.",
+      });
       setTimeout(() => logout(), 1500);
     } catch {
       toast({ title: "Có lỗi xảy ra", variant: "destructive" });
@@ -252,31 +296,40 @@ const toggleNotifPref = (key: NotifPrefKey) => {
   // ── Guards ────────────────────────────────────────────────────────────────────
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-  const handleRemoveFromWishlist = async (e: React.MouseEvent, courseId: string, title: string) => {
-    e.preventDefault(); e.stopPropagation();
+  const handleRemoveFromWishlist = async (
+    e: React.MouseEvent,
+    courseId: string,
+    title: string,
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
     await removeFromWishlist(courseId);
     toast({ title: "Đã bỏ yêu thích", description: `${title} đã được xóa.` });
   };
 
   const formatCurrency = (v: number) =>
-    new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(v);
+    new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+      maximumFractionDigits: 0,
+    }).format(v);
 
   const nameParts = user?.name?.split(" ") ?? [];
-  const lastName  = nameParts.at(-1) ?? "";
+  const lastName = nameParts.at(-1) ?? "";
   const firstName = nameParts.slice(0, -1).join(" ");
 
   const navItems = [
-    { label: "Khóa học của tôi",    path: "/dashboard",               icon: BookOpen },
-    { label: "Danh sách yêu thích", path: "/dashboard/wishlist",      icon: Heart },
-    { label: "Thông báo",           path: "/dashboard/notifications", icon: Bell },
-    { label: "Cài đặt tài khoản",  path: "/dashboard/settings",      icon: Settings },
+    { label: "Khóa học của tôi", path: "/dashboard", icon: BookOpen },
+    { label: "Danh sách yêu thích", path: "/dashboard/wishlist", icon: Heart },
+    { label: "Thông báo", path: "/dashboard/notifications", icon: Bell },
+    { label: "Cài đặt tài khoản", path: "/dashboard/settings", icon: Settings },
   ];
 
   const notifPrefItems: { key: NotifPrefKey; label: string }[] = [
     { key: "courseUpdates", label: "Nhận email khi có cập nhật khóa học" },
-    { key: "promotions",    label: "Nhận email khuyến mãi" },
-    { key: "browser",       label: "Thông báo qua trình duyệt" },
-    { key: "newsletter",    label: "Nhận bản tin hàng tuần" },
+    { key: "promotions", label: "Nhận email khuyến mãi" },
+    { key: "browser", label: "Thông báo qua trình duyệt" },
+    { key: "newsletter", label: "Nhận bản tin hàng tuần" },
   ];
 
   return (
@@ -284,56 +337,72 @@ const toggleNotifPref = (key: NotifPrefKey) => {
       <Header />
       <div className="container mx-auto px-4 py-8">
         <div className="flex gap-8">
-
           {/* Sidebar */}
           <aside className="w-64 flex-shrink-0 hidden lg:block">
             <div className="sticky top-20 space-y-2">
               <div className="flex items-center gap-3 mb-6 p-4 bg-secondary rounded-lg">
                 <img
-                  src={user?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}
-                  alt={user?.name} className="w-12 h-12 rounded-full object-cover"
+                  src={
+                    user?.avatar ||
+                    "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"
+                  }
+                  alt={user?.name}
+                  className="w-12 h-12 rounded-full object-cover"
                 />
                 <div>
                   <p className="font-semibold">{user?.name}</p>
-                  <p className="text-sm text-muted-foreground">{user?.username}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {user?.username}
+                  </p>
                 </div>
               </div>
               {navItems.map((item) => (
-                <Link key={item.path} to={item.path}
+                <Link
+                  key={item.path}
+                  to={item.path}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     currentPath === item.path ||
-                    (item.path === "/dashboard" && currentPath === "/dashboard/my-learning")
+                    (item.path === "/dashboard" &&
+                      currentPath === "/dashboard/my-learning")
                       ? "bg-udemy-purple-light text-primary font-medium"
                       : "hover:bg-secondary"
-                  }`}>
-                  <item.icon className="w-5 h-5" />{item.label}
-                  {item.path === "/dashboard/notifications" && unreadCount > 0 && (
-                    <span className="ml-auto bg-primary text-primary-foreground text-xs font-bold px-1.5 py-0.5 rounded-full">
-                      {unreadCount}
-                    </span>
-                  )}
+                  }`}
+                >
+                  <item.icon className="w-5 h-5" />
+                  {item.label}
+                  {item.path === "/dashboard/notifications" &&
+                    unreadCount > 0 && (
+                      <span className="ml-auto bg-primary text-primary-foreground text-xs font-bold px-1.5 py-0.5 rounded-full">
+                        {unreadCount}
+                      </span>
+                    )}
                 </Link>
               ))}
             </div>
           </aside>
 
           {/* Main */}
-          <main className="flex-1">
+          <main className="flex-1 min-w-0">
             {/* Mobile Nav */}
             <div className="lg:hidden flex gap-2 overflow-x-auto pb-4 mb-6">
               {navItems.map((item) => (
-                <Link key={item.path} to={item.path}
+                <Link
+                  key={item.path}
+                  to={item.path}
                   className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-colors ${
                     currentPath === item.path
                       ? "bg-primary text-primary-foreground"
                       : "bg-secondary hover:bg-secondary/80"
-                  }`}>
-                  <item.icon className="w-4 h-4" />{item.label}
-                  {item.path === "/dashboard/notifications" && unreadCount > 0 && (
-                    <span className="bg-white text-primary text-xs font-bold px-1.5 py-0.5 rounded-full">
-                      {unreadCount}
-                    </span>
-                  )}
+                  }`}
+                >
+                  <item.icon className="w-4 h-4" />
+                  {item.label}
+                  {item.path === "/dashboard/notifications" &&
+                    unreadCount > 0 && (
+                      <span className="bg-white text-primary text-xs font-bold px-1.5 py-0.5 rounded-full">
+                        {unreadCount}
+                      </span>
+                    )}
                 </Link>
               ))}
             </div>
@@ -347,20 +416,29 @@ const toggleNotifPref = (key: NotifPrefKey) => {
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                   </div>
                 ) : enrollments.length > 0 ? (
+                  // ✅ Đồng nhất: 2 cột giống wishlist
                   <div className="grid sm:grid-cols-2 gap-6">
                     {enrollments.map((e) => (
-                      <Link key={e._id} to={`/course/${e.courseId}/learn`}
-                        className="bg-card border border-border rounded-lg overflow-hidden hover:shadow-course-hover transition-shadow group">
-                        <div className="relative h-40">
-                          <img src={e.courseThumbnail} alt={e.courseTitle} className="w-full h-full object-cover" />
+                      <Link
+                        key={e._id}
+                        to={`/course/${e.courseId}/learn`}
+                        className="bg-card border border-border rounded-lg overflow-hidden hover:shadow-course-hover transition-shadow group"
+                      >
+                        <div className="relative h-44">
+                          <img
+                            src={e.courseThumbnail}
+                            alt={e.courseTitle}
+                            className="w-full h-full object-cover"
+                          />
                           <div className="absolute inset-0 bg-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <div className="w-16 h-16 bg-background rounded-full flex items-center justify-center">
-                              <Play className="w-8 h-8 text-primary fill-primary" />
+                            <div className="w-14 h-14 bg-background rounded-full flex items-center justify-center">
+                              <Play className="w-7 h-7 text-primary fill-primary" />
                             </div>
                           </div>
                           {e.status === "COMPLETED" && (
                             <div className="absolute top-2 right-2 bg-udemy-green text-background px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
-                              <Award className="w-3 h-3" />Hoàn thành
+                              <Award className="w-3 h-3" />
+                              Hoàn thành
                             </div>
                           )}
                         </div>
@@ -368,12 +446,19 @@ const toggleNotifPref = (key: NotifPrefKey) => {
                           <h3 className="font-semibold line-clamp-2 mb-3 group-hover:text-primary transition-colors">
                             {e.courseTitle}
                           </h3>
-                          <Progress value={Number(e.progress)} className="h-2 mb-2" />
+                          <Progress
+                            value={Number(e.progress)}
+                            className="h-2 mb-2"
+                          />
                           <div className="flex items-center justify-between text-sm text-muted-foreground">
-                            <span>Hoàn thành {Math.round(Number(e.progress))}%</span>
+                            <span>
+                              Hoàn thành {Math.round(Number(e.progress))}%
+                            </span>
                             <span className="flex items-center gap-1">
                               <Clock className="w-3 h-3" />
-                              {new Date(e.enrolledAt).toLocaleDateString("vi-VN")}
+                              {new Date(e.enrolledAt).toLocaleDateString(
+                                "vi-VN",
+                              )}
                             </span>
                           </div>
                         </div>
@@ -383,9 +468,16 @@ const toggleNotifPref = (key: NotifPrefKey) => {
                 ) : (
                   <div className="text-center py-16 bg-secondary rounded-lg">
                     <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <h2 className="text-xl font-semibold mb-2">Bắt đầu học ngay!</h2>
-                    <p className="text-muted-foreground mb-4">Khi bạn đăng ký khóa học, nó sẽ xuất hiện tại đây.</p>
-                    <Link to="/" className="inline-block bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold hover:bg-udemy-purple-dark transition-colors">
+                    <h2 className="text-xl font-semibold mb-2">
+                      Bắt đầu học ngay!
+                    </h2>
+                    <p className="text-muted-foreground mb-4">
+                      Khi bạn đăng ký khóa học, nó sẽ xuất hiện tại đây.
+                    </p>
+                    <Link
+                      to="/"
+                      className="inline-block bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold hover:bg-udemy-purple-dark transition-colors"
+                    >
                       Khám phá khóa học
                     </Link>
                   </div>
@@ -398,25 +490,46 @@ const toggleNotifPref = (key: NotifPrefKey) => {
               <div>
                 <h1 className="text-2xl font-bold mb-6">Danh sách yêu thích</h1>
                 {wishlist.length > 0 ? (
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  // ✅ Đồng nhất: 2 cột giống khóa học của tôi
+                  <div className="grid sm:grid-cols-2 gap-6">
                     {wishlist.map((item) => (
-                      <Link key={item._id} to={`/course/${item.courseId}`}
-                        className="bg-card border border-border rounded-lg overflow-hidden hover:shadow-course-hover transition-shadow group relative">
+                      <Link
+                        key={item._id}
+                        to={`/course/${item.courseId}`}
+                        className="bg-card border border-border rounded-lg overflow-hidden hover:shadow-course-hover transition-shadow group relative"
+                      >
                         <div className="relative">
-                          <img src={item.thumbnail} alt={item.title} className="w-full h-36 object-cover" />
+                          <img
+                            src={item.thumbnail}
+                            alt={item.title}
+                            className="w-full h-44 object-cover"
+                          />
                           <button
-                            onClick={(e) => handleRemoveFromWishlist(e, item.courseId, item.title)}
+                            onClick={(e) =>
+                              handleRemoveFromWishlist(
+                                e,
+                                item.courseId,
+                                item.title,
+                              )
+                            }
                             className="absolute top-2 right-2 w-8 h-8 bg-background/80 hover:bg-background rounded-full flex items-center justify-center transition-colors"
-                            title="Bỏ yêu thích">
+                            title="Bỏ yêu thích"
+                          >
                             <Heart className="w-5 h-5 text-primary fill-primary" />
                           </button>
                         </div>
                         <div className="p-4">
-                          <h3 className="font-semibold line-clamp-2 mb-2 group-hover:text-primary transition-colors">{item.title}</h3>
+                          <h3 className="font-semibold line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+                            {item.title}
+                          </h3>
                           <div className="flex items-center gap-2 mt-2">
-                            <span className="font-bold">{formatCurrency(Number(item.price))}</span>
+                            <span className="font-bold">
+                              {formatCurrency(Number(item.price))}
+                            </span>
                             {item.oldPrice > item.price && (
-                              <span className="text-sm text-muted-foreground line-through">{formatCurrency(Number(item.oldPrice))}</span>
+                              <span className="text-sm text-muted-foreground line-through">
+                                {formatCurrency(Number(item.oldPrice))}
+                              </span>
                             )}
                           </div>
                         </div>
@@ -426,9 +539,17 @@ const toggleNotifPref = (key: NotifPrefKey) => {
                 ) : (
                   <div className="text-center py-16 bg-secondary rounded-lg">
                     <Heart className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <h2 className="text-xl font-semibold mb-2">Danh sách yêu thích trống</h2>
-                    <p className="text-muted-foreground mb-4">Lưu các khóa học bạn quan tâm bằng cách nhấn biểu tượng trái tim.</p>
-                    <Link to="/" className="inline-block bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold hover:bg-udemy-purple-dark transition-colors">
+                    <h2 className="text-xl font-semibold mb-2">
+                      Danh sách yêu thích trống
+                    </h2>
+                    <p className="text-muted-foreground mb-4">
+                      Lưu các khóa học bạn quan tâm bằng cách nhấn biểu tượng
+                      trái tim.
+                    </p>
+                    <Link
+                      to="/"
+                      className="inline-block bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold hover:bg-udemy-purple-dark transition-colors"
+                    >
                       Khám phá khóa học
                     </Link>
                   </div>
@@ -443,12 +564,20 @@ const toggleNotifPref = (key: NotifPrefKey) => {
                   <div>
                     <h1 className="text-2xl font-bold">Thông báo</h1>
                     {unreadCount > 0 && (
-                      <p className="text-sm text-muted-foreground">{unreadCount} thông báo chưa đọc</p>
+                      <p className="text-sm text-muted-foreground">
+                        {unreadCount} thông báo chưa đọc
+                      </p>
                     )}
                   </div>
                   {unreadCount > 0 && (
-                    <Button variant="outline" size="sm" onClick={handleMarkAllAsRead} className="hidden sm:flex">
-                      <Check className="w-4 h-4 mr-2" />Đánh dấu tất cả đã đọc
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleMarkAllAsRead}
+                      className="hidden sm:flex"
+                    >
+                      <Check className="w-4 h-4 mr-2" />
+                      Đánh dấu tất cả đã đọc
                     </Button>
                   )}
                 </div>
@@ -462,39 +591,57 @@ const toggleNotifPref = (key: NotifPrefKey) => {
                     {userNotifs.map((n) => {
                       const { icon: Icon, className } = getIconStyle(n.type);
                       return (
-                        <div key={n._id}
+                        <div
+                          key={n._id}
                           className={`bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow ${
                             !n.isRead ? "border-l-4 border-l-primary" : ""
-                          }`}>
+                          }`}
+                        >
                           <div className="flex items-start gap-4">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${className}`}>
+                            <div
+                              className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${className}`}
+                            >
                               <Icon className="w-5 h-5" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
-                                    <h3 className={`font-semibold ${!n.isRead ? "text-foreground" : "text-muted-foreground"}`}>
+                                    <h3
+                                      className={`font-semibold ${!n.isRead ? "text-foreground" : "text-muted-foreground"}`}
+                                    >
                                       {n.title}
                                     </h3>
-                                    {!n.isRead && <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />}
+                                    {!n.isRead && (
+                                      <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
+                                    )}
                                   </div>
-                                  <p className="text-sm text-muted-foreground mt-1">{n.message}</p>
-                                  <p className="text-xs text-muted-foreground mt-2">{formatTime(n.createdAt)}</p>
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    {n.message}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground mt-2">
+                                    {formatTime(n.createdAt)}
+                                  </p>
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                   {!n.isRead && (
-                                    <Button variant="ghost" size="sm"
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
                                       onClick={() => handleMarkAsRead(n._id)}
                                       className="h-8 w-8 p-0 hover:bg-primary/10"
-                                      title="Đánh dấu đã đọc">
+                                      title="Đánh dấu đã đọc"
+                                    >
                                       <Check className="w-4 h-4 text-primary" />
                                     </Button>
                                   )}
-                                  <Button variant="ghost" size="sm"
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     onClick={() => handleRemoveNotif(n._id)}
                                     className="h-8 w-8 p-0 hover:bg-red-500/10"
-                                    title="Xóa thông báo">
+                                    title="Xóa thông báo"
+                                  >
                                     <X className="w-4 h-4 text-red-500" />
                                   </Button>
                                 </div>
@@ -508,8 +655,13 @@ const toggleNotifPref = (key: NotifPrefKey) => {
                 ) : (
                   <div className="text-center py-16 bg-secondary rounded-lg">
                     <Bell className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <h2 className="text-xl font-semibold mb-2">Chưa có thông báo</h2>
-                    <p className="text-muted-foreground">Các thông báo từ khóa học và hệ thống sẽ xuất hiện tại đây.</p>
+                    <h2 className="text-xl font-semibold mb-2">
+                      Chưa có thông báo
+                    </h2>
+                    <p className="text-muted-foreground">
+                      Các thông báo từ khóa học và hệ thống sẽ xuất hiện tại
+                      đây.
+                    </p>
                   </div>
                 )}
               </div>
@@ -520,15 +672,20 @@ const toggleNotifPref = (key: NotifPrefKey) => {
               <div>
                 <h1 className="text-2xl font-bold mb-6">Cài đặt tài khoản</h1>
                 <div className="max-w-2xl space-y-6">
-
                   {/* Hồ sơ */}
                   <div className="bg-card border border-border rounded-lg p-6">
-                    <h2 className="text-lg font-semibold mb-4">Hồ sơ cá nhân</h2>
+                    <h2 className="text-lg font-semibold mb-4">
+                      Hồ sơ cá nhân
+                    </h2>
                     <div className="flex items-center gap-4 mb-6">
                       <div className="relative">
                         <img
-                          src={user?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}
-                          alt={user?.name} className="w-20 h-20 rounded-full object-cover"
+                          src={
+                            user?.avatar ||
+                            "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"
+                          }
+                          alt={user?.name}
+                          className="w-20 h-20 rounded-full object-cover"
                         />
                         {uploadingAvatar && (
                           <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
@@ -537,52 +694,107 @@ const toggleNotifPref = (key: NotifPrefKey) => {
                         )}
                       </div>
                       <div>
-                        <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-                        <button onClick={handleAvatarClick} disabled={uploadingAvatar}
-                          className="flex items-center gap-2 text-primary font-semibold hover:underline disabled:opacity-60">
+                        <input
+                          ref={avatarInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleAvatarChange}
+                        />
+                        <button
+                          onClick={handleAvatarClick}
+                          disabled={uploadingAvatar}
+                          className="flex items-center gap-2 text-primary font-semibold hover:underline disabled:opacity-60"
+                        >
                           <Camera className="w-4 h-4" />
-                          {uploadingAvatar ? "Đang tải lên..." : "Đổi ảnh đại diện"}
+                          {uploadingAvatar
+                            ? "Đang tải lên..."
+                            : "Đổi ảnh đại diện"}
                         </button>
-                        <p className="text-sm text-muted-foreground mt-1">JPG, PNG hoặc GIF. Tối đa 2MB</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          JPG, PNG hoặc GIF. Tối đa 2MB
+                        </p>
                       </div>
                     </div>
                     <div className="grid gap-4">
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium mb-1">Họ</label>
-                          <input ref={firstNameRef} type="text" defaultValue={firstName}
-                            className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary" />
+                          <label className="block text-sm font-medium mb-1">
+                            Họ
+                          </label>
+                          <input
+                            ref={firstNameRef}
+                            type="text"
+                            defaultValue={firstName}
+                            className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium mb-1">Tên</label>
-                          <input ref={lastNameRef} type="text" defaultValue={lastName}
-                            className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary" />
+                          <label className="block text-sm font-medium mb-1">
+                            Tên
+                          </label>
+                          <input
+                            ref={lastNameRef}
+                            type="text"
+                            defaultValue={lastName}
+                            className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">Email</label>
-                        <input type="email" defaultValue={user?.username} disabled
-                          className="w-full px-4 py-2 border border-border rounded-lg bg-secondary text-muted-foreground cursor-not-allowed" />
+                        <label className="block text-sm font-medium mb-1">
+                          Email
+                        </label>
+                        <input
+                          type="email"
+                          defaultValue={user?.username}
+                          disabled
+                          className="w-full px-4 py-2 border border-border rounded-lg bg-secondary text-muted-foreground cursor-not-allowed"
+                        />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">Số điện thoại</label>
-                        <input ref={phoneRef} type="tel" defaultValue={user?.phone ?? ""} placeholder="0912345678"
-                          className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary" />
+                        <label className="block text-sm font-medium mb-1">
+                          Số điện thoại
+                        </label>
+                        <input
+                          ref={phoneRef}
+                          type="tel"
+                          defaultValue={user?.phone ?? ""}
+                          placeholder="0912345678"
+                          className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">Ngày sinh</label>
-                        <input ref={dobRef} type="date" defaultValue={user?.dateOfBirth ?? ""}
-                          className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary" />
+                        <label className="block text-sm font-medium mb-1">
+                          Ngày sinh
+                        </label>
+                        <input
+                          ref={dobRef}
+                          type="date"
+                          defaultValue={user?.dateOfBirth ?? ""}
+                          className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">Giới thiệu bản thân</label>
-                        <textarea ref={bioRef} rows={3} defaultValue={user?.bio ?? ""}
+                        <label className="block text-sm font-medium mb-1">
+                          Giới thiệu bản thân
+                        </label>
+                        <textarea
+                          ref={bioRef}
+                          rows={3}
+                          defaultValue={user?.bio ?? ""}
                           placeholder="Viết vài dòng về bản thân bạn..."
-                          className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
+                          className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                        />
                       </div>
-                      <button onClick={handleSaveProfile} disabled={savingProfile}
-                        className="w-full sm:w-auto px-6 py-2 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-udemy-purple-dark transition-colors disabled:opacity-60 flex items-center gap-2">
-                        {savingProfile && <Loader2 className="w-4 h-4 animate-spin" />}
+                      <button
+                        onClick={handleSaveProfile}
+                        disabled={savingProfile}
+                        className="w-full sm:w-auto px-6 py-2 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-udemy-purple-dark transition-colors disabled:opacity-60 flex items-center gap-2"
+                      >
+                        {savingProfile && (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        )}
                         Lưu thay đổi
                       </button>
                     </div>
@@ -593,23 +805,46 @@ const toggleNotifPref = (key: NotifPrefKey) => {
                     <h2 className="text-lg font-semibold mb-4">Bảo mật</h2>
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium mb-1">Mật khẩu hiện tại</label>
-                        <input ref={currentPwRef} type="password" placeholder="••••••••"
-                          className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary" />
+                        <label className="block text-sm font-medium mb-1">
+                          Mật khẩu hiện tại
+                        </label>
+                        <input
+                          ref={currentPwRef}
+                          type="password"
+                          placeholder="••••••••"
+                          className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">Mật khẩu mới</label>
-                        <input ref={newPwRef} type="password" placeholder="••••••••"
-                          className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary" />
+                        <label className="block text-sm font-medium mb-1">
+                          Mật khẩu mới
+                        </label>
+                        <input
+                          ref={newPwRef}
+                          type="password"
+                          placeholder="••••••••"
+                          className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">Xác nhận mật khẩu mới</label>
-                        <input ref={confirmPwRef} type="password" placeholder="••••••••"
-                          className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary" />
+                        <label className="block text-sm font-medium mb-1">
+                          Xác nhận mật khẩu mới
+                        </label>
+                        <input
+                          ref={confirmPwRef}
+                          type="password"
+                          placeholder="••••••••"
+                          className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
-                      <button onClick={handleChangePassword} disabled={savingPw}
-                        className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-udemy-purple-dark transition-colors disabled:opacity-60 flex items-center gap-2">
-                        {savingPw && <Loader2 className="w-4 h-4 animate-spin" />}
+                      <button
+                        onClick={handleChangePassword}
+                        disabled={savingPw}
+                        className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-udemy-purple-dark transition-colors disabled:opacity-60 flex items-center gap-2"
+                      >
+                        {savingPw && (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        )}
                         Đổi mật khẩu
                       </button>
                     </div>
@@ -617,20 +852,39 @@ const toggleNotifPref = (key: NotifPrefKey) => {
 
                   {/* Liên kết tài khoản */}
                   <div className="bg-card border border-border rounded-lg p-6">
-                    <h2 className="text-lg font-semibold mb-4">Liên kết tài khoản</h2>
+                    <h2 className="text-lg font-semibold mb-4">
+                      Liên kết tài khoản
+                    </h2>
                     <div className="space-y-3">
                       {[
-                        { label: "Google",   color: "bg-red-500",  letter: "G" },
-                        { label: "Facebook", color: "bg-blue-600", letter: "F" },
+                        { label: "Google", color: "bg-red-500", letter: "G" },
+                        {
+                          label: "Facebook",
+                          color: "bg-blue-600",
+                          letter: "F",
+                        },
                       ].map((s) => (
-                        <div key={s.label} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
+                        <div
+                          key={s.label}
+                          className="flex items-center justify-between p-3 bg-secondary rounded-lg"
+                        >
                           <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 ${s.color} rounded-full flex items-center justify-center text-white font-bold text-sm`}>{s.letter}</div>
+                            <div
+                              className={`w-8 h-8 ${s.color} rounded-full flex items-center justify-center text-white font-bold text-sm`}
+                            >
+                              {s.letter}
+                            </div>
                             <span>{s.label}</span>
                           </div>
                           <button
-                            onClick={() => toast({ title: "Tính năng đang phát triển", description: `Liên kết với ${s.label} sẽ sớm có.` })}
-                            className="text-primary font-medium hover:underline text-sm">
+                            onClick={() =>
+                              toast({
+                                title: "Tính năng đang phát triển",
+                                description: `Liên kết với ${s.label} sẽ sớm có.`,
+                              })
+                            }
+                            className="text-primary font-medium hover:underline text-sm"
+                          >
                             Liên kết
                           </button>
                         </div>
@@ -640,10 +894,15 @@ const toggleNotifPref = (key: NotifPrefKey) => {
 
                   {/* Tùy chọn thông báo */}
                   <div className="bg-card border border-border rounded-lg p-6">
-                    <h2 className="text-lg font-semibold mb-4">Tùy chọn thông báo</h2>
+                    <h2 className="text-lg font-semibold mb-4">
+                      Tùy chọn thông báo
+                    </h2>
                     <div className="space-y-3">
                       {notifPrefItems.map((n) => (
-                        <label key={n.key} className="flex items-center gap-3 cursor-pointer">
+                        <label
+                          key={n.key}
+                          className="flex items-center gap-3 cursor-pointer"
+                        >
                           <input
                             type="checkbox"
                             checked={notifPrefs[n.key]}
@@ -658,33 +917,47 @@ const toggleNotifPref = (key: NotifPrefKey) => {
 
                   {/* Khóa tài khoản */}
                   <div className="bg-card border border-destructive rounded-lg p-6">
-                    <h2 className="text-lg font-semibold text-destructive mb-2">Khóa tài khoản</h2>
+                    <h2 className="text-lg font-semibold text-destructive mb-2">
+                      Khóa tài khoản
+                    </h2>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Tài khoản của bạn sẽ bị vô hiệu hóa và bạn sẽ không thể đăng nhập cho đến khi được kích hoạt lại bởi quản trị viên.
+                      Tài khoản của bạn sẽ bị vô hiệu hóa và bạn sẽ không thể
+                      đăng nhập cho đến khi được kích hoạt lại bởi quản trị
+                      viên.
                     </p>
                     {!showDeleteConfirm ? (
-                      <button onClick={() => setShowDeleteConfirm(true)}
-                        className="px-4 py-2 border border-destructive text-destructive rounded-lg font-medium hover:bg-destructive/10 transition-colors">
+                      <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="px-4 py-2 border border-destructive text-destructive rounded-lg font-medium hover:bg-destructive/10 transition-colors"
+                      >
                         Khóa tài khoản
                       </button>
                     ) : (
                       <div className="bg-destructive/5 border border-destructive/30 rounded-lg p-4">
-                        <p className="text-sm font-medium mb-3">Bạn có chắc chắn muốn khóa tài khoản?</p>
+                        <p className="text-sm font-medium mb-3">
+                          Bạn có chắc chắn muốn khóa tài khoản?
+                        </p>
                         <div className="flex gap-3">
-                          <button onClick={handleLockAccount} disabled={lockingAccount}
-                            className="px-4 py-2 bg-destructive text-white rounded-lg font-medium hover:bg-destructive/90 transition-colors disabled:opacity-60 flex items-center gap-2">
-                            {lockingAccount && <Loader2 className="w-4 h-4 animate-spin" />}
+                          <button
+                            onClick={handleLockAccount}
+                            disabled={lockingAccount}
+                            className="px-4 py-2 bg-destructive text-white rounded-lg font-medium hover:bg-destructive/90 transition-colors disabled:opacity-60 flex items-center gap-2"
+                          >
+                            {lockingAccount && (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            )}
                             Xác nhận khóa
                           </button>
-                          <button onClick={() => setShowDeleteConfirm(false)}
-                            className="px-4 py-2 border border-border rounded-lg font-medium hover:bg-secondary transition-colors">
+                          <button
+                            onClick={() => setShowDeleteConfirm(false)}
+                            className="px-4 py-2 border border-border rounded-lg font-medium hover:bg-secondary transition-colors"
+                          >
                             Hủy
                           </button>
                         </div>
                       </div>
                     )}
                   </div>
-
                 </div>
               </div>
             )}
