@@ -42,6 +42,7 @@ public class SecurityConfiguration {
                                         "/categories/**")
                                 .permitAll()
                                 .requestMatchers(HttpMethod.GET, "/settings/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/courses/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/tags/**")
                                 .permitAll()
                                 .requestMatchers(whileList).permitAll()

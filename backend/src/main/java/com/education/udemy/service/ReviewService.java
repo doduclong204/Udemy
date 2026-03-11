@@ -23,6 +23,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 @Service
@@ -35,25 +37,49 @@ public class ReviewService {
     CourseRepository courseRepository;
     UserRepository userRepository;
 
+    private void recalculateCourseRating(Course course) {
+        List<Review> activeReviews = reviewRepository.findByCourseAndReviewStatusTrue(course);
+
+        long count = activeReviews.size();
+        BigDecimal avg = BigDecimal.ZERO;
+
+        if (count > 0) {
+            double sum = activeReviews.stream()
+                    .mapToInt(Review::getRating)
+                    .average()
+                    .orElse(0.0);
+            avg = BigDecimal.valueOf(sum).setScale(2, RoundingMode.HALF_UP);
+        }
+
+        course.setRating(avg);
+        course.setRatingCount(count);
+        courseRepository.save(course);
+        log.info("Cập nhật rating course {}: {} ({} đánh giá)", course.getId(), avg, count);
+    }
+
     @Transactional
     public ReviewResponse createReview(ReviewRequest request) {
         log.info("Học viên gửi đánh giá mới");
-        Review review = reviewMapper.toReview(request);
+
         Course course = courseRepository.findById(request.getCourseId())
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
-        review.setCourse(course);
 
         String email = SecurityUtil.getCurrentUserLogin().orElse("");
         User currentUser = userRepository.findByUsername(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-        review.setUser(currentUser);
 
+        Review review = reviewMapper.toReview(request);
+        review.setCourse(course);
+        review.setUser(currentUser);
         review.setReviewStatus(true);
 
         Review savedReview = reviewRepository.save(review);
 
+        recalculateCourseRating(course);
+
         return reviewMapper.toReviewResponse(savedReview);
     }
+
     public ApiPagination<ReviewResponse> getAllReviews(Specification<Review> spec, Pageable pageable) {
         log.info("Lấy danh sách đánh giá");
         Page<Review> pageReview = reviewRepository.findAll(spec, pageable);
@@ -79,13 +105,24 @@ public class ReviewService {
                 .orElseThrow(() -> new AppException(ErrorCode.REVIEW_NOT_FOUND));
 
         reviewMapper.updateReview(review, request);
-        return reviewMapper.toReviewResponse(reviewRepository.saveAndFlush(review));
+        Review updated = reviewRepository.saveAndFlush(review);
+
+        if (request.getReviewStatus() != null) {
+            recalculateCourseRating(review.getCourse());
+        }
+
+        return reviewMapper.toReviewResponse(updated);
     }
 
+    @Transactional
     public void delete(String id) {
         log.info("Xóa đánh giá");
-        if (!reviewRepository.existsById(id))
-            throw new AppException(ErrorCode.REVIEW_NOT_FOUND);
+        Review review = reviewRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.REVIEW_NOT_FOUND));
+
+        Course course = review.getCourse();
         reviewRepository.deleteById(id);
+
+        recalculateCourseRating(course);
     }
 }
