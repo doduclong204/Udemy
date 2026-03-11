@@ -1,21 +1,25 @@
-import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
-import { Rating } from '@/components/Rating';
-import { CourseCarousel } from '@/components/CourseCarousel';
-import { Button } from '@/components/ui/button';
-import { useCart } from '@/contexts/CartContext';
-import { useWishlist } from '@/contexts/WishlistContext';
-import courseService from '@/services/courseService';
-import reviewService from '@/services/reviewService';
-import type { CourseDetailResponse, CourseSummaryResponse, ReviewResponse } from '@/types';
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { Rating } from "@/components/Rating";
+import { CourseCarousel } from "@/components/CourseCarousel";
+import { Button } from "@/components/ui/button";
+import { useCart } from "@/contexts/CartContext";
+import { useWishlist } from "@/contexts/WishlistContext";
+import courseService from "@/services/courseService";
+import reviewService from "@/services/reviewService";
+import type {
+  CourseDetailResponse,
+  CourseSummaryResponse,
+  ReviewResponse,
+} from "@/types";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion';
+} from "@/components/ui/accordion";
 import {
   Play,
   FileText,
@@ -26,13 +30,13 @@ import {
   Share2,
   Check,
   Clock,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+} from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
     maximumFractionDigits: 0,
   }).format(value);
 };
@@ -49,7 +53,9 @@ export default function CourseDetail() {
   const { isInWishlist, toggleWishlist } = useWishlist();
 
   const [course, setCourse] = useState<CourseDetailResponse | null>(null);
-  const [relatedCourses, setRelatedCourses] = useState<CourseSummaryResponse[]>([]);
+  const [relatedCourses, setRelatedCourses] = useState<CourseSummaryResponse[]>(
+    [],
+  );
   const [reviews, setReviews] = useState<ReviewResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -64,7 +70,10 @@ export default function CourseDetail() {
           .getReviewsByCourse(data._id, { pageSize: 5 })
           .then((res) => setReviews(res.result))
           .catch(() => {});
-        return courseService.getCourses({ category: data.categoryName, pageSize: 10 });
+        return courseService.getCourses({
+          category: data.categoryName,
+          pageSize: 10,
+        });
       })
       .then((res) => {
         setRelatedCourses(res.result.filter((c) => c._id !== id));
@@ -98,38 +107,43 @@ export default function CourseDetail() {
   }
 
   const learningOutcomesList = course.learningOutcomes
-    ? course.learningOutcomes.split(/[\n,]/).map((s) => s.trim()).filter(Boolean)
+    ? course.learningOutcomes
+        .split(/[\n,]/)
+        .map((s) => s.trim())
+        .filter(Boolean)
     : [];
 
   const price = Number(course.price) || 0;
   const discountPrice = Number(course.discountPrice) || 0;
   const displayPrice = discountPrice > 0 ? discountPrice : price;
-  const discountPercent = discountPrice > 0
-    ? Math.round((1 - discountPrice / price) * 100)
-    : 0;
+  const discountPercent =
+    discountPrice > 0 ? Math.round((1 - discountPrice / price) * 100) : 0;
+
+  // ✅ Đọc state wishlist từ context (reactive), không dùng course.isInWishlist
+  const inWishlist = isInWishlist(course._id);
 
   const handleAddToCart = () => {
     addToCart(course as any);
     toast({
-      title: 'Đã thêm vào giỏ hàng',
+      title: "Đã thêm vào giỏ hàng",
       description: `${course.title} đã được thêm vào giỏ hàng của bạn.`,
     });
   };
 
+  // ✅ Truyền course._id (string) thay vì cả object
   const handleToggleWishlist = () => {
-    const inWishlist = isInWishlist(course._id);
-    toggleWishlist(course as any);
+    toggleWishlist(course._id);
     toast({
-      title: inWishlist ? 'Đã bỏ yêu thích' : 'Đã thêm vào yêu thích',
-      description: `${course.title} đã được ${inWishlist ? 'xóa khỏi' : 'thêm vào'} danh sách yêu thích.`,
+      title: inWishlist ? "Đã bỏ yêu thích" : "Đã thêm vào yêu thích",
+      description: `${course.title} đã được ${inWishlist ? "xóa khỏi" : "thêm vào"} danh sách yêu thích.`,
     });
   };
 
   const getLectureIcon = (type: string) => {
     switch (type.toUpperCase()) {
-      case 'VIDEO':
+      case "VIDEO":
         return <Play className="w-4 h-4" />;
-      case 'ARTICLE':
+      case "ARTICLE":
         return <FileText className="w-4 h-4" />;
       default:
         return <Play className="w-4 h-4" />;
@@ -154,7 +168,9 @@ export default function CourseDetail() {
               <h1 className="text-2xl md:text-3xl font-bold mb-4 leading-snug">
                 {course.title}
               </h1>
-              <p className="text-lg text-background/80 mb-4">{course.smallDescription}</p>
+              <p className="text-lg text-background/80 mb-4">
+                {course.smallDescription}
+              </p>
 
               <div className="flex flex-wrap items-center gap-4 mb-4">
                 <Rating
@@ -171,7 +187,8 @@ export default function CourseDetail() {
                 {course.updatedAt && (
                   <span className="flex items-center gap-1">
                     <Clock className="w-4 h-4" />
-                    Cập nhật lần cuối {new Date(course.updatedAt).toLocaleDateString('vi-VN')}
+                    Cập nhật lần cuối{" "}
+                    {new Date(course.updatedAt).toLocaleDateString("vi-VN")}
                   </span>
                 )}
                 <span className="flex items-center gap-1">
@@ -188,7 +205,6 @@ export default function CourseDetail() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
-
             {/* What you'll learn */}
             {learningOutcomesList.length > 0 && (
               <div className="border border-border rounded-lg p-6 mb-8">
@@ -213,10 +229,15 @@ export default function CourseDetail() {
                   <span>•</span>
                   <span>{course.totalLectures} bài giảng</span>
                   <span>•</span>
-                  <span>{formatDuration(course.totalDuration || 0)} tổng thời lượng</span>
+                  <span>
+                    {formatDuration(course.totalDuration || 0)} tổng thời lượng
+                  </span>
                 </div>
 
-                <Accordion type="multiple" className="border border-border rounded-lg overflow-hidden">
+                <Accordion
+                  type="multiple"
+                  className="border border-border rounded-lg overflow-hidden"
+                >
                   {course.sections.map((section) => (
                     <AccordionItem key={section._id} value={section._id}>
                       <AccordionTrigger className="px-4 py-3 bg-secondary hover:bg-secondary/80">
@@ -237,11 +258,15 @@ export default function CourseDetail() {
                               {getLectureIcon(lecture.type)}
                               <span className="text-sm">{lecture.title}</span>
                               {lecture.isFree && (
-                                <button className="text-primary text-sm underline">Xem trước</button>
+                                <button className="text-primary text-sm underline">
+                                  Xem trước
+                                </button>
                               )}
                             </div>
                             <span className="text-sm text-muted-foreground">
-                              {lecture.duration ? formatDuration(lecture.duration) : ''}
+                              {lecture.duration
+                                ? formatDuration(lecture.duration)
+                                : ""}
                             </span>
                           </div>
                         ))}
@@ -256,7 +281,9 @@ export default function CourseDetail() {
             {course.description && (
               <div className="mb-8">
                 <h2 className="text-xl font-bold mb-4">Mô tả khóa học</h2>
-                <p className="text-sm text-foreground/80 whitespace-pre-line">{course.description}</p>
+                <p className="text-sm text-foreground/80 whitespace-pre-line">
+                  {course.description}
+                </p>
               </div>
             )}
 
@@ -264,28 +291,41 @@ export default function CourseDetail() {
             <div className="mb-8">
               <h2 className="text-xl font-bold mb-4">Phản hồi học viên</h2>
               {reviews.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Chưa có ai phản hồi về khóa học này.</p>
+                <p className="text-sm text-muted-foreground">
+                  Chưa có ai phản hồi về khóa học này.
+                </p>
               ) : (
                 <div className="space-y-6">
                   {reviews.map((review) => (
-                    <div key={review._id} className="border-b border-border pb-6 last:border-0">
+                    <div
+                      key={review._id}
+                      className="border-b border-border pb-6 last:border-0"
+                    >
                       <div className="flex gap-4 mb-2">
                         <img
-                          src={review.user.avatar || '/placeholder-avatar.jpg'}
+                          src={review.user.avatar || "/placeholder-avatar.jpg"}
                           alt={review.user.name}
                           className="w-12 h-12 rounded-full object-cover"
                         />
                         <div>
                           <p className="font-semibold">{review.user.name}</p>
                           <div className="flex items-center gap-2">
-                            <Rating rating={review.rating} showNumber={false} size="sm" />
+                            <Rating
+                              rating={review.rating}
+                              showNumber={false}
+                              size="sm"
+                            />
                             <span className="text-sm text-muted-foreground">
-                              {new Date(review.createdAt).toLocaleDateString('vi-VN')}
+                              {new Date(review.createdAt).toLocaleDateString(
+                                "vi-VN",
+                              )}
                             </span>
                           </div>
                         </div>
                       </div>
-                      <p className="text-sm text-foreground/80">{review.comment}</p>
+                      <p className="text-sm text-foreground/80">
+                        {review.comment}
+                      </p>
                       {review.adminReply && (
                         <div className="mt-3 pl-4 border-l-2 border-primary">
                           <p className="text-xs text-muted-foreground font-semibold mb-1">
@@ -311,7 +351,9 @@ export default function CourseDetail() {
               />
               <div className="p-6">
                 <div className="flex flex-wrap items-center gap-3 mb-4">
-                  <span className="text-3xl font-bold">{formatCurrency(displayPrice)}</span>
+                  <span className="text-3xl font-bold">
+                    {formatCurrency(displayPrice)}
+                  </span>
                   {discountPrice > 0 && (
                     <>
                       <span className="text-lg text-muted-foreground line-through">
@@ -324,17 +366,21 @@ export default function CourseDetail() {
                   )}
                 </div>
 
-                {course.isInCart ? (
+                {isInCart(course._id) ? (
                   <Button variant="cart" className="mb-3" disabled>
                     Đã thêm vào giỏ
                   </Button>
                 ) : (
-                  <Button variant="cart" className="mb-3" onClick={handleAddToCart}>
+                  <Button
+                    variant="cart"
+                    className="mb-3"
+                    onClick={handleAddToCart}
+                  >
                     Thêm vào giỏ hàng
                   </Button>
                 )}
 
-                <Button variant="wishlist" className="w-full mb-4">
+                <Button variant="default" className="w-full mb-4">
                   Mua ngay
                 </Button>
 
@@ -346,7 +392,10 @@ export default function CourseDetail() {
                   <p className="font-bold">Khóa học này bao gồm:</p>
                   <div className="flex items-center gap-2">
                     <Play className="w-4 h-4 text-muted-foreground" />
-                    <span>{formatDuration(course.totalDuration || 0)} video theo yêu cầu</span>
+                    <span>
+                      {formatDuration(course.totalDuration || 0)} video theo yêu
+                      cầu
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-muted-foreground" />
@@ -363,16 +412,20 @@ export default function CourseDetail() {
                     <Share2 className="w-4 h-4" />
                     Chia sẻ
                   </button>
+
+                  {/* ✅ Dùng inWishlist từ context, không dùng course.isInWishlist */}
                   <button
                     onClick={handleToggleWishlist}
                     className={`flex items-center gap-1 text-sm transition-colors ${
-                      course.isInWishlist
-                        ? 'text-primary'
-                        : 'text-foreground hover:text-primary'
+                      inWishlist
+                        ? "text-primary"
+                        : "text-foreground hover:text-primary"
                     }`}
                   >
-                    <Heart className={`w-4 h-4 ${course.isInWishlist ? 'fill-primary' : ''}`} />
-                    {course.isInWishlist ? 'Đã yêu thích' : 'Yêu thích'}
+                    <Heart
+                      className={`w-4 h-4 ${inWishlist ? "fill-primary" : ""}`}
+                    />
+                    {inWishlist ? "Đã yêu thích" : "Yêu thích"}
                   </button>
                 </div>
               </div>
