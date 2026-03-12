@@ -416,7 +416,6 @@ export default function Dashboard() {
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                   </div>
                 ) : enrollments.length > 0 ? (
-                  // ✅ Đồng nhất: 2 cột giống wishlist
                   <div className="grid sm:grid-cols-2 gap-6">
                     {enrollments.map((e) => (
                       <Link
@@ -490,7 +489,6 @@ export default function Dashboard() {
               <div>
                 <h1 className="text-2xl font-bold mb-6">Danh sách yêu thích</h1>
                 {wishlist.length > 0 ? (
-                  // ✅ Đồng nhất: 2 cột giống khóa học của tôi
                   <div className="grid sm:grid-cols-2 gap-6">
                     {wishlist.map((item) => (
                       <Link
