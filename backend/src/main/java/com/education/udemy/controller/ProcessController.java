@@ -11,6 +11,8 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/enrollments")
 @RequiredArgsConstructor
@@ -26,5 +28,12 @@ public class ProcessController {
             @RequestBody @Valid ProcessUpdateRequest request) {
 
         return ResponseEntity.ok().body(processService.updateProgress(enrollmentId, request));
+    }
+
+    @GetMapping("/{enrollmentId}/progress")
+    @ApiMessage("Lấy tiến độ học tập thành công")
+    public ResponseEntity<List<ProcessResponse>> getProgress(
+            @PathVariable String enrollmentId) {
+        return ResponseEntity.ok().body(processService.getProgressByEnrollment(enrollmentId));
     }
 }

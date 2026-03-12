@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -94,5 +95,12 @@ public class ProcessService {
         }
 
         enrollmentRepository.save(enrollment);
+    }
+
+    public List<ProcessResponse> getProgressByEnrollment(String enrollmentId) {
+        return progressRepository.findByEnrollmentId(enrollmentId)
+                .stream()
+                .map(processMapper::toResponse)
+                .toList();
     }
 }

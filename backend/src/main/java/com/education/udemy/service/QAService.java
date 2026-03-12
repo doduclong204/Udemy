@@ -127,4 +127,21 @@ public class QAService {
                 .result(list)
                 .build();
     }
+
+    public ApiPagination<QAResponse> getAllAnswers(Specification<CourseAnswer> spec, Pageable pageable) {
+        Page<CourseAnswer> page = answerRepository.findAll(spec, pageable);
+        List<QAResponse> list = page.getContent().stream()
+                .map(qaMapper::toAnswerResponse)
+                .toList();
+
+        ApiPagination.Meta meta = ApiPagination.Meta.builder()
+                .current(pageable.getPageNumber() + 1)
+                .pageSize(pageable.getPageSize())
+                .pages(page.getTotalPages())
+                .total(page.getTotalElements())
+                .build();
+
+        return ApiPagination.<QAResponse>builder()
+                .meta(meta).result(list).build();
+    }
 }
