@@ -10,10 +10,10 @@ export function PromoBar() {
     <div className="bg-udemy-navy text-background py-3 relative animate-pulse-slow">
       <div className="container mx-auto px-4 text-center">
         <p className="text-sm md:text-base font-medium">
-          <span className="text-udemy-yellow">Khuyến mãi Năm Mới!</span> Khóa học chỉ từ{' '}
-          <span className="font-bold">199.000đ</span>. Còn 2 ngày!{' '}
+          <span className="text-udemy-yellow"> Không ngừng học hỏi, không ngừng phát triển. </span>{' '}
+          <span className="font-bold">Học ngay</span>!!!{' '}
           <button className="underline font-semibold hover:text-udemy-yellow transition-colors">
-            Mua ngay
+            
           </button>
         </p>
         <button

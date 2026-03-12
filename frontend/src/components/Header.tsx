@@ -14,6 +14,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { logoutAsync } from "@/redux/slices/authSlice";
 import type { RootState, AppDispatch } from "@/redux/store";
 import { useCart } from "@/contexts/CartContext";
+import { useSettings } from "@/contexts/SettingsContext";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 import {
   DropdownMenu,
@@ -30,6 +31,7 @@ export function Header() {
   const [categories, setCategories] = useState<Category[]>([]);
 
   const dispatch = useDispatch<AppDispatch>();
+  const { settings } = useSettings();
 
   const { user, isAuthenticated } = useSelector(
     (state: RootState) => state.auth,
@@ -65,8 +67,22 @@ export function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 gap-4">
           {/* Logo */}
-          <Link to="/" className="flex-shrink-0">
-            <span className="text-2xl font-bold text-primary">LearnHub</span>
+          <Link
+            to="/"
+            reloadDocument
+            className="flex-shrink-0 flex items-center gap-2"
+          >
+            {settings?.logo ? (
+              <img
+                src={settings.logo}
+                alt={settings?.siteName || "Logo"}
+                className="h-28 w-auto object-contain"
+              />
+            ) : (
+              <span className="text-2xl font-bold text-primary">
+                {settings?.siteName || "LearnHub"}
+              </span>
+            )}
           </Link>
 
           {/* Categories Dropdown - Desktop */}

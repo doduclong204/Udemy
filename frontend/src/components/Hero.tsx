@@ -1,10 +1,18 @@
 import { Search } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSettings } from '@/contexts/SettingsContext';
 
 export function Hero() {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const { settings } = useSettings();
+
+  const primaryColor = settings?.primaryColor || '#A435F0';
+
+  const heroStyle = {
+    background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}bb 50%, #1e1b4b 100%)`,
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -14,8 +22,7 @@ export function Hero() {
   };
 
   return (
-    <section className="relative bg-gradient-to-br from-udemy-purple via-udemy-purple-dark to-udemy-navy overflow-hidden">
-      {/* Background Pattern */}
+    <section className="relative overflow-hidden" style={heroStyle}>
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-0 left-0 w-96 h-96 bg-background rounded-full -translate-x-1/2 -translate-y-1/2"></div>
         <div className="absolute bottom-0 right-0 w-80 h-80 bg-background rounded-full translate-x-1/3 translate-y-1/3"></div>
@@ -23,11 +30,11 @@ export function Hero() {
 
       <div className="container mx-auto px-4 py-16 md:py-24 relative">
         <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-background mb-6 animate-fade-in">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-6 animate-fade-in">
             Học Mọi Thứ,{' '}
             <span className="text-udemy-yellow">Theo Lịch Của Bạn</span>
           </h1>
-          <p className="text-lg md:text-xl text-background/90 mb-8 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+          <p className="text-lg md:text-xl text-white/90 mb-8 animate-fade-in" style={{ animationDelay: '0.1s' }}>
             Khám phá hàng nghìn khóa học từ các giảng viên hàng đầu.
             Bắt đầu học ngay hôm nay và mở khóa tiềm năng của bạn.
           </p>
@@ -40,11 +47,12 @@ export function Hero() {
                 placeholder="Bạn muốn học gì hôm nay?"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-5 py-5 pl-14 text-lg rounded-full bg-background text-foreground shadow-2xl focus:outline-none focus:ring-4 focus:ring-udemy-yellow/50 transition-all"
+                className="w-full px-5 py-5 pl-14 text-lg rounded-full bg-background text-foreground shadow-2xl focus:outline-none focus:ring-4 focus:ring-white/30 transition-all"
               />
               <button
                 type="submit"
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-primary text-primary-foreground px-6 py-3 rounded-full font-semibold hover:bg-udemy-purple-dark transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-white px-6 py-3 rounded-full font-semibold transition-colors"
+                style={{ backgroundColor: `${primaryColor}dd` }}
               >
                 Tìm kiếm
               </button>
@@ -56,7 +64,7 @@ export function Hero() {
               <button
                 key={topic}
                 onClick={() => navigate(`/search?q=${encodeURIComponent(topic)}`)}
-                className="px-4 py-2 bg-background/20 text-background rounded-full text-sm font-medium hover:bg-background/30 transition-colors border border-background/30"
+                className="px-4 py-2 bg-white/20 text-white rounded-full text-sm font-medium hover:bg-white/30 transition-colors border border-white/30"
               >
                 {topic}
               </button>
@@ -65,26 +73,13 @@ export function Hero() {
         </div>
       </div>
 
-      {/* Stats Bar */}
-      <div className="bg-background/10 backdrop-blur-sm border-t border-background/20">
+      <div className="bg-white/10 backdrop-blur-sm border-t border-white/20">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-wrap justify-center gap-8 md:gap-16 text-background text-center">
-            <div>
-              <p className="text-3xl font-bold">210k+</p>
-              <p className="text-sm opacity-80">Khóa học trực tuyến</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold">75k+</p>
-              <p className="text-sm opacity-80">Giảng viên chuyên nghiệp</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold">62M+</p>
-              <p className="text-sm opacity-80">Học viên toàn cầu</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold">850M+</p>
-              <p className="text-sm opacity-80">Lượt đăng ký</p>
-            </div>
+          <div className="flex flex-wrap justify-center gap-8 md:gap-16 text-white text-center">
+            <div><p className="text-3xl font-bold">210k+</p><p className="text-sm opacity-80">Khóa học trực tuyến</p></div>
+            <div><p className="text-3xl font-bold">75k+</p><p className="text-sm opacity-80">Giảng viên chuyên nghiệp</p></div>
+            <div><p className="text-3xl font-bold">62M+</p><p className="text-sm opacity-80">Học viên toàn cầu</p></div>
+            <div><p className="text-3xl font-bold">850M+</p><p className="text-sm opacity-80">Lượt đăng ký</p></div>
           </div>
         </div>
       </div>

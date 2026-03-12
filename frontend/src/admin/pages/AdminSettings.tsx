@@ -14,6 +14,7 @@ import {
   Form, FormControl, FormField,
   FormItem, FormLabel, FormMessage,
 } from '@/components/ui/form';
+import axiosInstance from '@/config/api';
 
 // ── Schema ────────────────────────────────────────────────
 const schema = z.object({
@@ -61,19 +62,19 @@ export default function AdminSettings() {
   useEffect(() => {
     (async () => {
       try {
-        const s = await settingService.getSettings();
+        const settings = await settingService.getSettings();
         form.reset({
-          siteName:        s.siteName        ?? '',
-          siteDescription: s.siteDescription ?? '',
-          logo:            s.logo            ?? '',
-          favicon:         s.favicon         ?? '',
-          primaryColor:    s.primaryColor    ?? '#A435F0',
-          contactEmail:    s.contactEmail    ?? '',
-          contactPhone:    s.contactPhone    ?? '',
-          contactAddress:  s.contactAddress  ?? '',
-          facebookLink:    s.facebookLink    ?? '',
-          youtubeLink:     s.youtubeLink     ?? '',
-          footerText:      s.footerText      ?? '',
+          siteName:        settings.siteName        ?? '',
+          siteDescription: settings.siteDescription ?? '',
+          logo:            settings.logo            ?? '',
+          favicon:         settings.favicon         ?? '',
+          primaryColor:    settings.primaryColor    ?? '#A435F0',
+          contactEmail:    settings.contactEmail    ?? '',
+          contactPhone:    settings.contactPhone    ?? '',
+          contactAddress:  settings.contactAddress  ?? '',
+          facebookLink:    settings.facebookLink    ?? '',
+          youtubeLink:     settings.youtubeLink     ?? '',
+          footerText:      settings.footerText      ?? '',
         });
       } catch {
         toast.error('Không thể tải cài đặt');
@@ -90,6 +91,28 @@ export default function AdminSettings() {
     }
   };
 
+const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await axiosInstance.post('/upload/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    const relativePath = res.data?.data?.data?.url ?? res.data?.data?.url ?? res.data?.url;
+    if (relativePath) {
+      const baseURL = (axiosInstance.defaults.baseURL ?? '').replace(/\/api\/v1\/?$/, '');
+      const fullUrl = `${baseURL}${relativePath}`;
+      form.setValue('logo', fullUrl);
+      toast.success('Upload logo thành công!');
+    }
+  } catch {
+    toast.error('Upload logo thất bại!');
+  }
+};
   const isLoading = form.formState.isSubmitting;
 
   return (
@@ -136,7 +159,19 @@ export default function AdminSettings() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Button type="button" variant="outline" className="border-admin-border text-admin-foreground hover:bg-admin-accent">
+                  <input
+                    id="logo-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleLogoUpload}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-admin-border text-admin-foreground hover:bg-admin-accent"
+                    onClick={() => document.getElementById('logo-upload')?.click()}
+                  >
                     <Upload className="w-4 h-4 mr-2" />Tải lên logo
                   </Button>
                   <FormField control={form.control} name="logo" render={({ field }) => (
