@@ -113,9 +113,20 @@ export const API_ENDPOINTS = {
     BASE: "/settings",
   },
   WISHLIST: {
-    BASE: '/my-wishlist',
+    BASE: "/my-wishlist",
   },
   USER_NOTIFICATIONS: {
-    BASE: '/user-notifications',
+    BASE: "/user-notifications",
+  },
+  QA: {
+    QUESTIONS: "/qa/questions",
+    ANSWERS: "/qa/answers",
+  },
+  LECTURE_NOTES: {
+    BASE: "/lecture-notes",
+    BY_LECTURE: "/lecture-notes/lecture",
+  },
+  PROCESS: {
+    BASE: "/enrollments",
   },
 } as const;

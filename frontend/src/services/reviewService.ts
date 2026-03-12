@@ -45,6 +45,22 @@ const reviewService = {
     );
     return response.data.data;
   },
+
+  /**
+   * Cập nhật review của mình (Client)
+   * PUT /reviews/:id
+   */
+  updateMyReview: async (
+    reviewId: string,
+    data: Pick<ReviewRequest, "rating" | "comment">,
+  ): Promise<ReviewResponse> => {
+    const response = await axiosInstance.put<ApiResponse<ReviewResponse>>(
+      `${API_ENDPOINTS.REVIEWS.BASE}/${reviewId}`,
+      data,
+    );
+    return response.data.data;
+  },
+
   // ==================== Admin Methods ====================
 
   /**
