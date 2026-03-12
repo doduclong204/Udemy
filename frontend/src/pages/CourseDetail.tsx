@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Rating } from "@/components/Rating";
@@ -30,6 +30,7 @@ import {
   Share2,
   Check,
   Clock,
+  BookOpen,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -49,6 +50,7 @@ const formatDuration = (seconds: number) => {
 
 export default function CourseDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { addToCart, isInCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
 
@@ -119,7 +121,6 @@ export default function CourseDetail() {
   const discountPercent =
     discountPrice > 0 ? Math.round((1 - discountPrice / price) * 100) : 0;
 
-  // ✅ Đọc state wishlist từ context (reactive), không dùng course.isInWishlist
   const inWishlist = isInWishlist(course._id);
 
   const handleAddToCart = () => {
@@ -130,13 +131,16 @@ export default function CourseDetail() {
     });
   };
 
-  // ✅ Truyền course._id (string) thay vì cả object
   const handleToggleWishlist = () => {
     toggleWishlist(course._id);
     toast({
       title: inWishlist ? "Đã bỏ yêu thích" : "Đã thêm vào yêu thích",
       description: `${course.title} đã được ${inWishlist ? "xóa khỏi" : "thêm vào"} danh sách yêu thích.`,
     });
+  };
+
+  const handleGoToLearning = () => {
+    navigate(`/course/${course._id}/learn`);
   };
 
   const getLectureIcon = (type: string) => {
@@ -350,45 +354,66 @@ export default function CourseDetail() {
                 className="w-full h-48 object-cover"
               />
               <div className="p-6">
-                <div className="flex flex-wrap items-center gap-3 mb-4">
-                  <span className="text-3xl font-bold">
-                    {formatCurrency(displayPrice)}
-                  </span>
-                  {discountPrice > 0 && (
-                    <>
-                      <span className="text-lg text-muted-foreground line-through">
-                        {formatCurrency(price)}
-                      </span>
-                      <span className="text-primary font-semibold">
-                        Giảm {discountPercent}%
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                {isInCart(course._id) ? (
-                  <Button variant="cart" className="mb-3" disabled>
-                    Đã thêm vào giỏ
-                  </Button>
+                {course.isEnrolled ? (
+                  /* ── Đã đăng ký: chỉ hiện nút vào học ── */
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-emerald-600 font-semibold text-sm mb-1">
+                      <Check className="w-4 h-4" />
+                      Bạn đã sở hữu khóa học này
+                    </div>
+                    <Button
+                      className="w-full bg-violet-600 hover:bg-violet-700 text-white flex items-center gap-2"
+                      onClick={handleGoToLearning}
+                    >
+                      <BookOpen className="w-4 h-4" />
+                      Vào học ngay
+                    </Button>
+                  </div>
                 ) : (
-                  <Button
-                    variant="cart"
-                    className="mb-3"
-                    onClick={handleAddToCart}
-                  >
-                    Thêm vào giỏ hàng
-                  </Button>
+                  /* ── Chưa đăng ký: hiện giá + nút mua ── */
+                  <>
+                    <div className="flex flex-wrap items-center gap-3 mb-4">
+                      <span className="text-3xl font-bold">
+                        {formatCurrency(displayPrice)}
+                      </span>
+                      {discountPrice > 0 && (
+                        <>
+                          <span className="text-lg text-muted-foreground line-through">
+                            {formatCurrency(price)}
+                          </span>
+                          <span className="text-primary font-semibold">
+                            Giảm {discountPercent}%
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {isInCart(course._id) ? (
+                      <Button variant="cart" className="mb-3" disabled>
+                        Đã thêm vào giỏ
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="cart"
+                        className="mb-3"
+                        onClick={handleAddToCart}
+                      >
+                        Thêm vào giỏ hàng
+                      </Button>
+                    )}
+
+                    <Button variant="default" className="w-full mb-4" onClick={() => { addToCart(course as any); navigate("/cart"); }}>
+                      Mua ngay
+                    </Button>
+
+                    <p className="text-center text-sm text-muted-foreground mb-4">
+                      Đảm bảo hoàn tiền trong 30 ngày
+                    </p>
+                  </>
                 )}
 
-                <Button variant="default" className="w-full mb-4">
-                  Mua ngay
-                </Button>
-
-                <p className="text-center text-sm text-muted-foreground mb-4">
-                  Đảm bảo hoàn tiền trong 30 ngày
-                </p>
-
-                <div className="space-y-3 text-sm">
+                {/* Thông tin khóa học — luôn hiển thị */}
+                <div className="space-y-3 text-sm mt-2">
                   <p className="font-bold">Khóa học này bao gồm:</p>
                   <div className="flex items-center gap-2">
                     <Play className="w-4 h-4 text-muted-foreground" />
@@ -412,8 +437,6 @@ export default function CourseDetail() {
                     <Share2 className="w-4 h-4" />
                     Chia sẻ
                   </button>
-
-                  {/* ✅ Dùng inWishlist từ context, không dùng course.isInWishlist */}
                   <button
                     onClick={handleToggleWishlist}
                     className={`flex items-center gap-1 text-sm transition-colors ${

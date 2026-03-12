@@ -14,5 +14,4 @@ import java.math.BigDecimal;
 @Repository
 public interface EnrollmentRepository extends JpaRepository<Enrollment, String>, JpaSpecificationExecutor<Enrollment> {
     boolean existsByUserIdAndCourseId(String userId, String courseId);
-
 }
