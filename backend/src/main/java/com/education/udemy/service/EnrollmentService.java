@@ -61,6 +61,11 @@ public class EnrollmentService {
         enrollment.setProgress(BigDecimal.ZERO);
         enrollment.setStatus(EnrollmentStatus.ENROLLED);
 
+        course.setTotalStudents(
+                course.getTotalStudents() == null ? 1 : course.getTotalStudents() + 1
+        );
+        courseRepository.save(course);
+
         return enrollmentMapper.toEnrollmentResponse(enrollmentRepository.save(enrollment));
     }
 
@@ -82,6 +87,11 @@ public class EnrollmentService {
                 .build();
 
         enrollmentRepository.save(enrollment);
+
+        course.setTotalStudents(
+                course.getTotalStudents() == null ? 1 : course.getTotalStudents() + 1
+        );
+        courseRepository.save(course);
     }
 
     public ApiPagination<EnrollmentResponse> getMyEnrollments(Specification<Enrollment> spec, Pageable pageable) {
