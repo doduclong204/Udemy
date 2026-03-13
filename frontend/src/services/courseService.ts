@@ -33,7 +33,6 @@ const courseService = {
         },
       }
     );
-
     return response.data.data;
   },
 
@@ -42,6 +41,34 @@ const courseService = {
       `${API_ENDPOINTS.COURSES.BASE}/${id}`
     );
     return response.data.data;
+  },
+
+  getFeaturedCourses: async (): Promise<CourseSummaryResponse[]> => {
+    const response = await axiosInstance.get<ApiResponse<ApiPagination<CourseSummaryResponse>>>(
+      API_ENDPOINTS.COURSES.BASE,
+      {
+        params: {
+          page: 0,
+          size: 10,
+          filter: `outstanding:true`,
+        },
+      }
+    );
+    return response.data.data.result;
+  },
+
+  getPopularCourses: async (): Promise<CourseSummaryResponse[]> => {
+    const response = await axiosInstance.get<ApiResponse<ApiPagination<CourseSummaryResponse>>>(
+      API_ENDPOINTS.COURSES.BASE,
+      {
+        params: {
+          page: 0,
+          size: 10,
+          sort: 'totalStudents,desc',
+        },
+      }
+    );
+    return response.data.data.result;
   },
 
   getAdminCourses: async (params?: GetCoursesParams): Promise<ApiPagination<AdminCourse>> => {
@@ -65,7 +92,6 @@ const courseService = {
         },
       }
     );
-
     return response.data.data;
   },
 

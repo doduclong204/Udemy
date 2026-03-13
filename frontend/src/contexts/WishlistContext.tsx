@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useSelector } from 'react-redux';
 import axiosInstance from '@/config/api';
 import { API_ENDPOINTS } from '@/constant/common.constant';
 import type { WishlistResponse, ApiResponse, ApiPagination } from '@/types';
+import type { RootState } from '@/redux/store';
 
 interface WishlistContextType {
   wishlist: WishlistResponse[];
@@ -19,7 +21,10 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   const [wishlist, setWishlist] = useState<WishlistResponse[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
+
   const fetchWishlist = () => {
+    if (!isAuthenticated) return;
     setLoading(true);
     axiosInstance
       .get<ApiResponse<ApiPagination<WishlistResponse>>>(API_ENDPOINTS.WISHLIST.BASE, {
@@ -31,8 +36,12 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setWishlist([]);
+      return;
+    }
     fetchWishlist();
-  }, []);
+  }, [isAuthenticated]);
 
   const addToWishlist = async (courseId: string) => {
     await axiosInstance.post(API_ENDPOINTS.WISHLIST.BASE, { courseId });

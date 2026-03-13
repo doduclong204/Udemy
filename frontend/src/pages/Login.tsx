@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Eye, EyeOff, User, Lock } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { loginAsync, fetchAccount } from "@/redux/slices/authSlice";
+import { loginAsync } from "@/redux/slices/authSlice";
 import type { RootState, AppDispatch } from "@/redux/store";
 
 export default function Login() {
@@ -26,20 +26,6 @@ export default function Login() {
     const result = await dispatch(loginAsync({ username, password }));
 
     if (loginAsync.fulfilled.match(result)) {
-      // Login thành công → thử fetch full account (role, v.v.)
-      // KHÔNG await trực tiếp để tránh throw lỗi toàn cục nếu fetch fail
-      dispatch(fetchAccount())
-        .unwrap()
-        .then(() => {
-          console.log("Fetch account thành công sau login");
-        })
-        .catch((fetchErr: any) => {
-          console.warn(
-            "Fetch account fail sau login (không ảnh hưởng login):",
-            fetchErr.message,
-          );
-        });
-
       toast({
         title: "Chào mừng trở lại!",
         description: "Bạn đã đăng nhập thành công.",

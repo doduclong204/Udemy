@@ -41,8 +41,6 @@ export interface User {
   updatedAt?: string;
   createdBy?: string;
   updatedBy?: string;
-  // refreshToken is part of entity but typically not returned in responses
-  // pull from AuthResponse if needed
 }
 
 export interface AuthResponse {
@@ -51,9 +49,8 @@ export interface AuthResponse {
   user: User;
 }
 
-// mirrors com.education.udemy.dto.response.user.UserInToken
 export interface UserInToken {
-  id: string;          // serialized as _id in JSON
+  id: string;
   username: string;
   role: string;
 }
@@ -104,9 +101,9 @@ export interface UpdateCategoryRequest {
 // ==================== Coupon Types ====================
 
 export enum CouponStatus {
-  ACTIVE = 'ACTIVE',
-  EXPIRED = 'EXPIRED',
-  EXHAUSTED = 'EXHAUSTED',
+  ACTIVE = "ACTIVE",
+  EXPIRED = "EXPIRED",
+  EXHAUSTED = "EXHAUSTED",
 }
 
 export interface Coupon {
@@ -149,7 +146,7 @@ export interface CouponCheckRequest {
   orderAmount: number;
 }
 
-// ==================== User Types (Client - tự cập nhật profile) ====================
+// ==================== User Types (Client) ====================
 
 export interface UpdateProfileRequest {
   name?: string;
@@ -164,7 +161,7 @@ export interface ChangePasswordRequest {
   confirmPassword: string;
 }
 
-// ==================== User Types (Admin - quản lý user) ====================
+// ==================== User Types (Admin) ====================
 
 export interface Student {
   id: string;
@@ -176,8 +173,7 @@ export interface Student {
   totalSpent: number;
   joinedAt: string;
   lastActive: string;
-  status: 'Active' | 'Inactive';
-  // backend may return role when managing users
+  status: "Active" | "Inactive";
   role?: string;
 }
 
@@ -190,29 +186,14 @@ export interface GetStudentsParams {
 
 // ==================== Enums ====================
 
-// Level.java: BASIC, INTERMEDIATE, ADVANCED
-export type Level = 'BASIC' | 'INTERMEDIATE' | 'ADVANCED';
-
-// LectureType.java: VIDEO, ARTICLE
-export type LectureType = 'VIDEO' | 'ARTICLE';
-
-// EnrollmentStatus.java: ENROLLED, LEARNING, COMPLETED
-export type EnrollmentStatus = 'ENROLLED' | 'LEARNING' | 'COMPLETED';
-
-// OrderStatus.java: PENDING, COMPLETED, CANCELLED, REFUNDED
-export type OrderStatus = 'PENDING' | 'COMPLETED' | 'CANCELLED' | 'REFUNDED';
-
-// PaymentMethod.java: VNPAY, MOMO, BANK_TRANSFER, PAYPAL
-export type PaymentMethod = 'VNPAY' | 'MOMO' | 'BANK_TRANSFER' | 'PAYPAL';
-
-// NotificationType.java: PROMOTION, COURSE, SYSTEM
-export type NotificationType = 'PROMOTION' | 'COURSE' | 'SYSTEM';
-
-// NotificationTarget.java: ALL, ENROLLED, NEW_USER
-export type NotificationTarget = 'ALL' | 'ENROLLED' | 'NEW_USER';
-
-// NotificationStatus.java: DRAFT, SENT
-export type NotificationStatus = 'DRAFT' | 'SENT';
+export type Level = "BASIC" | "INTERMEDIATE" | "ADVANCED";
+export type LectureType = "VIDEO" | "ARTICLE";
+export type EnrollmentStatus = "ENROLLED" | "LEARNING" | "COMPLETED";
+export type OrderStatus = "PENDING" | "COMPLETED" | "CANCELLED" | "REFUNDED";
+export type PaymentMethod = "VNPAY" | "MOMO" | "BANK_TRANSFER" | "PAYPAL";
+export type NotificationType = "PROMOTION" | "COURSE" | "SYSTEM";
+export type NotificationTarget = "ALL" | "ENROLLED" | "NEW_USER";
+export type NotificationStatus = "DRAFT" | "SENT";
 
 // ==================== Lecture Types ====================
 
@@ -221,12 +202,12 @@ export interface LectureCreationRequest {
   type: LectureType;
   videoUrl?: string;
   content?: string;
-  duration?: number; // seconds (Integer)
-  isFree?: boolean;  // default false
+  duration?: number;
+  isFree?: boolean;
 }
 
 export interface LectureUpdateRequest {
-  id?: string;       // ID bài học hiện tại khi update
+  id?: string;
   title?: string;
   type?: LectureType;
   videoUrl?: string;
@@ -253,7 +234,7 @@ export interface SectionCreationRequest {
 }
 
 export interface SectionUpdateRequest {
-  id?: string;       // ID chương hiện tại khi update
+  id?: string;
   title?: string;
   lectures?: LectureUpdateRequest[];
 }
@@ -268,7 +249,7 @@ export interface SectionResponse {
 
 export interface Course {
   _id?: string;
-  id: string;
+  id?: string; // ← đổi thành optional
   title: string;
   thumbnail?: string;
   category?: string;
@@ -321,6 +302,7 @@ export interface UpdateCourseRequest {
 
 export interface CourseDetailResponse {
   _id: string;
+  id?: string; // ← thêm
   title: string;
   smallDescription: string;
   description: string;
@@ -349,6 +331,7 @@ export interface CourseDetailResponse {
 
 export interface CourseSummaryResponse {
   _id: string;
+  id?: string; // ← thêm
   title: string;
   thumbnail: string;
   price: number;
@@ -366,7 +349,7 @@ export interface GetCoursesParams {
   level?: string;
   search?: string;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
   outstanding?: boolean;
   sort?: string;
 }
@@ -379,9 +362,9 @@ export interface EnrollmentCreationRequest {
 
 export interface EnrollmentResponse {
   _id: string;
-  progress: number;          // BigDecimal (0-100)
+  progress: number;
   status: EnrollmentStatus;
-  enrolledAt: string;        // Instant -> ISO string
+  enrolledAt: string;
   courseId: string;
   courseTitle: string;
   courseThumbnail: string;
@@ -396,7 +379,7 @@ export interface GetEnrollmentsParams {
   status?: EnrollmentStatus;
 }
 
-// ==================== Process (Learning Progress) Types ====================
+// ==================== Process Types ====================
 
 export interface ProcessUpdateRequest {
   lectureId: string;
@@ -440,13 +423,12 @@ export interface LectureNoteResponse {
 
 // ==================== Review Types ====================
 
-// ReviewRequest dùng chung cho: tạo review, admin reply, ẩn/hiện review
 export interface ReviewRequest {
-  rating?: number;        // @Min(1) @Max(5) - bắt buộc khi tạo mới
+  rating?: number;
   comment?: string;
-  courseId?: string;      // bắt buộc khi tạo mới
-  adminReply?: string;    // chỉ dùng khi admin reply
-  reviewStatus?: boolean; // chỉ dùng khi admin ẩn/hiện
+  courseId?: string;
+  adminReply?: string;
+  reviewStatus?: boolean;
 }
 
 export interface ReviewResponse {
@@ -478,7 +460,7 @@ export interface GetReviewsParams {
 // ==================== Order Types ====================
 
 export interface OrderCreationRequest {
-  courseIds: string[];      // @NotEmpty - có thể mua nhiều khóa cùng lúc
+  courseIds: string[];
   couponCode?: string;
   paymentMethod: PaymentMethod;
 }
@@ -560,13 +542,12 @@ export interface WishlistResponse {
 
 // ==================== QA Types ====================
 
-// QARequest dùng chung cho: đặt câu hỏi và trả lời
 export interface QARequest {
-  content: string;      // @NotBlank - bắt buộc
-  title?: string;       // chỉ dùng khi đặt câu hỏi
-  courseId?: string;    // chỉ dùng khi đặt câu hỏi
-  lectureId?: string;   // chỉ dùng khi đặt câu hỏi
-  questionId?: string;  // chỉ dùng khi trả lời
+  content: string;
+  title?: string;
+  courseId?: string;
+  lectureId?: string;
+  questionId?: string;
 }
 
 export interface QAResponse {
@@ -604,7 +585,6 @@ export interface NotificationCreationRequest {
   relatedType?: string;
 }
 
-// NotificationResponse - Admin quản lý thông báo
 export interface NotificationResponse {
   _id: string;
   type: NotificationType;
@@ -620,7 +600,6 @@ export interface NotificationResponse {
   createdBy: string;
 }
 
-// UserNotificationResponse - Thông báo phía người dùng
 export interface UserNotificationResponse {
   _id: string;
   title: string;
@@ -647,7 +626,7 @@ export interface SettingRequest {
   siteDescription?: string;
   logo: string;
   favicon?: string;
-  primaryColor?: string; // hex, e.g. "#FF0000"
+  primaryColor?: string;
   contactEmail?: string;
   contactPhone?: string;
   contactAddress?: string;

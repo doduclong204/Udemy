@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// TODO: Đổi URL production sau
 const API_BASE_URL = 'http://localhost:8080/api/v1';
 
 const axiosInstance = axios.create({
@@ -15,7 +14,6 @@ const axiosInstance = axios.create({
     Object.entries(params).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
       if (key === 'filter' || key === 'sort') {
-        // Không encode filter và sort để Spring Boot parse đúng
         parts.push(`${key}=${value}`);
       } else if (Array.isArray(value)) {
         value.forEach((v) => parts.push(`${key}=${encodeURIComponent(v)}`));
@@ -27,7 +25,6 @@ const axiosInstance = axios.create({
   },
 });
 
-// Request interceptor - tự động thêm Bearer token
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
@@ -41,7 +38,6 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Response interceptor - xử lý lỗi chung
 axiosInstance.interceptors.response.use(
   (response) => {
     return response;
@@ -53,12 +49,15 @@ axiosInstance.interceptors.response.use(
       switch (response.status) {
         case 401: {
           const url: string = config?.url || '';
-          const isSecondaryAuthEndpoint =
+          const isAuthEndpoint =
             url.includes('/auth/account') ||
             url.includes('/auth/me') ||
-            url.includes('/auth/refresh');
+            url.includes('/auth/refresh') ||
+            url.includes('/auth/login');
 
-          if (!isSecondaryAuthEndpoint) {
+          const isOnLoginPage = window.location.pathname === '/login';
+
+          if (!isAuthEndpoint && !isOnLoginPage) {
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
             localStorage.removeItem('user');

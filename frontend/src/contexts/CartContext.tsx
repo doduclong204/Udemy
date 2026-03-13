@@ -1,53 +1,109 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Course } from '@/data/mockData';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/redux/store';
+import cartService from '@/services/cartService';
+import type { CartItemResponse } from '@/types';
 
 interface CartContextType {
-  items: Course[];
-  addToCart: (course: Course) => void;
-  removeFromCart: (courseId: string) => void;
-  clearCart: () => void;
-  isInCart: (courseId: string) => boolean;
-  totalPrice: number;
+  items: CartItemResponse[];
+  loading: boolean;
   totalOriginalPrice: number;
+  totalSalePrice: number;
+  totalDiscount: number;
+  discountPercentage: string;
+  addToCart: (courseId: string) => Promise<void>;
+  removeFromCart: (courseId: string) => Promise<void>;
+  clearCart: () => Promise<void>;
+  isInCart: (courseId: string) => boolean;
+  refetch: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<Course[]>(() => {
-    const saved = localStorage.getItem('cart');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [items, setItems] = useState<CartItemResponse[]>([]);
+  const [totalOriginalPrice, setTotalOriginalPrice] = useState(0);
+  const [totalSalePrice, setTotalSalePrice] = useState(0);
+  const [totalDiscount, setTotalDiscount] = useState(0);
+  const [discountPercentage, setDiscountPercentage] = useState('0');
+  const [loading, setLoading] = useState(false);
 
-  const addToCart = (course: Course) => {
-    if (!items.find((item) => item.id === course.id)) {
-      const newItems = [...items, course];
-      setItems(newItems);
-      localStorage.setItem('cart', JSON.stringify(newItems));
+  const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
+
+  const fetchCart = () => {
+    if (!isAuthenticated) return;
+    setLoading(true);
+    cartService
+      .getMyCart()
+      .then((cart) => {
+        setItems(cart.items);
+        setTotalOriginalPrice(cart.totalOriginalPrice);
+        setTotalSalePrice(cart.totalSalePrice);
+        setTotalDiscount(cart.totalDiscount);
+        setDiscountPercentage(cart.discountPercentage);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setItems([]);
+      setTotalOriginalPrice(0);
+      setTotalSalePrice(0);
+      setTotalDiscount(0);
+      setDiscountPercentage('0');
+      return;
     }
+    fetchCart();
+  }, [isAuthenticated]);
+
+  const addToCart = async (courseId: string) => {
+    const cart = await cartService.addToCart(courseId);
+    setItems(cart.items);
+    setTotalOriginalPrice(cart.totalOriginalPrice);
+    setTotalSalePrice(cart.totalSalePrice);
+    setTotalDiscount(cart.totalDiscount);
+    setDiscountPercentage(cart.discountPercentage);
   };
 
-  const removeFromCart = (courseId: string) => {
-    const newItems = items.filter((item) => item.id !== courseId);
-    setItems(newItems);
-    localStorage.setItem('cart', JSON.stringify(newItems));
+  const removeFromCart = async (courseId: string) => {
+    const cart = await cartService.removeFromCart(courseId);
+    setItems(cart.items);
+    setTotalOriginalPrice(cart.totalOriginalPrice);
+    setTotalSalePrice(cart.totalSalePrice);
+    setTotalDiscount(cart.totalDiscount);
+    setDiscountPercentage(cart.discountPercentage);
   };
 
-  const clearCart = () => {
+  const clearCart = async () => {
+    await cartService.clearCart();
     setItems([]);
-    localStorage.removeItem('cart');
+    setTotalOriginalPrice(0);
+    setTotalSalePrice(0);
+    setTotalDiscount(0);
+    setDiscountPercentage('0');
   };
 
   const isInCart = (courseId: string) => {
-    return items.some((item) => item.id === courseId);
+    return items.some((item) => item.courseId === courseId);
   };
-
-  const totalPrice = items.reduce((sum, item) => sum + item.price, 0);
-  const totalOriginalPrice = items.reduce((sum, item) => sum + item.originalPrice, 0);
 
   return (
     <CartContext.Provider
-      value={{ items, addToCart, removeFromCart, clearCart, isInCart, totalPrice, totalOriginalPrice }}
+      value={{
+        items,
+        loading,
+        totalOriginalPrice,
+        totalSalePrice,
+        totalDiscount,
+        discountPercentage,
+        addToCart,
+        removeFromCart,
+        clearCart,
+        isInCart,
+        refetch: fetchCart,
+      }}
     >
       {children}
     </CartContext.Provider>

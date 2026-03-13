@@ -4,12 +4,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
-
 import { SettingsProvider } from "@/contexts/SettingsContext";
 
 import Index from "./pages/Index";
@@ -20,6 +19,8 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import Cart from "./pages/Cart";
+import OrderCheckout from "./pages/OrderCheckout";
+import OrderPayment from "./pages/OrderPayment";
 import NotFound from "./pages/NotFound";
 
 import { AdminLayout } from "./admin/layouts/AdminLayout";
@@ -33,7 +34,6 @@ import AdminCoupons from "./admin/pages/AdminCoupons";
 import AdminNotifications from "./admin/pages/AdminNotifications";
 import AdminReviews from "./admin/pages/AdminReviews";
 import AdminSettings from "./admin/pages/AdminSettings";
-import { Navigate } from "react-router-dom";
 
 const queryClient = new QueryClient();
 
@@ -62,7 +62,9 @@ const App = () => (
                       <Route path="/dashboard/settings" element={<Dashboard />} />
                       <Route path="/dashboard/notifications" element={<Dashboard />} />
                       <Route path="/cart" element={<Cart />} />
-                      
+                      <Route path="/order/checkout" element={<OrderCheckout />} />
+                      <Route path="/order/payment" element={<OrderPayment />} />
+
                       {/* Admin Routes */}
                       <Route path="/admin" element={<AdminLayout />}>
                         <Route index element={<AdminDashboard />} />
@@ -77,7 +79,7 @@ const App = () => (
                         <Route path="reviews" element={<AdminReviews />} />
                         <Route path="settings" element={<AdminSettings />} />
                       </Route>
-                      
+
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </BrowserRouter>

@@ -1,54 +1,22 @@
-// Export store
-export { store } from './store';
-export type { RootState, AppDispatch } from './store';
+import { configureStore } from '@reduxjs/toolkit';
+import authReducer from './slices/authSlice';
+import courseReducer from './slices/courseSlice';
 
-// Export hooks
-export { useAppDispatch, useAppSelector } from './hooks';
+export const store = configureStore({
+  reducer: {
+    auth: authReducer,
+    courses: courseReducer,
+  },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: ['persist/PERSIST'],
+      },
+    }),
+  devTools: import.meta.env.DEV,
+});
 
-// Export auth slice
-export {
-  setUser,
-  clearError,
-  resetAuthState,
-  loginAsync,
-  registerAsync,
-  logoutAsync,
-  selectUser,
-  selectIsAuthenticated,
-  selectIsAdmin,
-  selectAuthLoading,
-  selectAuthError,
-} from './slices/authSlice';
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
 
-// Export course slice
-export {
-  setCurrentCourse,
-  clearCoursesError,
-  resetCoursesState,
-  fetchCoursesAsync,
-  fetchCourseByIdAsync,
-  fetchFeaturedCoursesAsync,
-  fetchPopularCoursesAsync,
-  fetchAdminCoursesAsync,
-  selectCourses,
-  selectAdminCourses,
-  selectCurrentCourse,
-  selectFeaturedCourses,
-  selectPopularCourses,
-  selectCoursesLoading,
-  selectCoursesError,
-  selectCoursesPagination,
-} from './slices/courseSlice';
-
-// Export cart slice
-export {
-  addToCart,
-  removeFromCart,
-  clearCart,
-  setCartItems,
-  selectCartItems,
-  selectCartItemsCount,
-  selectIsInCart,
-  selectCartTotalPrice,
-  selectCartTotalOriginalPrice,
-} from './slices/cartSlice';
+export default store;
