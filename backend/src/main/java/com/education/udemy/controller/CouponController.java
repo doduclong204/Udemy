@@ -16,7 +16,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -39,7 +41,8 @@ public class CouponController {
     @GetMapping
     @ApiMessage("Get all coupons success")
     public ResponseEntity<ApiPagination<CouponResponse>> getCoupons(
-            @Filter Specification<Coupon> spec, Pageable pageable) {
+            @Filter Specification<Coupon> spec,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(couponService.getAllCoupons(spec, pageable));
     }
 
@@ -48,6 +51,7 @@ public class CouponController {
     public ResponseEntity<CouponResponse> getCoupon(@PathVariable String id) {
         return ResponseEntity.ok(couponService.getDetailCoupon(id));
     }
+
     @GetMapping("/by-code/{code}")
     @ApiMessage("Get coupon by code success")
     public ResponseEntity<CouponResponse> getCouponByCode(@PathVariable String code) {
@@ -69,7 +73,6 @@ public class CouponController {
         couponService.delete(id);
         return ResponseEntity.ok(ApiString.builder().message("success").build());
     }
-
 
     @PostMapping("/calculate-discount")
     @ApiMessage("Calculate discount amount success")

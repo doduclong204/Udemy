@@ -8,7 +8,9 @@ import com.education.udemy.entity.Category;
 import com.education.udemy.service.CategoryService;
 import com.turkraft.springfilter.boot.Filter;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -40,7 +42,8 @@ public class CategoryController {
     @GetMapping
     @ApiMessage("Get all categories success")
     ResponseEntity<ApiPagination<CategoryResponse>> getCategories(
-            @Filter Specification<Category> spec, Pageable pageable) {
+            @Filter Specification<Category> spec,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok().body(this.categoryService.getAllCategories(spec, pageable));
     }
 

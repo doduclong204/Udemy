@@ -17,7 +17,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -48,7 +50,8 @@ public class OrderController {
     @GetMapping
     @ApiMessage("Get orders success")
     public ResponseEntity<ApiPagination<OrderResponse>> getOrders(
-            @Filter Specification<Order> spec, Pageable pageable) {
+            @Filter Specification<Order> spec,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(orderService.getAllOrders(spec, pageable));
     }
 
@@ -64,7 +67,6 @@ public class OrderController {
         return ResponseEntity.ok(orderService.update(id, request));
     }
 
-    // Hoàn tiền
     @PostMapping("/{id}/refund")
     @ApiMessage("Refund order success")
     public ResponseEntity<OrderResponse> refund(@PathVariable String id) {
@@ -84,7 +86,6 @@ public class OrderController {
     @ApiMessage("Export orders success")
     public ResponseEntity<byte[]> export(@Filter Specification<Order> spec) {
         byte[] csvBytes = orderService.exportOrdersToCsv(spec);
-
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=orders_export.csv")
                 .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))

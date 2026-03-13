@@ -14,7 +14,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,10 +33,12 @@ public class ReviewController {
     public ResponseEntity<ReviewResponse> createReview(@RequestBody @Valid ReviewRequest request) {
         return ResponseEntity.ok(reviewService.createReview(request));
     }
+
     @GetMapping
     @ApiMessage("Get all reviews success")
     public ResponseEntity<ApiPagination<ReviewResponse>> getReviews(
-            @Filter Specification<Review> spec, Pageable pageable) {
+            @Filter Specification<Review> spec,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(reviewService.getAllReviews(spec, pageable));
     }
 

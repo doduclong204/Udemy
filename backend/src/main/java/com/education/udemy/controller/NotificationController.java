@@ -8,7 +8,9 @@ import com.education.udemy.service.NotificationService;
 import com.education.udemy.dto.response.api.ApiString;
 import com.turkraft.springfilter.boot.Filter;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -47,7 +49,8 @@ public class NotificationController {
     @GetMapping
     @ApiMessage("Get all notifications history success")
     public ResponseEntity<ApiPagination<NotificationResponse>> getNotifications(
-            @Filter Specification<Notification> spec, Pageable pageable) {
+            @Filter Specification<Notification> spec,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok().body(this.notificationService.getAll(spec, pageable));
     }
 

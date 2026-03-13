@@ -2,7 +2,9 @@ package com.education.udemy.controller;
 
 import com.turkraft.springfilter.boot.Filter;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,7 +33,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class UserController {
     UserService userService;
-    // UserExcelImport userExcelImport;
 
     @PublicEndpoint
     @PostMapping
@@ -42,7 +43,9 @@ public class UserController {
 
     @GetMapping
     @ApiMessage("Get all users success")
-    ResponseEntity<ApiPagination<UserResponse>> getUsers(@Filter Specification<User> spec, Pageable pageable) {
+    ResponseEntity<ApiPagination<UserResponse>> getUsers(
+            @Filter Specification<User> spec,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok().body(this.userService.getAllUsers(spec, pageable));
     }
 
