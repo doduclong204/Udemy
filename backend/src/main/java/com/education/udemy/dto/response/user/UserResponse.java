@@ -1,5 +1,6 @@
 package com.education.udemy.dto.response.user;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -26,6 +27,9 @@ public class UserResponse {
     String bio;
     String role;
     Boolean active;
+    BigDecimal totalSpent;
+    Integer enrollmentCount;
+    Integer completedCount;
     Instant createdAt;
     Instant updatedAt;
     String createdBy;
