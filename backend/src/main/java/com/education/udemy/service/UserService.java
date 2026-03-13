@@ -10,6 +10,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.education.udemy.constant.PredefinedRole;
 import com.education.udemy.dto.request.user.UserCreationRequest;
 import com.education.udemy.dto.request.user.UserUpdateRequest;
@@ -34,6 +35,7 @@ public class UserService {
     UserRepository userRepository;
     UserMapper userMapper;
     PasswordEncoder passwordEncoder;
+
     public UserResponse create(UserCreationRequest request) {
         log.info("Create a user");
         User user = this.userMapper.toUser(request);
@@ -53,6 +55,7 @@ public class UserService {
         return userMapper.toUserResponse(user);
     }
 
+    @Transactional(readOnly = true)
     public UserResponse getMyInfo() {
         log.info("Get my info");
         var context = SecurityContextHolder.getContext();
@@ -90,6 +93,7 @@ public class UserService {
         this.userRepository.delete(user);
     }
 
+    @Transactional(readOnly = true)
     public ApiPagination<UserResponse> getAllUsers(Specification<User> spec, Pageable pageable) {
         log.info("Get all users");
         Page<User> pageUser = this.userRepository.findAll(spec, pageable);
@@ -97,10 +101,8 @@ public class UserService {
         List<UserResponse> listUser = pageUser.getContent().stream().map(userMapper::toUserResponse).toList();
 
         ApiPagination.Meta mt = new ApiPagination.Meta();
-
         mt.setCurrent(pageable.getPageNumber() + 1);
         mt.setPageSize(pageable.getPageSize());
-
         mt.setPages(pageUser.getTotalPages());
         mt.setTotal(pageUser.getTotalElements());
 
@@ -110,13 +112,14 @@ public class UserService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public List<UserResponse> getAllUsers() {
         log.info("Get all users");
         List<User> entities = this.userRepository.findAll();
-        List<UserResponse> res = entities.stream().map(userMapper::toUserResponse).toList();
-        return res;
+        return entities.stream().map(userMapper::toUserResponse).toList();
     }
 
+    @Transactional(readOnly = true)
     public UserResponse getDetailUser(String id) {
         log.info("Get detail a user");
         return userMapper.toUserResponse(

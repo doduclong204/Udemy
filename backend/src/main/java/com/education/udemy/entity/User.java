@@ -1,10 +1,8 @@
 package com.education.udemy.entity;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
-import com.education.udemy.util.SecurityUtil;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
@@ -48,10 +46,10 @@ public class User extends BaseEntity{
     @OneToMany(mappedBy = "instructor")
     List<Course> courses;
 
-    @OneToMany(mappedBy = "user")
+    @OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
     List<Enrollment> enrollments;
 
-    @OneToMany(mappedBy = "user")
+    @OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
     List<Order> orders;
 
     @OneToMany(mappedBy = "user")
@@ -65,5 +63,4 @@ public class User extends BaseEntity{
 
     @OneToMany(mappedBy = "user")
     List<UserNotification> userNotifications;
-
 }
