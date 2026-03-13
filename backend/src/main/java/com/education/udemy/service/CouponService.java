@@ -17,10 +17,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -31,6 +33,25 @@ public class CouponService {
 
     CouponRepository couponRepository;
     CouponMapper couponMapper;
+
+    @Scheduled(fixedRate = 60000)
+    @Transactional
+    public void autoExpireCoupons() {
+        List<Coupon> expiredCoupons = couponRepository.findAll().stream()
+                .filter(c -> c.getCouponStatus() == CouponStatus.ACTIVE
+                        && c.getExpiresAt() != null
+                        && c.getExpiresAt().isBefore(Instant.now()))
+                .toList();
+
+        expiredCoupons.forEach(c -> {
+            c.setCouponStatus(CouponStatus.EXPIRED);
+            log.info("Coupon {} auto-expired", c.getCode());
+        });
+
+        if (!expiredCoupons.isEmpty()) {
+            couponRepository.saveAll(expiredCoupons);
+        }
+    }
 
     public CouponResponse create(CouponCreationRequest request) {
         log.info("Create a new coupon: {}", request.getCode());
@@ -97,7 +118,6 @@ public class CouponService {
         Coupon coupon = couponRepository.findByCode(code)
                 .orElseThrow(() -> new AppException(ErrorCode.COUPON_NOT_FOUND));
 
-        // 1. Kiểm tra trạng thái
         if (coupon.getCouponStatus() == CouponStatus.EXHAUSTED) {
             throw new AppException(ErrorCode.COUPON_OUT_OF_STOCK);
         }
@@ -106,31 +126,26 @@ public class CouponService {
             throw new AppException(ErrorCode.COUPON_INACTIVE);
         }
 
-        // 2. Kiểm tra thời hạn
-        if (coupon.getExpiresAt() != null && coupon.getExpiresAt().isBefore(java.time.Instant.now())) {
+        if (coupon.getExpiresAt() != null && coupon.getExpiresAt().isBefore(Instant.now())) {
             throw new AppException(ErrorCode.COUPON_EXPIRED);
         }
 
-        // 3. Kiểm tra số lượt dùng (nếu có giới hạn)
         if (coupon.getMaxUsage() != null && coupon.getUsedCount() >= coupon.getMaxUsage()) {
             throw new AppException(ErrorCode.COUPON_OUT_OF_STOCK);
         }
 
-        // 4. Kiểm tra giá trị đơn hàng tối thiểu
         if (orderAmount.compareTo(coupon.getMinOrderAmount()) < 0) {
             throw new AppException(ErrorCode.COUPON_MIN_AMOUNT_NOT_REACHED);
         }
 
-        // 5. Tính toán số tiền giảm
         BigDecimal discountAmount;
         if ("PERCENTAGE".equalsIgnoreCase(coupon.getDiscountType())) {
             discountAmount = orderAmount.multiply(coupon.getDiscountValue())
-                    .divide(new java.math.BigDecimal(100), 2, java.math.RoundingMode.HALF_UP);
+                    .divide(new BigDecimal(100), 2, java.math.RoundingMode.HALF_UP);
         } else {
             discountAmount = coupon.getDiscountValue();
         }
 
-        // Đảm bảo tiền giảm không lớn hơn tiền đơn hàng
         return discountAmount.compareTo(orderAmount) > 0 ? orderAmount : discountAmount;
     }
 
@@ -139,11 +154,9 @@ public class CouponService {
         Coupon coupon = couponRepository.findByCode(code)
                 .orElseThrow(() -> new AppException(ErrorCode.COUPON_NOT_FOUND));
 
-        // Tăng số lượt đã dùng
         int newUsedCount = (coupon.getUsedCount() == null ? 0 : coupon.getUsedCount()) + 1;
         coupon.setUsedCount(newUsedCount);
 
-        // Tự động chuyển trạng thái nếu đạt giới hạn
         if (coupon.getMaxUsage() != null && newUsedCount >= coupon.getMaxUsage()) {
             coupon.setCouponStatus(CouponStatus.EXHAUSTED);
             log.info("Coupon {} is now EXHAUSTED due to max usage", code);
