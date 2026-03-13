@@ -52,6 +52,7 @@ public enum ErrorCode {
     // ORDER
     ORDER_NOT_FOUND(404, "Order not found", HttpStatus.NOT_FOUND),
     INVALID_PRICE_ORDER(400, "Price is invalid", HttpStatus.BAD_REQUEST),
+    ORDER_ALREADY_EXISTS(409, "You already have an active order for this course", HttpStatus.CONFLICT),
     EXPORT_FAILED(9999, "Lỗi khi xuất file dữ liệu", HttpStatus.INTERNAL_SERVER_ERROR),
 
 

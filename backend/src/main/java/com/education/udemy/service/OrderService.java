@@ -12,6 +12,7 @@ import com.education.udemy.exception.ErrorCode;
 import com.education.udemy.mapper.OrderMapper;
 import com.education.udemy.repository.CouponRepository;
 import com.education.udemy.repository.CourseRepository;
+import com.education.udemy.repository.EnrollmentRepository;
 import com.education.udemy.repository.OrderRepository;
 import com.education.udemy.repository.UserRepository;
 import com.education.udemy.util.SecurityUtil;
@@ -45,6 +46,7 @@ public class OrderService {
     CouponService couponService;
     CouponRepository couponRepository;
     EnrollmentService enrollmentService;
+    EnrollmentRepository enrollmentRepository;
 
     @Transactional
     public OrderResponse adminCreate(AdminOrderCreationRequest request) {
@@ -112,6 +114,15 @@ public class OrderService {
         List<Course> courses = courseRepository.findAllById(request.getCourseIds());
         if (courses.isEmpty()) {
             throw new AppException(ErrorCode.COURSE_NOT_FOUND);
+        }
+
+        for (Course course : courses) {
+            if (enrollmentRepository.existsByUserIdAndCourseId(currentUser.getId(), course.getId())) {
+                throw new AppException(ErrorCode.USER_ALREADY_ENROLLED);
+            }
+            if (orderRepository.existsActiveOrderForUserAndCourse(currentUser.getId(), course.getId())) {
+                throw new AppException(ErrorCode.ORDER_ALREADY_EXISTS);
+            }
         }
 
         BigDecimal totalAmount = courses.stream()
