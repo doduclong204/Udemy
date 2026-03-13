@@ -60,6 +60,15 @@ public class OrderService {
             throw new AppException(ErrorCode.COURSE_NOT_FOUND);
         }
 
+        for (Course course : courses) {
+            if (enrollmentRepository.existsByUserIdAndCourseId(targetUser.getId(), course.getId())) {
+                throw new AppException(ErrorCode.USER_ALREADY_ENROLLED);
+            }
+            if (orderRepository.existsActiveOrderForUserAndCourse(targetUser.getId(), course.getId())) {
+                throw new AppException(ErrorCode.ORDER_ALREADY_EXISTS);
+            }
+        }
+
         BigDecimal totalAmount = courses.stream()
                 .map(Course::getPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
