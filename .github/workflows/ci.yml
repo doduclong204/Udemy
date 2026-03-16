@@ -49,6 +49,17 @@ jobs:
     defaults:
       run:
         working-directory: backend
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE: udemy
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
     steps:
       - uses: actions/checkout@v4
       - name: Setup Java 21
@@ -60,6 +71,11 @@ jobs:
       - name: Make mvnw executable
         run: chmod +x mvnw
       - name: Run Tests & Build
+        env:
+          SPRING_PROFILES_ACTIVE: ci
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          JWT_SECRET_ACCESS: ${{ secrets.JWT_SECRET_ACCESS }}
+          JWT_SECRET_REFRESH: ${{ secrets.JWT_SECRET_REFRESH }}
         run: ./mvnw clean verify
       - name: Upload Backend Artifact
         uses: actions/upload-artifact@v4
