@@ -48,6 +48,10 @@ public class OrderService {
     EnrollmentService enrollmentService;
     EnrollmentRepository enrollmentRepository;
 
+    private BigDecimal getEffectivePrice(Course course) {
+        return course.getDiscountPrice() != null ? course.getDiscountPrice() : course.getPrice();
+    }
+
     @Transactional
     public OrderResponse adminCreate(AdminOrderCreationRequest request) {
         log.info("Admin creating order for userId: {}", request.getUserId());
@@ -70,7 +74,7 @@ public class OrderService {
         }
 
         BigDecimal totalAmount = courses.stream()
-                .map(Course::getPrice)
+                .map(this::getEffectivePrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal discountAmount = BigDecimal.ZERO;
@@ -97,7 +101,7 @@ public class OrderService {
                 OrderItem.builder()
                         .course(course)
                         .price(course.getPrice())
-                        .finalPrice(course.getPrice())
+                        .finalPrice(getEffectivePrice(course))
                         .order(order)
                         .build()
         ).toList();
@@ -135,7 +139,7 @@ public class OrderService {
         }
 
         BigDecimal totalAmount = courses.stream()
-                .map(Course::getPrice)
+                .map(this::getEffectivePrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal discountAmount = BigDecimal.ZERO;
@@ -162,7 +166,7 @@ public class OrderService {
                 OrderItem.builder()
                         .course(course)
                         .price(course.getPrice())
-                        .finalPrice(course.getPrice())
+                        .finalPrice(getEffectivePrice(course))
                         .order(order)
                         .build()
         ).toList();
