@@ -28,6 +28,7 @@ import {
   PlayCircle,
   Trophy,
   ChevronRight,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import VideoPlayer from "./VideoPlayer";
@@ -76,7 +77,9 @@ export default function CoursePlayer() {
   const [notesSaving, setNotesSaving] = useState(false);
 
   const [questions, setQuestions] = useState<QAResponse[]>([]);
-  const [answersMap, setAnswersMap] = useState<Record<string, QAResponse[]>>({});
+  const [answersMap, setAnswersMap] = useState<Record<string, QAResponse[]>>(
+    {},
+  );
   const [questionTitle, setQuestionTitle] = useState("");
   const [questionContent, setQuestionContent] = useState("");
   const [qaLoading, setQaLoading] = useState(false);
@@ -110,9 +113,9 @@ export default function CoursePlayer() {
                 progressList.filter((p) => p.completed).map((p) => p.lectureId),
               );
               setCompletedLectures(completedIds);
-            } catch (_e) { /* ignore */ }
+            } catch (_e) {}
           }
-        } catch (_e) { /* ignore */ }
+        } catch (_e) {}
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -139,7 +142,6 @@ export default function CoursePlayer() {
       .finally(() => setNotesLoading(false));
   }, [currentLectureData?._id]);
 
-  // ── Fetch questions + answers song song ──
   useEffect(() => {
     if (!course?._id) return;
     setQaLoading(true);
@@ -147,7 +149,6 @@ export default function CoursePlayer() {
       .getQuestions(course._id, currentLectureData?._id)
       .then(async (res) => {
         setQuestions(res.result);
-        // Fetch answers cho tất cả questions song song
         const entries = await Promise.all(
           res.result.map(async (q) => {
             try {
@@ -269,7 +270,6 @@ export default function CoursePlayer() {
         lectureId: currentLectureData?._id,
       });
       setQuestions((prev) => [created, ...prev]);
-      // Khởi tạo answers rỗng cho question mới
       setAnswersMap((prev) => ({ ...prev, [created._id]: [] }));
       setQuestionTitle("");
       setQuestionContent("");
@@ -287,12 +287,8 @@ export default function CoursePlayer() {
       await qaService.createAnswer({ content: answerContent, questionId });
       setAnsweringId(null);
       setAnswerContent("");
-
-      // Refresh answers của question này
       const ans = await qaService.getAnswers(questionId);
       setAnswersMap((prev) => ({ ...prev, [questionId]: ans.result }));
-
-      // Refresh questions để cập nhật badge "Đã trả lời"
       if (course?._id) {
         const res = await qaService.getQuestions(
           course._id,
@@ -300,7 +296,6 @@ export default function CoursePlayer() {
         );
         setQuestions(res.result);
       }
-
       toast.success("Đã gửi trả lời!");
     } catch {
       toast.error("Không thể gửi trả lời");
@@ -326,6 +321,20 @@ export default function CoursePlayer() {
     }
   };
 
+  const handleDownloadArticle = () => {
+    const content = currentLectureData?.content || "";
+    const title = currentLectureData?.title || "bai-tap";
+    const filename = `${title}.md`;
+    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Đã tải xuống bài tập!");
+  };
+
   const formatDuration = (seconds?: number) => {
     if (!seconds) return "";
     const m = Math.floor(seconds / 60);
@@ -349,7 +358,6 @@ export default function CoursePlayer() {
 
   return (
     <div className="h-screen bg-slate-50 flex flex-col overflow-hidden">
-      {/* ── TOP BAR ── */}
       <header className="h-16 bg-white border-b border-slate-200 flex items-center px-5 gap-4 flex-shrink-0 shadow-sm z-50">
         <Link
           to="/dashboard"
@@ -372,7 +380,6 @@ export default function CoursePlayer() {
           </p>
         </div>
 
-        {/* Progress pill */}
         <div className="hidden sm:flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-full px-4 py-1.5">
           <Trophy className="w-3.5 h-3.5 text-amber-500" />
           <div className="w-28 h-1.5 bg-slate-200 rounded-full overflow-hidden">
@@ -402,19 +409,116 @@ export default function CoursePlayer() {
         <main
           className={`flex-1 flex flex-col overflow-y-auto transition-all duration-300 ${isSidebarOpen ? "lg:mr-[340px]" : ""}`}
         >
-          {/* ── VIDEO PLAYER ── */}
+          {/* VIDEO / ARTICLE */}
           <div
             className="relative bg-black w-full"
             style={{ aspectRatio: "16/9" }}
           >
-            {currentLectureData?.videoUrl ? (
+            {currentLectureData?.type === "ARTICLE" ? (
+              <div
+                className="absolute inset-0 overflow-y-auto"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #f8f7ff 0%, #f0f4ff 100%)",
+                }}
+              >
+                {/* Header bar */}
+                <div className="sticky top-0 z-10 backdrop-blur-md bg-white/80 border-b border-violet-100 px-8 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-violet-100 flex items-center justify-center">
+                      <FileText className="w-3.5 h-3.5 text-violet-600" />
+                    </div>
+                    <span className="text-xs font-bold text-violet-600 uppercase tracking-widest">
+                      Bài tập
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleDownloadArticle}
+                    className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold transition-colors shadow-sm"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Tải xuống
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="max-w-3xl mx-auto px-8 py-8">
+                  {/* Title card */}
+                  <div className="bg-white rounded-2xl border border-violet-100 shadow-sm p-6 mb-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <FileText className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-violet-500 uppercase tracking-widest mb-1">
+                          Bài tập thực hành
+                        </p>
+                        <h2 className="text-xl font-bold text-slate-800 leading-snug">
+                          {currentLectureData.title}
+                        </h2>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Body */}
+                  {currentLectureData.content ? (
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                      <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
+                        {currentLectureData.content}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                        <FileText className="w-6 h-6 text-slate-300" />
+                      </div>
+                      <p className="text-sm text-slate-400 font-medium">
+                        Bài tập này chưa có nội dung
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Footer actions */}
+                  <div className="flex items-center justify-between mt-6 pt-6 border-t border-slate-100">
+                    <button
+                      onClick={handlePrevLecture}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white hover:border-violet-300 hover:text-violet-600 text-slate-600 text-sm font-medium transition-colors"
+                    >
+                      <SkipBack className="w-4 h-4" /> Bài trước
+                    </button>
+                    <button
+                      onClick={handleDownloadArticle}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg border border-violet-200 bg-violet-50 hover:bg-violet-100 text-violet-600 text-sm font-medium transition-colors"
+                    >
+                      <Download className="w-4 h-4" /> Tải xuống (.md)
+                    </button>
+                    <button
+                      onClick={handleNextLecture}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium transition-colors shadow-sm"
+                    >
+                      Bài tiếp <SkipForward className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : currentLectureData?.videoUrl ? (
               <VideoPlayer
                 key={currentLectureData._id}
                 src={getMediaUrl(currentLectureData.videoUrl)}
                 poster={getMediaUrl(course.thumbnail || course.banner)}
                 subtitleUrl={
-                  (currentLectureData as LectureResponse & { subtitleUrl?: string }).subtitleUrl
-                    ? getMediaUrl((currentLectureData as LectureResponse & { subtitleUrl?: string }).subtitleUrl!)
+                  (
+                    currentLectureData as LectureResponse & {
+                      subtitleUrl?: string;
+                    }
+                  ).subtitleUrl
+                    ? getMediaUrl(
+                        (
+                          currentLectureData as LectureResponse & {
+                            subtitleUrl?: string;
+                          }
+                        ).subtitleUrl!,
+                      )
                     : undefined
                 }
                 subtitleLabel="Tiếng Việt"
@@ -451,12 +555,19 @@ export default function CoursePlayer() {
             )}
           </div>
 
-          {/* ── LECTURE TITLE BAR ── */}
+          {/* LECTURE TITLE BAR */}
           <div className="bg-white border-b border-slate-200 px-6 py-3.5 flex items-center justify-between flex-shrink-0">
             <div className="min-w-0">
-              <h2 className="font-semibold text-slate-800 text-sm sm:text-base truncate">
-                {currentLectureData?.title || course.title}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="font-semibold text-slate-800 text-sm sm:text-base truncate">
+                  {currentLectureData?.title || course.title}
+                </h2>
+                {currentLectureData?.type === "ARTICLE" && (
+                  <span className="flex-shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold bg-violet-50 text-violet-600 border border-violet-100 px-2 py-0.5 rounded-full">
+                    <FileText className="w-3 h-3" /> Bài tập
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-violet-400 inline-block" />
                 {currentSection?.title}
@@ -480,10 +591,9 @@ export default function CoursePlayer() {
             </div>
           </div>
 
-          {/* ── TABS ── */}
+          {/* TABS */}
           <div className="flex-1 bg-slate-50">
             <Tabs defaultValue="overview" className="flex flex-col h-full">
-              {/* Tab nav */}
               <div className="bg-white border-b border-slate-200 sticky top-0 z-10 flex-shrink-0">
                 <TabsList className="h-auto bg-transparent p-0 w-full grid grid-cols-4">
                   {[
@@ -508,7 +618,7 @@ export default function CoursePlayer() {
                 </TabsList>
               </div>
 
-              {/* ── OVERVIEW TAB ── */}
+              {/* OVERVIEW TAB */}
               <TabsContent
                 value="overview"
                 className="p-5 sm:p-6 space-y-4 mt-0"
@@ -551,7 +661,7 @@ export default function CoursePlayer() {
                 </div>
               </TabsContent>
 
-              {/* ── NOTES TAB ── */}
+              {/* NOTES TAB */}
               <TabsContent value="notes" className="p-5 sm:p-6 space-y-4 mt-0">
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50">
@@ -655,9 +765,8 @@ export default function CoursePlayer() {
                 )}
               </TabsContent>
 
-              {/* ── QA TAB ── */}
+              {/* QA TAB */}
               <TabsContent value="qa" className="p-5 sm:p-6 space-y-4 mt-0">
-                {/* Form đặt câu hỏi */}
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50">
                     <h3 className="font-semibold text-slate-700 text-sm">
@@ -695,7 +804,6 @@ export default function CoursePlayer() {
                   </div>
                 </div>
 
-                {/* Danh sách câu hỏi + answers */}
                 {qaLoading ? (
                   <div className="flex justify-center py-10">
                     <Loader2 className="w-6 h-6 animate-spin text-violet-500" />
@@ -710,7 +818,6 @@ export default function CoursePlayer() {
                         key={q._id}
                         className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
                       >
-                        {/* ── Câu hỏi ── */}
                         <div className="p-5">
                           <div className="flex items-start gap-3">
                             <img
@@ -741,8 +848,6 @@ export default function CoursePlayer() {
                               <p className="text-sm text-slate-500 leading-relaxed mt-1">
                                 {q.content}
                               </p>
-
-                              {/* Nút trả lời */}
                               <button
                                 onClick={() =>
                                   setAnsweringId(
@@ -754,8 +859,6 @@ export default function CoursePlayer() {
                                 <MessageSquare className="w-3.5 h-3.5" /> Trả
                                 lời
                               </button>
-
-                              {/* Form nhập trả lời */}
                               {answeringId === q._id && (
                                 <div className="mt-3 space-y-2 pl-3 border-l-2 border-violet-100">
                                   <Textarea
@@ -790,8 +893,6 @@ export default function CoursePlayer() {
                             </div>
                           </div>
                         </div>
-
-                        {/* ── Danh sách câu trả lời ── */}
                         {answersMap[q._id]?.length > 0 && (
                           <div className="border-t border-slate-100 bg-slate-50/60 pl-16 pr-5 py-4 space-y-3">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -800,11 +901,7 @@ export default function CoursePlayer() {
                             {answersMap[q._id].map((ans) => (
                               <div
                                 key={ans._id}
-                                className={`flex items-start gap-3 rounded-xl p-3.5 border ${
-                                  ans.instructorAnswer
-                                    ? "bg-violet-50 border-violet-100"
-                                    : "bg-white border-slate-100"
-                                }`}
+                                className={`flex items-start gap-3 rounded-xl p-3.5 border ${ans.instructorAnswer ? "bg-violet-50 border-violet-100" : "bg-white border-slate-100"}`}
                               >
                                 <img
                                   src={
@@ -851,7 +948,7 @@ export default function CoursePlayer() {
                 )}
               </TabsContent>
 
-              {/* ── REVIEWS TAB ── */}
+              {/* REVIEWS TAB */}
               <TabsContent
                 value="reviews"
                 className="p-5 sm:p-6 space-y-4 mt-0"
@@ -994,11 +1091,10 @@ export default function CoursePlayer() {
           </div>
         </main>
 
-        {/* ── SIDEBAR ── */}
+        {/* SIDEBAR */}
         <aside
           className={`fixed top-16 right-0 bottom-0 w-[340px] bg-white border-l border-slate-200 flex flex-col transition-transform duration-300 z-40 ${isSidebarOpen ? "translate-x-0" : "translate-x-full"}`}
         >
-          {/* Sidebar header */}
           <div className="px-5 py-4 border-b border-slate-200 flex-shrink-0 bg-white">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-bold text-slate-800 text-sm">
@@ -1019,7 +1115,6 @@ export default function CoursePlayer() {
             </p>
           </div>
 
-          {/* Sections */}
           <div className="flex-1 overflow-y-auto">
             <Accordion
               type="multiple"
@@ -1060,13 +1155,8 @@ export default function CoursePlayer() {
                               lecture: lectureIndex,
                             })
                           }
-                          className={`w-full flex items-start gap-3 px-5 py-3 text-left transition-all border-l-2 ${
-                            isActive
-                              ? "bg-violet-50 border-l-violet-500"
-                              : "hover:bg-slate-50 border-l-transparent hover:border-l-slate-200"
-                          }`}
+                          className={`w-full flex items-start gap-3 px-5 py-3 text-left transition-all border-l-2 ${isActive ? "bg-violet-50 border-l-violet-500" : "hover:bg-slate-50 border-l-transparent hover:border-l-slate-200"}`}
                         >
-                          {/* Status icon */}
                           <div className="flex-shrink-0 mt-0.5">
                             {isDone ? (
                               <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -1081,17 +1171,16 @@ export default function CoursePlayer() {
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p
-                              className={`text-sm leading-snug truncate ${
-                                isActive
-                                  ? "font-semibold text-violet-700"
-                                  : isDone
-                                    ? "text-slate-400"
-                                    : "text-slate-700"
-                              }`}
-                            >
-                              {lecture.title}
-                            </p>
+                            <div className="flex items-center gap-1.5">
+                              {lecture.type === "ARTICLE" && (
+                                <FileText className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                              )}
+                              <p
+                                className={`text-sm leading-snug truncate ${isActive ? "font-semibold text-violet-700" : isDone ? "text-slate-400" : "text-slate-700"}`}
+                              >
+                                {lecture.title}
+                              </p>
+                            </div>
                             {lecture.duration && (
                               <div className="flex items-center gap-1 mt-1">
                                 <Clock className="w-3 h-3 text-slate-300" />
@@ -1112,7 +1201,6 @@ export default function CoursePlayer() {
         </aside>
       </div>
 
-      {/* Mobile overlay */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 lg:hidden"
