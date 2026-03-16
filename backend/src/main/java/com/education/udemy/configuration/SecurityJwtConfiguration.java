@@ -17,6 +17,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 
 import com.education.udemy.exception.AppException;
 import com.education.udemy.exception.ErrorCode;
+import com.education.udemy.repository.UserRepository;
 import com.education.udemy.service.InvalidatedTokenService;
 import com.education.udemy.util.SecurityUtil;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
@@ -33,6 +34,9 @@ public class SecurityJwtConfiguration {
     @Autowired
     private InvalidatedTokenService invalidatedTokenService;
 
+    @Autowired
+    private UserRepository userRepository;
+
     private SecretKey getSecretKey(String base64Key) {
         byte[] keyBytes = java.util.Base64.getDecoder().decode(base64Key);
         return new SecretKeySpec(keyBytes, 0, keyBytes.length, SecurityUtil.JWT_ALGORITHM.getName());
@@ -40,13 +44,11 @@ public class SecurityJwtConfiguration {
 
     @Bean
     public JwtEncoder jwtEncoder() {
-        // This example uses accessTokenKey for encoding. Update as necessary.
         return new NimbusJwtEncoder(new ImmutableSecret<>(getSecretKey(accessTokenKey)));
     }
 
     @Bean
     public JwtDecoder jwtDecoder() {
-        // Create decoders for access and refresh tokens
         NimbusJwtDecoder accessTokenDecoder = NimbusJwtDecoder.withSecretKey(getSecretKey(accessTokenKey))
                 .macAlgorithm(SecurityUtil.JWT_ALGORITHM).build();
 
@@ -59,13 +61,23 @@ public class SecurityJwtConfiguration {
                     throw new AppException(ErrorCode.UNAUTHENTICATED);
                 }
 
-                // Parse the token and determine the type (access or refresh)
                 Jwt jwt = accessTokenDecoder.decode(token);
                 if ("refresh".equals(jwt.getClaims().get("token_type"))) {
-                    // Decode as refresh token
                     jwt = refreshTokenDecoder.decode(token);
                 }
+
+                String username = jwt.getSubject();
+                if (username != null) {
+                    userRepository.findByUsername(username).ifPresent(user -> {
+                        if (!user.getActive()) {
+                            throw new AppException(ErrorCode.ACCOUNT_LOCKED);
+                        }
+                    });
+                }
+
                 return jwt;
+            } catch (AppException e) {
+                throw e;
             } catch (Exception e) {
                 System.out.println(">>> JWT error: " + e.getMessage());
                 throw e;
@@ -83,4 +95,3 @@ public class SecurityJwtConfiguration {
         return jwtAuthenticationConverter;
     }
 }
-

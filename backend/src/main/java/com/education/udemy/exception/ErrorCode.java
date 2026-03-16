@@ -24,6 +24,7 @@ public enum ErrorCode {
     INVALID_PASSWORD(400, "Password must be at least {min} characters", HttpStatus.BAD_REQUEST),
     PASSWORD_INCORRECT(400, "Current password is incorrect", HttpStatus.BAD_REQUEST),
     PASSWORD_NOT_MATCH(400, "Passwords do not match", HttpStatus.BAD_REQUEST),
+    ACCOUNT_LOCKED(403, "Your account has been locked", HttpStatus.FORBIDDEN),
 
     // CATEGORY
     CATEGORY_EXISTED(409, "Category existed", HttpStatus.CONFLICT),
