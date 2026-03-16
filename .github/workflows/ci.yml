@@ -7,7 +7,7 @@ on:
     branches: [dev]
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -23,29 +23,19 @@ jobs:
         with:
           filters: |
             backend:
-              - 'backend/pom.xml'
-              - 'backend/mvnw'
-              - 'backend/mvnw.cmd'
-              - 'backend/src/**'
+              - 'backend/**'
               - '.github/workflows/**'
             frontend:
-              - 'frontend/package.json'
-              - 'frontend/package-lock.json'
-              - 'frontend/vite.config.ts'
-              - 'frontend/tsconfig.json'
-              - 'frontend/index.html'
-              - 'frontend/src/**'
-              - 'frontend/public/**'
-              - 'frontend/components/**'
-              - 'frontend/app/**'
-              - '.github/workflows/**'
+              - 'frontend/**'
 
   backend:
     name: Build & Test Spring Boot
     needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.backend == 'true' || github.event_name == 'pull_request' }}
+    if: >-
+      ${{ (github.event_name == 'pull_request') ||
+          (needs.detect-changes.outputs.backend == 'true') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     defaults:
       run:
         working-directory: backend
@@ -76,8 +66,9 @@ jobs:
           MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
           JWT_SECRET_ACCESS: ${{ secrets.JWT_SECRET_ACCESS }}
           JWT_SECRET_REFRESH: ${{ secrets.JWT_SECRET_REFRESH }}
-        run: ./mvnw clean verify
+        run: ./mvnw clean verify -B --no-transfer-progress
       - name: Upload Backend Artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: backend-jar
@@ -87,7 +78,9 @@ jobs:
   frontend:
     name: Build & Lint React + Vite
     needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.frontend == 'true' || github.event_name == 'pull_request' }}
+    if: >-
+      ${{ (github.event_name == 'pull_request') ||
+          (needs.detect-changes.outputs.frontend == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -108,6 +101,7 @@ jobs:
       - name: Build
         run: npm run build
       - name: Upload Frontend Artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
