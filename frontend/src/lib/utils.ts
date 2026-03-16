@@ -109,17 +109,17 @@ export function getErrorMessage(error: unknown): string {
  * @param func - Function cần debounce
  * @param wait - Thời gian chờ (ms)
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: Parameters<T>) => ReturnType<T>>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  
-  return function (this: any, ...args: Parameters<T>) {
+
+  return function (this: unknown, ...args: Parameters<T>) {
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
-    
+
     timeoutId = setTimeout(() => {
       func.apply(this, args);
     }, wait);
@@ -131,13 +131,13 @@ export function debounce<T extends (...args: any[]) => any>(
  * @param func - Function cần throttle
  * @param limit - Thời gian giới hạn (ms)
  */
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: Parameters<T>) => ReturnType<T>>(
   func: T,
   limit: number
 ): (...args: Parameters<T>) => void {
   let inThrottle = false;
-  
-  return function (this: any, ...args: Parameters<T>) {
+
+  return function (this: unknown, ...args: Parameters<T>) {
     if (!inThrottle) {
       func.apply(this, args);
       inThrottle = true;
@@ -226,7 +226,7 @@ export function parseQueryString(queryString: string): Record<string, string> {
  * Build query string từ object
  * @param params - Object params
  */
-export function buildQueryString(params: Record<string, any>): string {
+export function buildQueryString(params: Record<string, unknown>): string {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {

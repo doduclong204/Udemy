@@ -2,7 +2,7 @@
 
 export interface ApiResponse<T> {
   statusCode?: number;
-  message?: any;
+  message?: string | string[] | Record<string, unknown>;
   error?: string;
   data: T;
 }

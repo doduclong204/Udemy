@@ -113,7 +113,7 @@ export default function VideoPlayer({
       if (tag === "INPUT" || tag === "TEXTAREA") return;
       const v = videoRef.current;
       if (!v) return;
-      if (e.key === " " || e.key === "k") { e.preventDefault(); v.paused ? v.play() : v.pause(); }
+      if (e.key === " " || e.key === "k") { e.preventDefault(); if (v.paused) { void v.play(); } else { v.pause(); } }
       if (e.key === "ArrowRight") { e.preventDefault(); v.currentTime = Math.min(v.duration, v.currentTime + 5); }
       if (e.key === "ArrowLeft") { e.preventDefault(); v.currentTime = Math.max(0, v.currentTime - 5); }
       if (e.key === "m") { v.muted = !v.muted; setMuted(v.muted); }
@@ -141,7 +141,7 @@ export default function VideoPlayer({
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
-    v.paused ? v.play() : v.pause();
+    if (v.paused) { void v.play(); } else { v.pause(); }
     // Flash icon
     if (playFlashTimer.current) clearTimeout(playFlashTimer.current);
     setShowPlayFlash(true);

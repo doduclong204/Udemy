@@ -39,6 +39,7 @@ import reviewService from "@/services/reviewService";
 import processService from "@/services/processService";
 import type {
   CourseDetailResponse,
+  LectureResponse,
   LectureNoteResponse,
   QAResponse,
   ReviewResponse,
@@ -109,9 +110,9 @@ export default function CoursePlayer() {
                 progressList.filter((p) => p.completed).map((p) => p.lectureId),
               );
               setCompletedLectures(completedIds);
-            } catch {}
+            } catch (_e) { /* ignore */ }
           }
-        } catch {}
+        } catch (_e) { /* ignore */ }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -412,8 +413,8 @@ export default function CoursePlayer() {
                 src={getMediaUrl(currentLectureData.videoUrl)}
                 poster={getMediaUrl(course.thumbnail || course.banner)}
                 subtitleUrl={
-                  (currentLectureData as any).subtitleUrl
-                    ? getMediaUrl((currentLectureData as any).subtitleUrl)
+                  (currentLectureData as LectureResponse & { subtitleUrl?: string }).subtitleUrl
+                    ? getMediaUrl((currentLectureData as LectureResponse & { subtitleUrl?: string }).subtitleUrl!)
                     : undefined
                 }
                 subtitleLabel="Tiếng Việt"

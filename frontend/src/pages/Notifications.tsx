@@ -44,15 +44,16 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState<UserNotificationResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-
   useEffect(() => {
+    if (!isAuthenticated) return;
     userNotificationService
       .getMyNotifications({ pageSize: 50 })
       .then((res) => setNotifications(res.result))
       .catch(() => toast.error('Không thể tải thông báo'))
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [isAuthenticated]);
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   const handleMarkAsRead = async (id: string) => {
     try {

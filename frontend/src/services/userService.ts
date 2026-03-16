@@ -11,6 +11,47 @@ import {
 } from '@/types';
 import { adminStudents as mockStudents } from '@/data/adminMockData';
 
+// Internal type for raw API user response
+interface RawUserResponse {
+  _id?: string;
+  id?: string;
+  name?: string;
+  username?: string;
+  email?: string;
+  avatar?: string;
+  enrollmentCount?: number;
+  completedCount?: number;
+  totalSpent?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  active?: boolean;
+  status?: boolean;
+  role?: string;
+}
+
+interface RawPaginatedResponse {
+  result?: RawUserResponse[];
+  meta?: {
+    current?: number;
+    pageSize?: number;
+    pages?: number;
+    total?: number;
+  };
+}
+
+interface CreateUserPayload {
+  name: string;
+  username: string;
+  password?: string;
+  role?: string;
+}
+
+interface UpdateUserPayload {
+  name?: string;
+  username?: string;
+  role?: string;
+}
+
 const userService = {
   /**
    * Lấy thông tin user hiện tại
@@ -38,7 +79,6 @@ const userService = {
     );
     const updated = response.data.data;
 
-    // Sync localStorage để refresh page vẫn đúng
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify({ ...JSON.parse(userStr!), ...updated }));
 
     return updated;
@@ -73,25 +113,33 @@ const userService = {
     try {
       const page = params?.page || 1;
       const pageSize = params?.pageSize || 10;
-      const response = await axiosInstance.get<ApiResponse<any>>(`${API_ENDPOINTS.USERS.BASE}`, {
-        params: {
-          page: Math.max(0, page - 1),
-          size: pageSize,
-          search: params?.search,
-          status: params?.status,
+      const response = await axiosInstance.get<ApiResponse<RawPaginatedResponse>>(
+        `${API_ENDPOINTS.USERS.BASE}`,
+        {
+          params: {
+            page: Math.max(0, page - 1),
+            size: pageSize,
+            search: params?.search,
+            status: params?.status,
+          },
         },
-      });
-      const payload = response.data.data as any;
-      const list = payload?.result ?? [];
-      const meta = payload?.meta ?? { current: page - 1, pageSize, pages: 1, total: Array.isArray(list) ? list.length : 0 };
+      );
+      const payload = response.data.data;
+      const list: RawUserResponse[] = payload?.result ?? [];
+      const meta = payload?.meta ?? {
+        current: page - 1,
+        pageSize,
+        pages: 1,
+        total: list.length,
+      };
 
-      const students: Student[] = (Array.isArray(list) ? list : []).map((u: any) => ({
-        id: u._id ?? u.id,
-        name: u.name ?? u.username,
-        email: u.username ?? u.email,
+      const students: Student[] = list.map((u) => ({
+        id: u._id ?? u.id ?? '',
+        name: u.name ?? u.username ?? '',
+        email: u.username ?? u.email ?? '',
         avatar: u.avatar ?? '',
-enrolledCourses: u.enrollmentCount ?? 0,   
-completedCourses: u.completedCount ?? 0,   
+        enrolledCourses: u.enrollmentCount ?? 0,
+        completedCourses: u.completedCount ?? 0,
         totalSpent: u.totalSpent ?? 0,
         joinedAt: u.createdAt ?? '',
         lastActive: u.updatedAt ?? '',
@@ -110,7 +158,7 @@ completedCourses: u.completedCount ?? 0,
       };
     } catch {
       await new Promise(resolve => setTimeout(resolve, 500));
-      let filteredStudents = [...mockStudents].map(s => ({ ...s, role: 'USER' } as any));
+      let filteredStudents: (Student & { role?: string })[] = [...mockStudents].map(s => ({ ...s, role: 'USER' }));
 
       if (params?.search) {
         const search = params.search.toLowerCase();
@@ -158,26 +206,39 @@ completedCourses: u.completedCount ?? 0,
     }
   },
 
-  createUser: async (data: { name: string; email: string; password?: string; role?: string }): Promise<any> => {
-    const payload: any = { ...data, username: data.email };
-    delete payload.email;
-    payload.role = payload.role ? payload.role.toString().toUpperCase() : 'USER';
+  createUser: async (data: { name: string; email: string; password?: string; role?: string }): Promise<User> => {
+    const payload: CreateUserPayload = {
+      name: data.name,
+      username: data.email,
+      password: data.password,
+      role: data.role ? data.role.toString().toUpperCase() : 'USER',
+    };
 
     try {
-      const response = await axiosInstance.post(`${API_ENDPOINTS.USERS.BASE}`, payload);
+      const response = await axiosInstance.post<ApiResponse<User>>(
+        `${API_ENDPOINTS.USERS.BASE}`,
+        payload,
+      );
       return response.data?.data ?? response.data;
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.response?.data?.error || err.message || 'Create user failed';
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string; error?: string } }; message?: string };
+      const msg = axiosErr?.response?.data?.message ||
+        axiosErr?.response?.data?.error ||
+        axiosErr?.message ||
+        'Create user failed';
       throw new Error(msg);
     }
   },
 
-  updateUser: async (id: string, data: Partial<{ name: string; email: string; role?: string }>): Promise<any> => {
-    const payload: any = { ...data };
-    if (payload.email) { payload.username = payload.email; delete payload.email; }
-    if (payload.role)  { payload.role = payload.role.toString().toUpperCase(); }
+  updateUser: async (id: string, data: Partial<{ name: string; email: string; role?: string }>): Promise<User> => {
+    const payload: UpdateUserPayload = { name: data.name };
+    if (data.email) { payload.username = data.email; }
+    if (data.role)  { payload.role = data.role.toString().toUpperCase(); }
 
-    const response = await axiosInstance.put(`${API_ENDPOINTS.USERS.BASE}/${id}`, payload);
+    const response = await axiosInstance.put<ApiResponse<User>>(
+      `${API_ENDPOINTS.USERS.BASE}/${id}`,
+      payload,
+    );
     return response.data?.data ?? response.data;
   },
 };

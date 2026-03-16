@@ -48,7 +48,9 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem("admin", JSON.stringify(adminUser));
           return adminUser;
         }
-      } catch {}
+      } catch (_e) {
+        // ignore parse error, fall through to default admin
+      }
     }
 
     // otherwise fall back to default hardcoded admin

@@ -32,9 +32,11 @@ export const loginAsync = createAsyncThunk(
     try {
       const response = await authService.login(data);
       return response.user;
-    } catch (error: any) {
+    } catch (error: unknown) {
       const message =
-        error.response?.data?.message || error.message || "Đăng nhập thất bại";
+        (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ||
+        (error as { message?: string })?.message ||
+        "Đăng nhập thất bại";
       return rejectWithValue(message);
     }
   },
@@ -47,9 +49,11 @@ export const registerAsync = createAsyncThunk(
       // Register chỉ trả UserResponse, không auto-login
       const user = await authService.register(data);
       return user;
-    } catch (error: any) {
+    } catch (error: unknown) {
       const message =
-        error.response?.data?.message || error.message || "Đăng ký thất bại";
+        (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ||
+        (error as { message?: string })?.message ||
+        "Đăng ký thất bại";
       return rejectWithValue(message);
     }
   },
@@ -65,7 +69,7 @@ export const fetchAccount = createAsyncThunk(
     try {
       const user = await authService.getAccount();
       return user;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       return rejectWithValue("Failed to fetch account");
     }
   },
@@ -138,8 +142,8 @@ const authSlice = createSlice({
         state.user = action.payload;
         state.isAuthenticated = true;
       })
-      .addCase(fetchAccount.rejected, (state) => {
-         
+      .addCase(fetchAccount.rejected, (_state) => {
+        // token invalid hoặc chưa đăng nhập — giữ nguyên state
       });
   },
 });
