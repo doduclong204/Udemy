@@ -40,9 +40,9 @@ export function CourseCarousel({ title, subtitle, courses }: CourseCarouselProps
           <ChevronLeft className="w-6 h-6" />
         </button>
 
-        <div ref={scrollRef} className="carousel-container">
+        <div ref={scrollRef} className="carousel-container items-stretch">
           {courses.map((course) => (
-            <div key={course._id} className="carousel-item">
+            <div key={course._id} className="carousel-item w-56 md:w-64 lg:w-72 flex-shrink-0">
               <CourseCard course={course} />
             </div>
           ))}
