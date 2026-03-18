@@ -7,6 +7,7 @@ import com.education.udemy.entity.Notification;
 import com.education.udemy.entity.User;
 import com.education.udemy.entity.UserNotification;
 import com.education.udemy.enums.NotificationStatus;
+import com.education.udemy.enums.NotificationTarget;
 import com.education.udemy.enums.NotificationType;
 import com.education.udemy.exception.AppException;
 import com.education.udemy.exception.ErrorCode;
@@ -25,11 +26,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Slf4j
 public class NotificationService {
+
     NotificationRepository notificationRepository;
     UserNotificationRepository userNotificationRepository;
     UserRepository userRepository;
@@ -45,12 +48,16 @@ public class NotificationService {
             notification.setStatus(NotificationStatus.DRAFT);
         }
 
+        if (request.getTargetUserIds() != null && !request.getTargetUserIds().isEmpty()) {
+            notification.setTargetUserIds(request.getTargetUserIds());
+        }
+
         notification = notificationRepository.save(notification);
 
         if (notification.getStatus() == NotificationStatus.SENT) {
-            List<User> allUsers = userRepository.findAll();
+            List<User> recipients = resolveRecipients(notification);
             Notification finalNotification = notification;
-            List<UserNotification> userNotifications = allUsers.stream()
+            List<UserNotification> userNotifications = recipients.stream()
                     .map(user -> UserNotification.builder()
                             .notification(finalNotification)
                             .user(user)
@@ -77,8 +84,8 @@ public class NotificationService {
         notification.setStatus(NotificationStatus.SENT);
         notificationRepository.save(notification);
 
-        List<User> allUsers = userRepository.findAll();
-        List<UserNotification> userNotifications = allUsers.stream()
+        List<User> recipients = resolveRecipients(notification);
+        List<UserNotification> userNotifications = recipients.stream()
                 .map(user -> UserNotification.builder()
                         .notification(notification)
                         .user(user)
@@ -88,6 +95,18 @@ public class NotificationService {
         userNotificationRepository.saveAll(userNotifications);
 
         return getDetail(id);
+    }
+
+    private List<User> resolveRecipients(Notification notification) {
+        if (notification.getTargetType() == NotificationTarget.SPECIFIC_USERS) {
+            List<String> ids = notification.getTargetUserIds();
+            if (ids == null || ids.isEmpty()) {
+                log.warn("SPECIFIC_USERS nhưng targetUserIds rỗng. notificationId={}", notification.getId());
+                return List.of();
+            }
+            return userRepository.findAllById(ids);
+        }
+        return userRepository.findAll();
     }
 
     public ApiPagination<NotificationResponse> getAll(Specification<Notification> spec, Pageable pageable) {
@@ -136,6 +155,7 @@ public class NotificationService {
         userNotificationRepository.deleteByNotificationId(id);
         notificationRepository.deleteById(id);
     }
+
     @Transactional
     public void sendSilentNotification(String title, String message, String relatedId, String relatedType, List<User> recipients) {
         Notification notification = Notification.builder()

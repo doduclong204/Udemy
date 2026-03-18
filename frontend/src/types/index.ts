@@ -192,7 +192,7 @@ export type EnrollmentStatus = "ENROLLED" | "LEARNING" | "COMPLETED";
 export type OrderStatus = "PENDING" | "COMPLETED" | "CANCELLED" | "REFUNDED";
 export type PaymentMethod = "VNPAY" | "MOMO" | "BANK_TRANSFER" | "PAYPAL";
 export type NotificationType = "PROMOTION" | "COURSE" | "SYSTEM";
-export type NotificationTarget = "ALL" | "ENROLLED" | "NEW_USER";
+export type NotificationTarget = "ALL" | "ENROLLED" | "NEW_USER" | "SPECIFIC_USERS";
 export type NotificationStatus = "DRAFT" | "SENT";
 
 // ==================== Lecture Types ====================
@@ -249,7 +249,7 @@ export interface SectionResponse {
 
 export interface Course {
   _id?: string;
-  id?: string; // ← đổi thành optional
+  id?: string;
   title: string;
   thumbnail?: string;
   category?: string;
@@ -302,7 +302,7 @@ export interface UpdateCourseRequest {
 
 export interface CourseDetailResponse {
   _id: string;
-  id?: string; // ← thêm
+  id?: string;
   title: string;
   smallDescription: string;
   description: string;
@@ -331,7 +331,7 @@ export interface CourseDetailResponse {
 
 export interface CourseSummaryResponse {
   _id: string;
-  id?: string; // ← thêm
+  id?: string;
   title: string;
   thumbnail: string;
   price: number;
@@ -583,6 +583,7 @@ export interface NotificationCreationRequest {
   status?: NotificationStatus;
   relatedId?: string;
   relatedType?: string;
+  targetUserIds?: string[];
 }
 
 export interface NotificationResponse {

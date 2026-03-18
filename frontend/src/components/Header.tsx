@@ -184,7 +184,7 @@ export function Header() {
                     <Link to="/dashboard/wishlist">Danh sách yêu thích</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/dashboard/messages">Tin nhắn</Link>
+                    <Link to="/dashboard/notifications">Thông báo</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/dashboard/settings">Cài đặt tài khoản</Link>

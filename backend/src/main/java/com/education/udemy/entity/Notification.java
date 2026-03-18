@@ -1,18 +1,15 @@
 package com.education.udemy.entity;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.List;
-
 import com.education.udemy.enums.NotificationStatus;
 import com.education.udemy.enums.NotificationTarget;
 import com.education.udemy.enums.NotificationType;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+
+import java.util.List;
+
 @Getter
 @Setter
 @Builder
@@ -21,7 +18,8 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Entity(name = "notifications")
 @JsonPropertyOrder(alphabetic = true)
-public class Notification extends BaseEntity{
+public class Notification extends BaseEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     String id;
@@ -44,6 +42,11 @@ public class Notification extends BaseEntity{
 
     String relatedId;
     String relatedType;
+
+    @ElementCollection
+    @CollectionTable(name = "notification_target_users", joinColumns = @JoinColumn(name = "notification_id"))
+    @Column(name = "user_id")
+    List<String> targetUserIds;
 
     @OneToMany(mappedBy = "notification", cascade = CascadeType.ALL)
     List<UserNotification> userNotifications;
