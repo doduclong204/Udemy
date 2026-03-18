@@ -9,8 +9,12 @@ import {
   Bell,
   Send,
   Users,
+  User,
   ChevronDown,
+  MessageSquare,
+  HelpCircle,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import notificationService from "@/services/notificationService";
 import {
   NotificationResponse,
@@ -67,6 +71,10 @@ const ITEM_BASE =
 const ITEM_DEFAULT = "text-slate-300 hover:bg-[hsl(220,20%,25%)]";
 const ITEM_SEL = "bg-admin-primary/20 text-white";
 
+// Thông báo là câu hỏi từ học viên
+const isQuestionNotif = (n: NotificationResponse) =>
+  n.relatedType === "QUESTION" || n.relatedType === "COURSE_QUESTION";
+
 // ==================== Label maps ====================
 
 const TYPE_LABELS: Record<NotificationType, string> = {
@@ -85,6 +93,7 @@ const TARGET_LABELS: Record<NotificationTarget, string> = {
   ALL: "Tất cả người dùng",
   ENROLLED: "Học viên đã đăng ký",
   NEW_USER: "Người dùng mới",
+  SPECIFIC_USERS: "Người dùng cụ thể",
 };
 
 const STATUS_COLORS: Record<NotificationStatus, string> = {
@@ -96,6 +105,69 @@ const STATUS_LABELS: Record<NotificationStatus, string> = {
   SENT: "Đã gửi",
   DRAFT: "Bản nháp",
 };
+
+// ==================== Target Icon ====================
+
+function TargetCell({ n }: { n: NotificationResponse }) {
+  // Câu hỏi từ học viên — icon riêng + label riêng
+  if (isQuestionNotif(n)) {
+    return (
+      <div className="flex items-center gap-2">
+        <HelpCircle className="w-4 h-4 text-amber-400 shrink-0" />
+        <span className="text-sm text-amber-400 font-medium">
+          Câu hỏi học viên
+        </span>
+      </div>
+    );
+  }
+
+  // Gửi đến user cụ thể
+  if (n.targetType === "SPECIFIC_USERS") {
+    return (
+      <div className="flex items-center gap-2">
+        <User className="w-4 h-4 text-admin-muted-foreground shrink-0" />
+        <span className="text-sm text-admin-foreground">
+          {TARGET_LABELS[n.targetType]}
+        </span>
+      </div>
+    );
+  }
+
+  // Các loại còn lại
+  return (
+    <div className="flex items-center gap-2">
+      <Users className="w-4 h-4 text-admin-muted-foreground shrink-0" />
+      <span className="text-sm text-admin-foreground">
+        {n.targetType ? (TARGET_LABELS[n.targetType] ?? n.targetType) : "-"}
+      </span>
+    </div>
+  );
+}
+
+// ==================== Stats Cell ====================
+
+function StatsCell({ n }: { n: NotificationResponse }) {
+  // Câu hỏi học viên → không hiện thống kê
+  if (isQuestionNotif(n)) {
+    return <span className="text-sm text-admin-muted-foreground">-</span>;
+  }
+
+  // Các loại khác (kể cả SPECIFIC_USERS) → hiện thống kê bình thường
+  if (n.status === "SENT" && n.totalSent > 0) {
+    return (
+      <div className="text-sm">
+        <p className="text-admin-foreground">
+          {(n.totalRead ?? 0).toLocaleString()} / {n.totalSent.toLocaleString()}
+        </p>
+        <p className="text-xs text-admin-muted-foreground">
+          {Math.round(((n.totalRead ?? 0) / n.totalSent) * 100)}% đã đọc
+        </p>
+      </div>
+    );
+  }
+
+  return <span className="text-sm text-admin-muted-foreground">-</span>;
+}
 
 // ==================== Custom Select ====================
 
@@ -248,7 +320,6 @@ function NotificationFormDialog({
               className={INPUT_CLASS}
             />
           </div>
-
           <div className="space-y-2">
             <Label className="text-white">
               Nội dung <span className="text-red-400">*</span>
@@ -261,7 +332,6 @@ function NotificationFormDialog({
               rows={4}
             />
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-white">Loại thông báo</Label>
@@ -327,7 +397,8 @@ function NotificationFormDialog({
 // ==================== Main Component ====================
 
 export default function AdminNotifications() {
-  // ── List state ──────────────────────────────────────────
+  const navigate = useNavigate();
+
   const [notifications, setNotifications] = useState<NotificationResponse[]>(
     [],
   );
@@ -341,15 +412,12 @@ export default function AdminNotifications() {
   const itemsPerPage = 10;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-  // ── Dialog state ──────────────────────────────────────────
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selected, setSelected] = useState<NotificationResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // ── Fetch ─────────────────────────────────────────────────
 
   const fetchNotifications = async () => {
     setIsLoading(true);
@@ -360,7 +428,9 @@ export default function AdminNotifications() {
         search: searchQuery || undefined,
         status: statusFilter !== "all" ? statusFilter : undefined,
       });
-      setNotifications(res.result);
+      setNotifications(
+        res.result.filter((n) => n.relatedType !== "COURSE_ANSWER"),
+      );
       setTotalItems(res.meta.total);
     } catch {
       toast.error("Không thể tải danh sách thông báo");
@@ -380,13 +450,9 @@ export default function AdminNotifications() {
     return () => clearTimeout(t);
   }, [searchQuery, statusFilter]); // eslint-disable-line
 
-  // ── Stats ──────────────────────────────────────────────────
-
   const sentCount = notifications.filter((n) => n.status === "SENT").length;
   const draftCount = notifications.filter((n) => n.status === "DRAFT").length;
   const totalRead = notifications.reduce((s, n) => s + (n.totalRead ?? 0), 0);
-
-  // ── Handlers ──────────────────────────────────────────────
 
   const handleFormSubmit = async (data: FormData, sendNow: boolean) => {
     if (!data.title.trim() || !data.message.trim()) {
@@ -461,6 +527,12 @@ export default function AdminNotifications() {
     }
   };
 
+  const handleReplyQuestion = (n: NotificationResponse) => {
+    if (n.relatedId) {
+      navigate(`/course/${n.relatedId}/learn`, { state: { defaultTab: "qa" } });
+    }
+  };
+
   const openView = (n: NotificationResponse) => {
     setSelected(n);
     setIsViewOpen(true);
@@ -474,11 +546,8 @@ export default function AdminNotifications() {
     setIsDeleteOpen(true);
   };
 
-  // ── Render ────────────────────────────────────────────────
-
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-admin-foreground">
@@ -497,7 +566,6 @@ export default function AdminNotifications() {
         </Button>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           {
@@ -523,7 +591,6 @@ export default function AdminNotifications() {
         ))}
       </div>
 
-      {/* Filters */}
       <div className="bg-admin-card border border-admin-border rounded-xl p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
@@ -555,7 +622,6 @@ export default function AdminNotifications() {
         </div>
       </div>
 
-      {/* Table */}
       {!isLoading && notifications.length === 0 ? (
         <div className="bg-admin-card border border-admin-border rounded-xl p-12 text-center">
           <Bell className="w-16 h-16 text-admin-muted-foreground mx-auto mb-4" />
@@ -635,39 +701,23 @@ export default function AdminNotifications() {
                         </span>
                       </td>
                       <td className="py-4 px-4 hidden lg:table-cell">
-                        <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4 text-admin-muted-foreground shrink-0" />
-                          <span className="text-sm text-admin-foreground">
-                            {TARGET_LABELS[n.targetType]}
-                          </span>
-                        </div>
+                        <TargetCell n={n} />
                       </td>
                       <td className="py-4 px-4 hidden sm:table-cell">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${STATUS_COLORS[n.status]}`}
-                        >
-                          {STATUS_LABELS[n.status]}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 hidden lg:table-cell">
-                        {n.status === "SENT" && n.totalSent > 0 ? (
-                          <div className="text-sm">
-                            <p className="text-admin-foreground">
-                              {(n.totalRead ?? 0).toLocaleString()} /{" "}
-                              {n.totalSent.toLocaleString()}
-                            </p>
-                            <p className="text-xs text-admin-muted-foreground">
-                              {Math.round(
-                                ((n.totalRead ?? 0) / n.totalSent) * 100,
-                              )}
-                              % đã đọc
-                            </p>
-                          </div>
+                        {isQuestionNotif(n) ? (
+                          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-amber-500/10 text-amber-400">
+                            Câu hỏi mới
+                          </span>
                         ) : (
-                          <span className="text-sm text-admin-muted-foreground">
-                            -
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${STATUS_COLORS[n.status]}`}
+                          >
+                            {STATUS_LABELS[n.status]}
                           </span>
                         )}
+                      </td>
+                      <td className="py-4 px-4 hidden lg:table-cell">
+                        <StatsCell n={n} />
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex justify-end">
@@ -686,6 +736,17 @@ export default function AdminNotifications() {
                                 <Eye className="w-4 h-4 mr-2" />
                                 Xem chi tiết
                               </DropdownMenuItem>
+
+                              {isQuestionNotif(n) && n.relatedId && (
+                                <DropdownMenuItem
+                                  onClick={() => handleReplyQuestion(n)}
+                                  className="text-amber-400 hover:text-amber-300"
+                                >
+                                  <MessageSquare className="w-4 h-4 mr-2" />
+                                  Phản hồi câu hỏi
+                                </DropdownMenuItem>
+                              )}
+
                               {n.status === "DRAFT" && (
                                 <>
                                   <DropdownMenuItem onClick={() => openEdit(n)}>
@@ -719,7 +780,6 @@ export default function AdminNotifications() {
             </table>
           </div>
 
-          {/* Pagination */}
           <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-admin-border gap-4">
             <p className="text-sm text-admin-muted-foreground">
               Hiển thị{" "}
@@ -752,7 +812,6 @@ export default function AdminNotifications() {
         </div>
       )}
 
-      {/* ===== Add Dialog ===== */}
       <NotificationFormDialog
         open={isAddOpen}
         onClose={() => setIsAddOpen(false)}
@@ -760,7 +819,6 @@ export default function AdminNotifications() {
         isLoading={isSubmitting}
       />
 
-      {/* ===== Edit Dialog ===== */}
       <NotificationFormDialog
         open={isEditOpen}
         onClose={() => {
@@ -782,7 +840,6 @@ export default function AdminNotifications() {
         isLoading={isSubmitting}
       />
 
-      {/* ===== View Dialog ===== */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="admin-dialog sm:max-w-lg">
           <DialogHeader>
@@ -805,7 +862,12 @@ export default function AdminNotifications() {
                   { label: "Loại", value: TYPE_LABELS[selected.type] },
                   {
                     label: "Đối tượng",
-                    value: TARGET_LABELS[selected.targetType],
+                    value: isQuestionNotif(selected)
+                      ? "Câu hỏi học viên"
+                      : selected.targetType
+                        ? (TARGET_LABELS[selected.targetType] ??
+                          selected.targetType)
+                        : "-",
                   },
                   {
                     label: "Trạng thái",
@@ -825,25 +887,41 @@ export default function AdminNotifications() {
                   </div>
                 ))}
               </div>
-              {selected.status === "SENT" && selected.totalSent > 0 && (
-                <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-2">Thống kê</p>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-slate-400 text-sm">Đã đọc</span>
-                    <span className="text-white font-semibold text-sm">
-                      {(selected.totalRead ?? 0).toLocaleString()} /{" "}
-                      {selected.totalSent.toLocaleString()}
-                    </span>
+
+              {!isQuestionNotif(selected) &&
+                selected.status === "SENT" &&
+                selected.totalSent > 0 && (
+                  <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
+                    <p className="text-xs text-slate-400 mb-2">Thống kê</p>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-slate-400 text-sm">Đã đọc</span>
+                      <span className="text-white font-semibold text-sm">
+                        {(selected.totalRead ?? 0).toLocaleString()} /{" "}
+                        {selected.totalSent.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-600/50 rounded-full h-2">
+                      <div
+                        className="bg-admin-primary h-2 rounded-full"
+                        style={{
+                          width: `${((selected.totalRead ?? 0) / selected.totalSent) * 100}%`,
+                        }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full bg-slate-600/50 rounded-full h-2">
-                    <div
-                      className="bg-admin-primary h-2 rounded-full"
-                      style={{
-                        width: `${((selected.totalRead ?? 0) / selected.totalSent) * 100}%`,
-                      }}
-                    />
-                  </div>
-                </div>
+                )}
+
+              {isQuestionNotif(selected) && selected.relatedId && (
+                <Button
+                  onClick={() => {
+                    handleReplyQuestion(selected);
+                    setIsViewOpen(false);
+                  }}
+                  className="w-full bg-amber-500 hover:bg-amber-400 text-white"
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Đi đến câu hỏi để phản hồi
+                </Button>
               )}
             </div>
           )}
@@ -859,7 +937,6 @@ export default function AdminNotifications() {
         </DialogContent>
       </Dialog>
 
-      {/* ===== Delete Dialog ===== */}
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent className="admin-dialog">
           <AlertDialogHeader>

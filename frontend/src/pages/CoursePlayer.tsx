@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useParams, Navigate } from "react-router-dom";
+import { Link, useParams, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,7 +54,11 @@ const getMediaUrl = (url?: string | null) => {
 
 export default function CoursePlayer() {
   const { slug } = useParams();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const isAdmin = user?.role?.toUpperCase() === 'ADMIN';
+  const location = useLocation();
+  const navigate = useNavigate();
+  const defaultTab = (location.state as any)?.defaultTab ?? "overview";
 
   const [course, setCourse] = useState<CourseDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,6 +105,7 @@ export default function CoursePlayer() {
     courseService
       .getCourseById(slug)
       .then(async (c) => {
+        console.log('Course fetched:', c);
         setCourse(c);
         try {
           const enrollments = await enrollmentService.getMyEnrollments();
@@ -117,7 +122,11 @@ export default function CoursePlayer() {
           }
         } catch (_e) {}
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error('CoursePlayer error:', err);
+        toast.error("Không tìm thấy khóa học. Đang chuyển về trang chủ...");
+        navigate("/dashboard", { replace: true });
+      })
       .finally(() => setLoading(false));
   }, [slug]);
 
@@ -593,7 +602,7 @@ export default function CoursePlayer() {
 
           {/* TABS */}
           <div className="flex-1 bg-slate-50">
-            <Tabs defaultValue="overview" className="flex flex-col h-full">
+            <Tabs defaultValue={defaultTab} className="flex flex-col h-full">
               <div className="bg-white border-b border-slate-200 sticky top-0 z-10 flex-shrink-0">
                 <TabsList className="h-auto bg-transparent p-0 w-full grid grid-cols-4">
                   {[
@@ -848,17 +857,19 @@ export default function CoursePlayer() {
                               <p className="text-sm text-slate-500 leading-relaxed mt-1">
                                 {q.content}
                               </p>
-                              <button
-                                onClick={() =>
-                                  setAnsweringId(
-                                    answeringId === q._id ? null : q._id,
-                                  )
-                                }
-                                className="mt-2.5 text-xs font-medium text-violet-600 hover:text-violet-700 flex items-center gap-1.5 transition-colors"
-                              >
-                                <MessageSquare className="w-3.5 h-3.5" /> Trả
-                                lời
-                              </button>
+                              {isAdmin && (
+                                <button
+                                  onClick={() =>
+                                    setAnsweringId(
+                                      answeringId === q._id ? null : q._id,
+                                    )
+                                  }
+                                  className="mt-2.5 text-xs font-medium text-violet-600 hover:text-violet-700 flex items-center gap-1.5 transition-colors"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5" /> Trả
+                                  lời
+                                </button>
+                              )}
                               {answeringId === q._id && (
                                 <div className="mt-3 space-y-2 pl-3 border-l-2 border-violet-100">
                                   <Textarea
