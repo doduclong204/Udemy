@@ -31,9 +31,9 @@ public class DatabaseInitializer implements CommandLineRunner {
         long countUsers = this.userRepository.count();
         if (countUsers == 0) {
             User adminUser = User.builder()
-                    .username("admin")
+                    .username("admin@gmail.com")
                     .name("Đỗ Đức Long")
-                    .password(passwordEncoder.encode("123456"))
+                    .password(passwordEncoder.encode("Long752004"))
                     .role("ADMIN")
                     .active(true)
                     .phone("0969654190")
