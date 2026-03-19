@@ -168,6 +168,9 @@ export interface Student {
   name: string;
   email: string;
   avatar: string;
+  phone?: string;
+  bio?: string;
+  dateOfBirth?: string;
   enrolledCourses: number;
   completedCourses: number;
   totalSpent: number;

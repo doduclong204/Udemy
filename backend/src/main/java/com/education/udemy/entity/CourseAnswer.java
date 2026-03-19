@@ -1,15 +1,11 @@
 package com.education.udemy.entity;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.List;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Getter
 @Setter
@@ -19,8 +15,10 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Entity(name = "course_answers")
 @JsonPropertyOrder(alphabetic = true)
-public class CourseAnswer extends BaseEntity{
-    @Id @GeneratedValue(strategy = GenerationType.UUID)
+public class CourseAnswer extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     String id;
 
     @Column(columnDefinition = "TEXT")
@@ -32,6 +30,7 @@ public class CourseAnswer extends BaseEntity{
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "question_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     CourseQuestion question;
 
     @Column(nullable = false)

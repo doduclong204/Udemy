@@ -19,6 +19,9 @@ interface RawUserResponse {
   username?: string;
   email?: string;
   avatar?: string;
+  phone?: string;
+  bio?: string;
+  dateOfBirth?: string;
   enrollmentCount?: number;
   completedCount?: number;
   totalSpent?: number;
@@ -50,6 +53,10 @@ interface UpdateUserPayload {
   name?: string;
   username?: string;
   role?: string;
+  phone?: string;
+  bio?: string;
+  dateOfBirth?: string;
+  avatar?: string;
 }
 
 const userService = {
@@ -138,6 +145,9 @@ const userService = {
         name: u.name ?? u.username ?? '',
         email: u.username ?? u.email ?? '',
         avatar: u.avatar ?? '',
+        phone: u.phone ?? '',
+        bio: u.bio ?? '',
+        dateOfBirth: u.dateOfBirth ?? '',
         enrolledCourses: u.enrollmentCount ?? 0,
         completedCourses: u.completedCount ?? 0,
         totalSpent: u.totalSpent ?? 0,
@@ -230,10 +240,13 @@ const userService = {
     }
   },
 
-  updateUser: async (id: string, data: Partial<{ name: string; email: string; role?: string }>): Promise<User> => {
+  updateUser: async (id: string, data: Partial<{ name: string; role?: string; phone?: string; bio?: string; dateOfBirth?: string; avatar?: string }>): Promise<User> => {
     const payload: UpdateUserPayload = { name: data.name };
-    if (data.email) { payload.username = data.email; }
-    if (data.role)  { payload.role = data.role.toString().toUpperCase(); }
+    if (data.role)        { payload.role = data.role.toString().toUpperCase(); }
+    if (data.phone !== undefined)       { payload.phone = data.phone; }
+    if (data.bio !== undefined)         { payload.bio = data.bio; }
+    if (data.dateOfBirth !== undefined) { payload.dateOfBirth = data.dateOfBirth; }
+    if (data.avatar !== undefined)      { payload.avatar = data.avatar; }
 
     const response = await axiosInstance.put<ApiResponse<User>>(
       `${API_ENDPOINTS.USERS.BASE}/${id}`,

@@ -38,11 +38,11 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Notifications */}
+        {/* Notifications
         <button className="relative p-2 hover:bg-admin-accent rounded-lg">
           <Bell className="w-5 h-5 text-admin-muted-foreground" />
           <span className="absolute top-1 right-1 w-2 h-2 bg-admin-primary rounded-full" />
-        </button>
+        </button> */}
 
         {/* User Menu */}
         <DropdownMenu>

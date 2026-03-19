@@ -3,6 +3,8 @@ package com.education.udemy.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Getter
 @Setter
@@ -28,5 +30,6 @@ public class LectureNote extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lecture_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     Lecture lecture;
 }

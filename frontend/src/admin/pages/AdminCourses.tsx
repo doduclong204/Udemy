@@ -21,6 +21,7 @@ import {
   selectCoursesPagination,
 } from '@/redux/slices/courseSlice';
 import categoryService from '@/services/categoryService';
+import courseService from '@/services/courseService';
 import { Category } from '@/types';
 import {
   DropdownMenu,
@@ -102,6 +103,7 @@ export default function AdminCourses() {
   const [levelFilter, setLevelFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCourse, setSelectedCourse] = useState<any | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const itemsPerPage = 10;
@@ -127,7 +129,6 @@ export default function AdminCourses() {
     loadCategories();
   }, []);
 
-  // Hiển thị lỗi
   useEffect(() => {
     if (error) toast.error(error);
   }, [error]);
@@ -151,9 +152,20 @@ export default function AdminCourses() {
   const showCountStart = totalItems === 0 ? 0 : (pagination.page - 1) * pagination.pageSize + 1;
   const showCountEnd = Math.min(pagination.page * pagination.pageSize, totalItems);
 
-  const handleViewCourse = (course: any) => {
-    setSelectedCourse(course);
+  const handleViewCourse = async (course: any) => {
     setIsViewDialogOpen(true);
+    setSelectedCourse(course); // hiện ngay data tóm tắt trước
+    const id = getCourseId(course);
+    if (!id) return;
+    try {
+      setLoadingDetail(true);
+      const detail = await courseService.getCourseById(id);
+      setSelectedCourse(detail);
+    } catch {
+      // giữ nguyên data tóm tắt nếu load detail thất bại
+    } finally {
+      setLoadingDetail(false);
+    }
   };
 
   const handleDeleteClick = (course: any) => {
@@ -166,12 +178,13 @@ export default function AdminCourses() {
       try {
         await dispatch(deleteAdminCourseAsync(getCourseId(selectedCourse))).unwrap();
         toast.success('Đã xóa khóa học thành công!');
-      } catch (err) {
+        setIsDeleteDialogOpen(false);
+        setSelectedCourse(null);
+      } catch (err: any) {
         console.error('Delete course error', err);
-        toast.error('Xóa thất bại');
+        const message = err?.message || err?.response?.data?.message || 'Xóa thất bại';
+        toast.error(message);
       }
-      setIsDeleteDialogOpen(false);
-      setSelectedCourse(null);
     }
   };
 
@@ -235,7 +248,6 @@ export default function AdminCourses() {
       {error && !loading && (
         <div className="p-4 bg-red-500/10 border border-red-500/50 rounded-xl text-red-400">
           <p className="text-sm">{error}</p>
-          <p className="text-xs text-red-300 mt-2">Vui lòng đảm bảo bạn đã đăng nhập với tài khoản ADMIN</p>
         </div>
       )}
 
@@ -369,100 +381,202 @@ export default function AdminCourses() {
       </div>
 
       {/* View Course Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="bg-admin-card border-admin-border sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-admin-foreground">Chi tiết khóa học</DialogTitle>
-          </DialogHeader>
-          {selectedCourse && (
-            <div className="space-y-4 py-4">
-              {/* Thumbnail */}
-              {selectedCourse.thumbnail ? (
-                <img
-                  src={selectedCourse.thumbnail}
-                  alt={selectedCourse.title}
-                  className="w-full h-48 object-cover rounded-lg"
-                  onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMG; }}
-                />
-              ) : (
-                <div className="w-full h-48 bg-admin-accent rounded-lg flex items-center justify-center">
-                  <p className="text-admin-muted-foreground text-sm">Chưa có ảnh</p>
-                </div>
-              )}
-
-              {/* Title & subtitle */}
-              <div>
-                <h3 className="text-lg font-semibold text-admin-foreground">{selectedCourse.title}</h3>
-                {(selectedCourse.subtitle || selectedCourse.smallDescription) && (
-                  <p className="text-sm text-admin-muted-foreground mt-1">
-                    {selectedCourse.subtitle || selectedCourse.smallDescription}
-                  </p>
-                )}
-              </div>
-
-              {/* Stats grid */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-700/50 border border-slate-600/50 p-3 rounded-lg">
-                  <p className="text-xs text-admin-muted-foreground">Danh mục</p>
-                  <p className="text-sm font-medium text-admin-foreground">
-                    {selectedCourse.category || selectedCourse.categoryName || '—'}
-                  </p>
-                </div>
-                <div className="bg-slate-700/50 border border-slate-600/50 p-3 rounded-lg">
-                  <p className="text-xs text-admin-muted-foreground">Trình độ</p>
-                  <p className="text-sm font-medium text-admin-foreground">
-                    {getLevelLabel(selectedCourse.level)}
-                  </p>
-                </div>
-                <div className="bg-slate-700/50 border border-slate-600/50 p-3 rounded-lg">
-                  <p className="text-xs text-admin-muted-foreground">Giá gốc</p>
-                  <p className="text-sm font-medium text-admin-foreground line-through">
-                    {formatCurrency(selectedCourse.price || 0)}
-                  </p>
-                </div>
-                <div className="bg-slate-700/50 border border-slate-600/50 p-3 rounded-lg">
-                  <p className="text-xs text-admin-muted-foreground">Giá bán</p>
-                  <p className="text-sm font-medium text-green-400">
-                    {formatCurrency(selectedCourse.discountPrice || selectedCourse.price || 0)}
-                  </p>
-                </div>
-                <div className="bg-slate-700/50 border border-slate-600/50 p-3 rounded-lg">
-                  <p className="text-xs text-admin-muted-foreground">Học viên</p>
-                  <p className="text-sm font-medium text-admin-foreground">
-                    {(selectedCourse.students || selectedCourse.totalStudents || 0).toLocaleString()}
-                  </p>
-                </div>
-                <div className="bg-slate-700/50 border border-slate-600/50 p-3 rounded-lg">
-                  <p className="text-xs text-admin-muted-foreground">Đánh giá</p>
-                  <p className="text-sm font-medium text-admin-foreground">
-                    {selectedCourse.rating ? `${selectedCourse.rating} ⭐` : '—'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Badges - chỉ hiện khi có giá trị thật */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getLevelClass(selectedCourse.level)}`}>
-                  {getLevelLabel(selectedCourse.level)}
-                </span>
-                {selectedCourse.isBestseller === true && (
-                  <span className="text-xs px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-full">Bán chạy</span>
-                )}
-                {(selectedCourse.isFeatured === true || selectedCourse.outstanding === true) && (
-                  <span className="text-xs px-2 py-1 bg-purple-500/20 text-purple-400 rounded-full">Nổi bật</span>
-                )}
-              </div>
+      <Dialog open={isViewDialogOpen} onOpenChange={(open) => { setIsViewDialogOpen(open); if (!open) setSelectedCourse(null); }}>
+        <DialogContent
+          className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          style={{ background: '#0f1117', border: '1px solid #1e2230' }}
+        >
+          {/* Loading skeleton */}
+          {loadingDetail && !selectedCourse && (
+            <div className="flex items-center justify-center h-64" style={{ color: '#475569' }}>
+              <svg className="animate-spin w-6 h-6 mr-2" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              </svg>
+              Đang tải...
             </div>
           )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsViewDialogOpen(false)}
-              className="border-admin-border text-admin-foreground hover:bg-admin-accent"
-            >
-              Đóng
-            </Button>
-          </DialogFooter>
+
+          {selectedCourse && (
+            <>
+              {/* Banner / Thumbnail full-width */}
+              <div className="relative w-full h-52 overflow-hidden rounded-t-xl">
+                <img
+                  src={selectedCourse.banner || selectedCourse.thumbnail || PLACEHOLDER_IMG}
+                  alt={selectedCourse.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMG; }}
+                />
+                {/* gradient overlay phía dưới ảnh */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0f1117] via-transparent to-transparent" />
+                {/* loading spinner overlay khi đang fetch detail */}
+                {loadingDetail && (
+                  <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(15,17,23,0.5)' }}>
+                    <svg className="animate-spin w-8 h-8" fill="none" viewBox="0 0 24 24" style={{ color: '#6366f1' }}>
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg>
+                  </div>
+                )}
+              </div>
+
+              {/* Body */}
+              <div className="px-6 pb-6 pt-4 space-y-5">
+                {/* Label + Title + badges */}
+                <div>
+                  <p
+                    className="text-[11px] font-semibold uppercase tracking-widest mb-1"
+                    style={{ color: '#6366f1' }}
+                  >
+                    Chi tiết khóa học
+                  </p>
+                  <h3 className="text-xl font-bold leading-snug" style={{ color: '#f1f5f9' }}>
+                    {selectedCourse.title}
+                  </h3>
+                  {(selectedCourse.smallDescription || selectedCourse.subtitle) && (
+                    <p className="text-sm mt-1" style={{ color: '#94a3b8' }}>
+                      {selectedCourse.smallDescription || selectedCourse.subtitle}
+                    </p>
+                  )}
+                  {/* {selectedCourse.instructorName && (
+                    <p className="text-xs mt-2 flex items-center gap-1.5" style={{ color: '#818cf8' }}>
+                      <span>👤</span> {selectedCourse.instructorName}
+                    </p>
+                  )} */}
+
+                  {/* Badges — đặt dưới title */}
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <span
+                      className="text-xs px-2.5 py-1 rounded-full font-medium"
+                      style={{
+                        border: '1px solid',
+                        borderColor:
+                          selectedCourse.level === 'ADVANCED' ? 'rgba(248,113,113,0.4)' :
+                          selectedCourse.level === 'INTERMEDIATE' ? 'rgba(251,191,36,0.4)' : 'rgba(74,222,128,0.4)',
+                        background:
+                          selectedCourse.level === 'ADVANCED' ? 'rgba(248,113,113,0.1)' :
+                          selectedCourse.level === 'INTERMEDIATE' ? 'rgba(251,191,36,0.1)' : 'rgba(74,222,128,0.1)',
+                        color:
+                          selectedCourse.level === 'ADVANCED' ? '#f87171' :
+                          selectedCourse.level === 'INTERMEDIATE' ? '#fbbf24' : '#4ade80',
+                      }}
+                    >
+                      {getLevelLabel(selectedCourse.level)}
+                    </span>
+                    {(selectedCourse.isFeatured || selectedCourse.outstanding) && (
+                      <span
+                        className="text-xs px-2.5 py-1 rounded-full font-medium"
+                        style={{
+                          background: 'rgba(139,92,246,0.12)',
+                          border: '1px solid rgba(139,92,246,0.35)',
+                          color: '#c4b5fd',
+                        }}
+                      >
+                        ✨ Nổi bật
+                      </span>
+                    )}
+                    {selectedCourse.isBestseller && (
+                      <span
+                        className="text-xs px-2.5 py-1 rounded-full font-medium"
+                        style={{
+                          background: 'rgba(234,179,8,0.12)',
+                          border: '1px solid rgba(234,179,8,0.35)',
+                          color: '#fde68a',
+                        }}
+                      >
+                        🔥 Bán chạy
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Description */}
+                {selectedCourse.description && (
+                  <div
+                    className="rounded-xl p-4"
+                    style={{ background: '#161b27', border: '1px solid #1e2a3a' }}
+                  >
+                    <p className="text-[11px] uppercase tracking-wider font-semibold mb-2" style={{ color: '#475569' }}>
+                      Mô tả
+                    </p>
+                    <p className="text-sm leading-relaxed line-clamp-3" style={{ color: '#cbd5e1' }}>
+                      {selectedCourse.description}
+                    </p>
+                  </div>
+                )}
+
+                {/* Stats grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'Danh mục', value: selectedCourse.categoryName || selectedCourse.category || '—', icon: '🏷️' },
+                    { label: 'Trình độ', value: getLevelLabel(selectedCourse.level), icon: '📊' },
+                    { label: 'Giá gốc', value: formatCurrency(selectedCourse.price || 0), icon: '💰', strikethrough: true },
+                    {
+                      label: 'Giá bán',
+                      value: selectedCourse.discountPrice
+                        ? formatCurrency(selectedCourse.discountPrice)
+                        : formatCurrency(selectedCourse.price || 0),
+                      icon: '💸',
+                      green: true,
+                    },
+                    {
+                      label: 'Học viên',
+                      value: (selectedCourse.totalStudents || selectedCourse.students || 0).toLocaleString(),
+                      icon: '👥',
+                    },
+                    {
+                      label: 'Đánh giá',
+                      value: selectedCourse.rating
+                        ? `${selectedCourse.rating} ⭐ (${(selectedCourse.ratingCount || 0).toLocaleString()})`
+                        : '—',
+                      icon: '⭐',
+                    },
+                    ...(selectedCourse.totalLectures != null ? [{ label: 'Bài giảng', value: `${selectedCourse.totalLectures} bài`, icon: '🎬' }] : []),
+                    ...(selectedCourse.totalDuration != null ? [{
+                      label: 'Thời lượng',
+                      value: `${Math.floor(selectedCourse.totalDuration / 3600)}h ${Math.floor((selectedCourse.totalDuration % 3600) / 60)}m`,
+                      icon: '⏱️',
+                    }] : []),
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="rounded-xl p-3.5"
+                      style={{
+                        background: 'linear-gradient(135deg, #161b27 0%, #1a2035 100%)',
+                        border: '1px solid #252d42',
+                      }}
+                    >
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <span className="text-sm">{stat.icon}</span>
+                        <p className="text-[11px] uppercase tracking-wider font-semibold" style={{ color: '#475569' }}>
+                          {stat.label}
+                        </p>
+                      </div>
+                      <p
+                        className={`text-sm font-semibold ${(stat as any).strikethrough ? 'line-through' : ''}`}
+                        style={{ color: (stat as any).green ? '#4ade80' : '#e2e8f0' }}
+                      >
+                        {stat.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Footer */}
+                <div className="flex justify-end pt-1">
+                  <button
+                    onClick={() => setIsViewDialogOpen(false)}
+                    className="px-5 py-2 rounded-lg text-sm font-medium transition-all"
+                    style={{ background: '#1e2230', border: '1px solid #2d3550', color: '#94a3b8' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#252d42'; (e.currentTarget as HTMLButtonElement).style.color = '#f1f5f9'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#1e2230'; (e.currentTarget as HTMLButtonElement).style.color = '#94a3b8'; }}
+                  >
+                    Đóng
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

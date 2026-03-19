@@ -3,10 +3,12 @@ package com.education.udemy.entity;
 import java.time.Instant;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 @Getter
 @Setter
 @Builder
@@ -16,6 +18,7 @@ import lombok.experimental.FieldDefaults;
 @Entity(name = "lecture_progress")
 @JsonPropertyOrder(alphabetic = true)
 public class LectureProgress {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @JsonProperty("_id")
@@ -36,5 +39,6 @@ public class LectureProgress {
 
     @ManyToOne
     @JoinColumn(name = "lecture_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     Lecture lecture;
 }

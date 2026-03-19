@@ -199,7 +199,7 @@ export default function CourseDetail() {
                 )}
                 <span className="flex items-center gap-1">
                   <Globe className="w-4 h-4" />
-                  Tiếng Việt
+                  Online Video Course
                 </span>
               </div>
             </div>

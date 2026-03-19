@@ -1,14 +1,14 @@
 package com.education.udemy.entity;
 
 import java.util.List;
-
 import com.education.udemy.enums.LectureType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Getter
 @Setter
@@ -19,6 +19,7 @@ import lombok.experimental.FieldDefaults;
 @Entity(name = "lectures")
 @JsonPropertyOrder(alphabetic = true)
 public class Lecture {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @JsonProperty("_id")
@@ -32,10 +33,10 @@ public class Lecture {
     LectureType type;
 
     @Column(length = 500)
-    String videoUrl; // ype là VIDEO
+    String videoUrl;
 
     @Column(columnDefinition = "TEXT")
-    String content; // type là ARTICLE
+    String content;
 
     @Builder.Default
     Integer duration = 0;
@@ -45,6 +46,7 @@ public class Lecture {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "section_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     Section section;
 
     @OneToMany(mappedBy = "lecture")

@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import {
-  Course,
   AdminCourse,
   CourseSummaryResponse,
   CourseDetailResponse,
@@ -43,7 +42,21 @@ const initialState: CourseState = {
   },
 };
 
-const getId = (course: { _id?: string; id?: string }): string => course._id || course.id || "";
+const getId = (course: { _id?: string; id?: string }): string =>
+  course._id || course.id || "";
+
+// Lấy message từ response body của server thay vì message của axios
+const extractErrorMessage = (error: unknown, fallback: string): string => {
+  if (error && typeof error === "object") {
+    const err = error as {
+      response?: { data?: { message?: string } };
+      message?: string;
+    };
+    if (err.response?.data?.message) return err.response.data.message;
+    if (err.message) return err.message;
+  }
+  return fallback;
+};
 
 export const fetchCoursesAsync = createAsyncThunk(
   "courses/fetchCourses",
@@ -58,9 +71,9 @@ export const fetchCoursesAsync = createAsyncThunk(
   ) => {
     try {
       return await courseService.getCourses(params);
-    } catch (error: unknown) {
+    } catch (error) {
       return rejectWithValue(
-        (error as { message?: string }).message || "Không thể tải danh sách khóa học",
+        extractErrorMessage(error, "Không thể tải danh sách khóa học"),
       );
     }
   },
@@ -71,9 +84,9 @@ export const fetchCourseByIdAsync = createAsyncThunk(
   async (id: string, { rejectWithValue }) => {
     try {
       return await courseService.getCourseById(id);
-    } catch (error: unknown) {
+    } catch (error) {
       return rejectWithValue(
-        (error as { message?: string }).message || "Không thể tải thông tin khóa học",
+        extractErrorMessage(error, "Không thể tải thông tin khóa học"),
       );
     }
   },
@@ -84,8 +97,10 @@ export const fetchFeaturedCoursesAsync = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       return await courseService.getFeaturedCourses();
-    } catch (error: unknown) {
-      return rejectWithValue((error as { message?: string }).message || "Không thể tải khóa học nổi bật");
+    } catch (error) {
+      return rejectWithValue(
+        extractErrorMessage(error, "Không thể tải khóa học nổi bật"),
+      );
     }
   },
 );
@@ -95,9 +110,9 @@ export const fetchPopularCoursesAsync = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       return await courseService.getPopularCourses();
-    } catch (error: unknown) {
+    } catch (error) {
       return rejectWithValue(
-        (error as { message?: string }).message || "Không thể tải khóa học phổ biến",
+        extractErrorMessage(error, "Không thể tải khóa học phổ biến"),
       );
     }
   },
@@ -108,9 +123,9 @@ export const fetchAdminCoursesAsync = createAsyncThunk(
   async (params: GetCoursesParams = {}, { rejectWithValue }) => {
     try {
       return await courseService.getAdminCourses(params);
-    } catch (error: unknown) {
+    } catch (error) {
       return rejectWithValue(
-        (error as { message?: string }).message || "Không thể tải danh sách khóa học",
+        extractErrorMessage(error, "Không thể tải danh sách khóa học"),
       );
     }
   },
@@ -121,8 +136,10 @@ export const createAdminCourseAsync = createAsyncThunk(
   async (data: CreateCourseRequest, { rejectWithValue }) => {
     try {
       return await courseService.createCourse(data);
-    } catch (error: unknown) {
-      return rejectWithValue((error as { message?: string }).message || "Không thể tạo khóa học");
+    } catch (error) {
+      return rejectWithValue(
+        extractErrorMessage(error, "Không thể tạo khóa học"),
+      );
     }
   },
 );
@@ -132,8 +149,10 @@ export const updateAdminCourseAsync = createAsyncThunk(
   async (data: UpdateCourseRequest & { id: string }, { rejectWithValue }) => {
     try {
       return await courseService.updateCourse(data);
-    } catch (error: unknown) {
-      return rejectWithValue((error as { message?: string }).message || "Không thể cập nhật khóa học");
+    } catch (error) {
+      return rejectWithValue(
+        extractErrorMessage(error, "Không thể cập nhật khóa học"),
+      );
     }
   },
 );
@@ -144,8 +163,10 @@ export const deleteAdminCourseAsync = createAsyncThunk(
     try {
       await courseService.deleteCourse(id);
       return id;
-    } catch (error: unknown) {
-      return rejectWithValue((error as { message?: string }).message || "Không thể xóa khóa học");
+    } catch (error) {
+      return rejectWithValue(
+        extractErrorMessage(error, "Không thể xóa khóa học"),
+      );
     }
   },
 );
@@ -202,7 +223,6 @@ const courseSlice = createSlice({
       .addCase(fetchFeaturedCoursesAsync.fulfilled, (state, action) => {
         state.featuredCourses = action.payload;
       })
-
       .addCase(fetchPopularCoursesAsync.fulfilled, (state, action) => {
         state.popularCourses = action.payload;
       })
@@ -247,9 +267,7 @@ const courseSlice = createSlice({
         state.loading = false;
         const updatedId = getId(action.payload);
         const idx = state.adminCourses.findIndex((c) => getId(c) === updatedId);
-        if (idx !== -1) {
-          state.adminCourses[idx] = action.payload;
-        }
+        if (idx !== -1) state.adminCourses[idx] = action.payload;
       })
       .addCase(updateAdminCourseAsync.rejected, (state, action) => {
         state.loading = false;
@@ -266,9 +284,9 @@ const courseSlice = createSlice({
           (c) => getId(c) !== action.payload,
         );
       })
-      .addCase(deleteAdminCourseAsync.rejected, (state, action) => {
+      .addCase(deleteAdminCourseAsync.rejected, (state) => {
         state.loading = false;
-        state.error = action.payload as string;
+        state.error = null;
       });
   },
 });

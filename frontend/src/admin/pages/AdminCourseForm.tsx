@@ -160,17 +160,21 @@ export default function AdminCourseForm() {
           isBestseller: course.isBestseller || false,
         });
 
-        if (course.thumbnail) {
-  console.log('thumbnail URL:', course.thumbnail);
-  setThumbnailPreview(course.thumbnail);
-}
-if (course.banner) {
-  console.log('banner URL:', course.banner);
-  setBannerPreview(course.banner);
-}
-        // ✅ Load preview ảnh từ URL cũ
+        // Load preview ảnh từ URL cũ
         if (course.thumbnail) setThumbnailPreview(course.thumbnail);
         if (course.banner) setBannerPreview(course.banner);
+
+        // Load learningOutcomes
+        if (course.learningOutcomes) {
+          try {
+            const points = JSON.parse(course.learningOutcomes);
+            if (Array.isArray(points) && points.length > 0) {
+              setLearningPoints(points);
+            }
+          } catch {
+            setLearningPoints([course.learningOutcomes]);
+          }
+        }
 
         if (course.sections && course.sections.length > 0) {
           setSections(
@@ -200,7 +204,19 @@ if (course.banner) {
     loadCourse();
   }, [id, isEditing]);
 
-  // ✅ Hàm upload ảnh
+  // Validate file ảnh: chỉ chấp nhận PNG/JPG, tối đa 5MB
+  const validateImageFile = (file: File): boolean => {
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Chỉ chấp nhận file PNG, JPG hoặc WebP");
+      return false;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Kích thước ảnh không được vượt quá 5MB");
+      return false;
+    }
+    return true;
+  };
   const uploadImage = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append("file", file);
@@ -214,9 +230,9 @@ if (course.banner) {
     if (!res.ok) throw new Error("Upload ảnh thất bại");
     const data = await res.json();
 
-    // ✅ Chỉ sửa dòng này
     const url = data.data.url;
-    return `http://localhost:8080${url}`;
+    // Nếu server trả về URL tương đối thì ghép với BASE_URL, còn URL tuyệt đối thì dùng thẳng
+    return url.startsWith("http") ? url : `${BASE_URL.replace("/api/v1", "")}${url}`;
   };
 
   // ✅ Hàm upload video
@@ -258,8 +274,13 @@ if (course.banner) {
       return;
     }
 
-    // ✅ Upload tất cả video trong sections
-    toast.loading("Đang upload video...", { id: "upload" });
+    // Upload video mới nếu có
+    const hasNewVideos = sections.some(s =>
+      s.lectures.some(l => l.type === "VIDEO" && l.videoFile)
+    );
+    if (hasNewVideos) {
+      toast.loading("Đang upload video...", { id: "upload" });
+    }
     try {
       const sectionsWithVideoUrl = await Promise.all(
         sections.map(async (s) => ({
@@ -279,6 +300,10 @@ if (course.banner) {
 
       toast.dismiss("upload");
 
+      const learningOutcomesJson = JSON.stringify(
+        learningPoints.filter((p) => p.trim())
+      );
+
       const coursePayload = isEditing
         ? ({
             id: id!,
@@ -294,6 +319,7 @@ if (course.banner) {
             level: formData.level as any,
             categoryId: formData.category,
             outstanding: formData.isFeatured,
+            learningOutcomes: learningOutcomesJson,
             sections: sectionsWithVideoUrl.map((s) => ({
               title: s.title,
               lectures: s.lectures.map((l) => ({
@@ -322,6 +348,7 @@ if (course.banner) {
               : undefined,
             level: formData.level as any,
             categoryId: formData.category,
+            learningOutcomes: learningOutcomesJson,
             sections: sectionsWithVideoUrl.map((s) => ({
               title: s.title,
               lectures: s.lectures.map((l) => ({
@@ -673,10 +700,11 @@ if (course.banner) {
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file) {
+                    if (file && validateImageFile(file)) {
                       setThumbnailFile(file);
                       setThumbnailPreview(URL.createObjectURL(file));
                     }
+                    e.target.value = "";
                   }}
                 />
                 {thumbnailPreview ? (
@@ -723,10 +751,11 @@ if (course.banner) {
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file) {
+                    if (file && validateImageFile(file)) {
                       setBannerFile(file);
                       setBannerPreview(URL.createObjectURL(file));
                     }
+                    e.target.value = "";
                   }}
                 />
                 {bannerPreview ? (
@@ -806,7 +835,7 @@ if (course.banner) {
               />
               <Label className="text-admin-foreground">Khoá học nổi bật</Label>
             </div>
-            <div className="flex items-center gap-3">
+            {/* <div className="flex items-center gap-3">
               <Switch
                 checked={formData.isBestseller}
                 onCheckedChange={(checked) =>
@@ -814,7 +843,7 @@ if (course.banner) {
                 }
               />
               <Label className="text-admin-foreground">Bestseller</Label>
-            </div>
+            </div> */}
           </div>
         </div>
 

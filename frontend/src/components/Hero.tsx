@@ -1,7 +1,11 @@
 import { Search } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '@/contexts/SettingsContext';
+import courseService from '@/services/courseService';
+import userService from '@/services/userService';
+import reviewService from '@/services/reviewService';
+import orderService from '@/services/orderService';
 
 export function Hero() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -14,12 +18,49 @@ export function Hero() {
     background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}bb 50%, #1e1b4b 100%)`,
   };
 
+  const [stats, setStats] = useState({
+    totalCourses: 0,
+    totalStudents: 0,
+    avgRating: 0,
+    completedOrders: 0,
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const [coursesRes, usersRes, reviewsRes, ordersRes] = await Promise.allSettled([
+        courseService.getCourses({ page: 1, pageSize: 1 }),
+        userService.getStudents({ page: 1, pageSize: 1 }),
+        reviewService.getAdminReviews({ page: 1, pageSize: 200 }),
+        orderService.getAdminOrders({ page: 1, pageSize: 200 }),
+      ]);
+
+      const totalCourses = coursesRes.status === 'fulfilled' ? coursesRes.value.meta.total : 0;
+      const totalStudents = usersRes.status === 'fulfilled' ? usersRes.value.meta.total : 0;
+      const reviews = reviewsRes.status === 'fulfilled' ? reviewsRes.value.result : [];
+      const avgRating = reviews.length
+        ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
+        : 0;
+      const orders = ordersRes.status === 'fulfilled' ? ordersRes.value.result : [];
+      const completedOrders = orders.filter(o => o.paymentStatus === 'COMPLETED').length;
+
+      setStats({ totalCourses, totalStudents, avgRating, completedOrders });
+    };
+    fetchStats();
+  }, []);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
     }
   };
+
+  const statItems = [
+    { value: stats.totalCourses > 0 ? `${stats.totalCourses.toLocaleString()}+` : '...', label: 'Khóa học trực tuyến' },
+    { value: stats.totalStudents > 0 ? `${stats.totalStudents.toLocaleString()}+` : '...', label: 'Học viên' },
+    { value: stats.completedOrders > 0 ? `${stats.completedOrders.toLocaleString()}+` : '...', label: 'Đơn hàng hoàn thành' },
+    { value: stats.avgRating > 0 ? `${stats.avgRating.toFixed(1)} ⭐` : '...', label: 'Đánh giá trung bình' },
+  ];
 
   return (
     <section className="relative overflow-hidden" style={heroStyle}>
@@ -76,10 +117,12 @@ export function Hero() {
       <div className="bg-white/10 backdrop-blur-sm border-t border-white/20">
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-wrap justify-center gap-8 md:gap-16 text-white text-center">
-            <div><p className="text-3xl font-bold">210k+</p><p className="text-sm opacity-80">Khóa học trực tuyến</p></div>
-            <div><p className="text-3xl font-bold">75k+</p><p className="text-sm opacity-80">Giảng viên chuyên nghiệp</p></div>
-            <div><p className="text-3xl font-bold">62M+</p><p className="text-sm opacity-80">Học viên toàn cầu</p></div>
-            <div><p className="text-3xl font-bold">850M+</p><p className="text-sm opacity-80">Lượt đăng ký</p></div>
+            {statItems.map((item) => (
+              <div key={item.label}>
+                <p className="text-3xl font-bold">{item.value}</p>
+                <p className="text-sm opacity-80">{item.label}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>

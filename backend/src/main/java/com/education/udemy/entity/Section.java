@@ -1,14 +1,14 @@
 package com.education.udemy.entity;
 
-import java.time.Instant;
 import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 @Getter
 @Setter
 @Builder
@@ -18,6 +18,7 @@ import lombok.experimental.FieldDefaults;
 @Entity(name = "sections")
 @JsonPropertyOrder(alphabetic = true)
 public class Section {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @JsonProperty("_id")
@@ -26,9 +27,9 @@ public class Section {
     @Column(nullable = false, length = 255)
     String title;
 
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     Course course;
 
     @OneToMany(mappedBy = "section", cascade = CascadeType.ALL, orphanRemoval = true)
