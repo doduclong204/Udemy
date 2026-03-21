@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Rating } from "@/components/Rating";
@@ -7,6 +7,7 @@ import { CourseCarousel } from "@/components/CourseCarousel";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
+import { useAuth } from "@/contexts/AuthContext";
 import courseService from "@/services/courseService";
 import reviewService from "@/services/reviewService";
 import type {
@@ -51,6 +52,8 @@ const formatDuration = (seconds: number) => {
 export default function CourseDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated } = useAuth();
   const { addToCart, isInCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
 
@@ -122,6 +125,10 @@ export default function CourseDetail() {
   const inWishlist = isInWishlist(course._id);
 
   const handleAddToCart = async () => {
+    if (!isAuthenticated) {
+      navigate(`/login?redirect=${location.pathname}`);
+      return;
+    }
     if (isInCart(course._id)) return;
     await addToCart(course._id);
     toast({
@@ -131,6 +138,10 @@ export default function CourseDetail() {
   };
 
   const handleBuyNow = async () => {
+    if (!isAuthenticated) {
+      navigate(`/login?redirect=${location.pathname}`);
+      return;
+    }
     if (!isInCart(course._id)) {
       await addToCart(course._id);
     }
@@ -138,6 +149,10 @@ export default function CourseDetail() {
   };
 
   const handleToggleWishlist = () => {
+    if (!isAuthenticated) {
+      navigate(`/login?redirect=${location.pathname}`);
+      return;
+    }
     toggleWishlist(course._id);
     toast({
       title: inWishlist ? "Đã bỏ yêu thích" : "Đã thêm vào yêu thích",

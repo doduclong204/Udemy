@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,10 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const searchParams = new URLSearchParams(location.search);
+  const redirectTo = searchParams.get("redirect") || "/";
 
   const dispatch = useDispatch<AppDispatch>();
   const { loading, error } = useSelector((state: RootState) => state.auth);
@@ -33,7 +37,7 @@ export default function Login() {
         title: "Chào mừng trở lại!",
         description: "Bạn đã đăng nhập thành công.",
       });
-      navigate("/");
+      navigate(redirectTo);
     } else {
       toast({
         title: "Đăng nhập thất bại",
@@ -54,7 +58,7 @@ export default function Login() {
       );
       if (loginGoogleAsync.fulfilled.match(result)) {
         toast({ title: "Đăng nhập Google thành công!" });
-        navigate("/");
+        navigate(redirectTo);
       } else {
         toast({
           title: "Đăng nhập Google thất bại",
@@ -78,19 +82,20 @@ export default function Login() {
     window.FB.login(
       (response) => {
         if (response.authResponse) {
-          dispatch(loginFacebookAsync({ token: response.authResponse.accessToken }))
-            .then((result) => {
-              if (loginFacebookAsync.fulfilled.match(result)) {
-                toast({ title: "Đăng nhập Facebook thành công!" });
-                navigate("/");
-              } else {
-                toast({
-                  title: "Đăng nhập Facebook thất bại",
-                  description: result.payload as string,
-                  variant: "destructive",
-                });
-              }
-            });
+          dispatch(
+            loginFacebookAsync({ token: response.authResponse.accessToken }),
+          ).then((result) => {
+            if (loginFacebookAsync.fulfilled.match(result)) {
+              toast({ title: "Đăng nhập Facebook thành công!" });
+              navigate(redirectTo);
+            } else {
+              toast({
+                title: "Đăng nhập Facebook thất bại",
+                description: result.payload as string,
+                variant: "destructive",
+              });
+            }
+          });
         }
       },
       { scope: "email,public_profile" },
