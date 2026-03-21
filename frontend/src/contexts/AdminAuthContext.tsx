@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { useDispatch } from "react-redux";
 import userService from "@/services/userService";
+import { resetAuthState } from "@/redux/slices/authSlice";
+import type { AppDispatch } from "@/redux/store";
 
 interface AdminUser {
   id: string;
@@ -28,6 +31,8 @@ const buildAdminFromUser = (user: any): AdminUser => ({
 });
 
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
+  const dispatch = useDispatch<AppDispatch>();
+
   const [admin, setAdmin] = useState<AdminUser | null>(() => {
     const userStr = localStorage.getItem("user");
     if (userStr) {
@@ -41,7 +46,6 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     return null;
   });
 
-  // Fetch data thật từ API khi mount
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     if (!token) return;
@@ -55,8 +59,6 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const adminLogin = async (email: string, password: string): Promise<boolean> => {
-    // Login thật qua API — giả sử authService.login đã được gọi trước đó
-    // Ở đây chỉ check localStorage sau khi login
     const userStr = localStorage.getItem("user");
     if (userStr) {
       try {
@@ -84,6 +86,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 
   const adminLogout = () => {
     setAdmin(null);
+    dispatch(resetAuthState());
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     localStorage.removeItem("user");
