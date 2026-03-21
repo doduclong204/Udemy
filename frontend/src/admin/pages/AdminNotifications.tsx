@@ -403,7 +403,9 @@ export default function AdminNotifications() {
     [],
   );
   const [totalItems, setTotalItems] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const isMounted = useRef(false);
+  const [answeredIds, setAnsweredIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<NotificationStatus | "all">(
     "all",
@@ -419,19 +421,37 @@ export default function AdminNotifications() {
   const [selected, setSelected] = useState<NotificationResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (
+    page = currentPage,
+    search = searchQuery,
+    status = statusFilter
+  ) => {
     setIsLoading(true);
     try {
       const res = await notificationService.getAdminNotifications({
-        page: currentPage,
+        page,
         pageSize: itemsPerPage,
-        search: searchQuery || undefined,
-        status: statusFilter !== "all" ? statusFilter : undefined,
+        search: search || undefined,
+        status: status !== "all" ? status : undefined,
       });
-      setNotifications(
-        res.result.filter((n) => n.relatedType !== "COURSE_ANSWER"),
-      );
+      setNotifications(res.result.filter((n) => n.relatedType !== "COURSE_ANSWER"));
       setTotalItems(res.meta.total);
+
+      // Lấy danh sách câu hỏi đã được trả lời (COURSE_ANSWER)
+      try {
+        const allRes = await notificationService.getAdminNotifications({
+          page: 1,
+          pageSize: 200,
+        });
+        const answered = new Set(
+          allRes.result
+            .filter((n) => n.relatedType === "COURSE_ANSWER" && n.relatedId)
+            .map((n) => n.relatedId as string)
+        );
+        setAnsweredIds(answered);
+      } catch {
+        // ignore
+      }
     } catch {
       toast.error("Không thể tải danh sách thông báo");
     } finally {
@@ -440,12 +460,13 @@ export default function AdminNotifications() {
   };
 
   useEffect(() => {
-    fetchNotifications();
+    fetchNotifications(currentPage, searchQuery, statusFilter);
   }, [currentPage]); // eslint-disable-line
   useEffect(() => {
+    if (!isMounted.current) { isMounted.current = true; return; }
     const t = setTimeout(() => {
       setCurrentPage(1);
-      fetchNotifications();
+      fetchNotifications(1, searchQuery, statusFilter);
     }, 350);
     return () => clearTimeout(t);
   }, [searchQuery, statusFilter]); // eslint-disable-line
@@ -471,7 +492,7 @@ export default function AdminNotifications() {
       await notificationService.createNotification(payload);
       toast.success(sendNow ? "Đã gửi thông báo!" : "Đã lưu bản nháp!");
       setIsAddOpen(false);
-      fetchNotifications();
+      fetchNotifications(currentPage, searchQuery, statusFilter);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Tạo thông báo thất bại");
     } finally {
@@ -496,7 +517,7 @@ export default function AdminNotifications() {
       toast.success("Cập nhật thông báo thành công!");
       setIsEditOpen(false);
       setSelected(null);
-      fetchNotifications();
+      fetchNotifications(currentPage, searchQuery, statusFilter);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Cập nhật thất bại");
     } finally {
@@ -508,7 +529,7 @@ export default function AdminNotifications() {
     try {
       await notificationService.sendNotification(n._id);
       toast.success("Đã gửi thông báo!");
-      fetchNotifications();
+      fetchNotifications(currentPage, searchQuery, statusFilter);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Gửi thất bại");
     }
@@ -521,7 +542,7 @@ export default function AdminNotifications() {
       toast.success("Đã xóa thông báo!");
       setIsDeleteOpen(false);
       setSelected(null);
-      fetchNotifications();
+      fetchNotifications(currentPage, searchQuery, statusFilter);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Xóa thất bại");
     }
@@ -705,9 +726,15 @@ export default function AdminNotifications() {
                       </td>
                       <td className="py-4 px-4 hidden sm:table-cell">
                         {isQuestionNotif(n) ? (
-                          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-amber-500/10 text-amber-400">
-                            Câu hỏi mới
-                          </span>
+                          answeredIds.has(n.relatedId ?? '') ? (
+                            <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-500/10 text-green-400">
+                              Đã trả lời
+                            </span>
+                          ) : (
+                            <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-amber-500/10 text-amber-400">
+                              Chờ trả lời
+                            </span>
+                          )
                         ) : (
                           <span
                             className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${STATUS_COLORS[n.status]}`}
@@ -871,7 +898,11 @@ export default function AdminNotifications() {
                   },
                   {
                     label: "Trạng thái",
-                    value: STATUS_LABELS[selected.status],
+                    value: isQuestionNotif(selected)
+                      ? answeredIds.has(selected.relatedId ?? '')
+                        ? "Đã trả lời"
+                        : "Chờ trả lời"
+                      : STATUS_LABELS[selected.status],
                   },
                   {
                     label: "Ngày tạo",

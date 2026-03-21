@@ -95,7 +95,8 @@ function Stars({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'md' }) 
 export default function AdminReviews() {
   const [reviews, setReviews]         = useState<ReviewResponse[]>([]);
   const [totalItems, setTotalItems]   = useState(0);
-  const [isLoading, setIsLoading]     = useState(false);
+  const [isLoading, setIsLoading]     = useState(true);
+  const isMounted = useRef(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [ratingFilter, setRatingFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -110,14 +111,18 @@ export default function AdminReviews() {
   const [isSubmitting, setIsSubmitting]   = useState(false);
 
   // ── fetch ──
-  const fetchReviews = async () => {
+  const fetchReviews = async (
+    page = currentPage,
+    search = searchQuery,
+    rating = ratingFilter
+  ) => {
     setIsLoading(true);
     try {
       const res = await reviewService.getAdminReviews({
-        page: currentPage,
+        page,
         pageSize: itemsPerPage,
-        search: searchQuery || undefined,
-        rating: ratingFilter !== 'all' ? Number(ratingFilter) : undefined,
+        search: search || undefined,
+        rating: rating !== 'all' ? Number(rating) : undefined,
       });
       setReviews(res.result);
       setTotalItems(res.meta.total);
@@ -128,9 +133,10 @@ export default function AdminReviews() {
     }
   };
 
-  useEffect(() => { fetchReviews(); }, [currentPage]); // eslint-disable-line
+  useEffect(() => { fetchReviews(currentPage, searchQuery, ratingFilter); }, [currentPage]); // eslint-disable-line
   useEffect(() => {
-    const t = setTimeout(() => { setCurrentPage(1); fetchReviews(); }, 350);
+    if (!isMounted.current) { isMounted.current = true; return; }
+    const t = setTimeout(() => { setCurrentPage(1); fetchReviews(1, searchQuery, ratingFilter); }, 350);
     return () => clearTimeout(t);
   }, [searchQuery, ratingFilter]); // eslint-disable-line
 
@@ -149,7 +155,7 @@ export default function AdminReviews() {
     try {
       await reviewService.toggleReviewVisibility(r._id, r.reviewStatus);
       toast.success(r.reviewStatus ? 'Đã ẩn đánh giá!' : 'Đã hiện đánh giá!');
-      fetchReviews();
+      fetchReviews(currentPage, searchQuery, ratingFilter);
     } catch (e: any) {
       toast.error(e?.response?.data?.message || 'Thao tác thất bại');
     }
@@ -164,7 +170,7 @@ export default function AdminReviews() {
       setReplyOpen(false);
       setSelected(null);
       setReplyText('');
-      fetchReviews();
+      fetchReviews(currentPage, searchQuery, ratingFilter);
     } catch (e: any) {
       toast.error(e?.response?.data?.message || 'Gửi phản hồi thất bại');
     } finally {
@@ -179,7 +185,7 @@ export default function AdminReviews() {
       toast.success('Đã xoá đánh giá!');
       setDeleteOpen(false);
       setSelected(null);
-      fetchReviews();
+      fetchReviews(currentPage, searchQuery, ratingFilter);
     } catch (e: any) {
       toast.error(e?.response?.data?.message || 'Xoá thất bại');
     }

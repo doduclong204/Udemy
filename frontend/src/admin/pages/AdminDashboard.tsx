@@ -127,10 +127,10 @@ export default function AdminDashboard() {
     try {
       // Fetch song song
       const [ordersRes, usersRes, coursesRes, reviewsRes] = await Promise.allSettled([
-        orderService.getAdminOrders({ page: 1, pageSize: 200 }),
-        userService.getStudents({ page: 1, pageSize: 1 }),
-        courseService.getAdminCourses({ page: 1, pageSize: 1 }),
-        reviewService.getAdminReviews({ page: 1, pageSize: 200 }),
+        orderService.getAdminOrders({ page: 1, pageSize: 5 }),
+        userService.getStudents({ page: 1, pageSize: 5 }),
+        courseService.getAdminCourses({ page: 1, pageSize: 5 }),
+        reviewService.getAdminReviews({ page: 1, pageSize: 5 }),
       ]);
 
       const orders: OrderResponse[] =

@@ -480,7 +480,8 @@ function PaymentSelect({
 export default function AdminOrders() {
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [totalItems, setTotalItems] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const isMounted = useRef(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -513,14 +514,18 @@ export default function AdminOrders() {
 
   // ── Fetch orders ────────────────────────────────────────────
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (
+    page = currentPage,
+    search = searchQuery,
+    status = statusFilter
+  ) => {
     setIsLoading(true);
     try {
       const res = await orderService.getAdminOrders({
-        page: currentPage,
+        page,
         pageSize: itemsPerPage,
-        search: searchQuery || undefined,
-        status: statusFilter !== "all" ? statusFilter : undefined,
+        search: search || undefined,
+        status: status !== "all" ? status : undefined,
       });
       setOrders(res.result);
       setTotalItems(res.meta.total);
@@ -533,12 +538,14 @@ export default function AdminOrders() {
   };
 
   useEffect(() => {
-    fetchOrders();
+    fetchOrders(currentPage, searchQuery, statusFilter);
   }, [currentPage]); // eslint-disable-line
+
   useEffect(() => {
+    if (!isMounted.current) { isMounted.current = true; return; }
     const t = setTimeout(() => {
       setCurrentPage(1);
-      fetchOrders();
+      fetchOrders(1, searchQuery, statusFilter);
     }, 350);
     return () => clearTimeout(t);
   }, [searchQuery, statusFilter]); // eslint-disable-line
@@ -608,7 +615,7 @@ export default function AdminOrders() {
       toast.success("Tạo đơn hàng thành công!");
       resetAddForm();
       setIsAddDialogOpen(false);
-      fetchOrders();
+      fetchOrders(currentPage, searchQuery, statusFilter);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Tạo đơn hàng thất bại");
     } finally {
@@ -651,7 +658,7 @@ export default function AdminOrders() {
       toast.success("Cập nhật đơn hàng thành công!");
       setIsEditDialogOpen(false);
       setSelectedOrder(null);
-      fetchOrders();
+      fetchOrders(currentPage, searchQuery, statusFilter);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Cập nhật thất bại");
     }
@@ -664,7 +671,7 @@ export default function AdminOrders() {
       toast.success("Đã xóa đơn hàng!");
       setIsDeleteDialogOpen(false);
       setSelectedOrder(null);
-      fetchOrders();
+      fetchOrders(currentPage, searchQuery, statusFilter);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Xóa thất bại");
     }
@@ -674,7 +681,7 @@ export default function AdminOrders() {
     try {
       await orderService.updateOrder(o._id, { paymentStatus: "REFUNDED" });
       toast.success("Đã hoàn tiền đơn hàng!");
-      fetchOrders();
+      fetchOrders(currentPage, searchQuery, statusFilter);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Hoàn tiền thất bại");
     }

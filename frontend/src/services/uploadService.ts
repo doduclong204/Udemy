@@ -1,6 +1,6 @@
 import axiosInstance from "@/config/api";
 
-const BASE_URL = "http://localhost:8080";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
 
 const uploadService = {
   uploadImage: async (file: File): Promise<string> => {
@@ -13,7 +13,8 @@ const uploadService = {
       { headers: { "Content-Type": "multipart/form-data" } }
     );
 
-    return `${BASE_URL}${response.data.data.url}`;
+    const url = response.data.data.url;
+    return url.startsWith("http") ? url : `${BASE_URL}${url}`;
   },
 
   uploadVideo: async (file: File): Promise<string> => {
@@ -26,7 +27,8 @@ const uploadService = {
       { headers: { "Content-Type": "multipart/form-data" } }
     );
 
-    return `${BASE_URL}${response.data.data.url}`;
+    const url = response.data.data.url;
+    return url.startsWith("http") ? url : `${BASE_URL}${url}`;
   },
 };
 

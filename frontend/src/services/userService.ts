@@ -1,17 +1,16 @@
-import axiosInstance from '@/config/api';
-import { API_ENDPOINTS, STORAGE_KEYS } from '@/constant/common.constant';
-import { 
-  User, 
-  ApiResponse, 
+import axiosInstance from "@/config/api";
+import { API_ENDPOINTS, STORAGE_KEYS } from "@/constant/common.constant";
+import {
+  User,
+  ApiResponse,
   ApiPagination,
-  Student, 
-  UpdateProfileRequest, 
+  Student,
+  UpdateProfileRequest,
   ChangePasswordRequest,
-  GetStudentsParams 
-} from '@/types';
-import { adminStudents as mockStudents } from '@/data/adminMockData';
+  GetStudentsParams,
+} from "@/types";
+import { adminStudents as mockStudents } from "@/data/adminMockData";
 
-// Internal type for raw API user response
 interface RawUserResponse {
   _id?: string;
   id?: string;
@@ -59,11 +58,16 @@ interface UpdateUserPayload {
   avatar?: string;
 }
 
+const buildFilter = (search?: string, status?: string): string | undefined => {
+  const parts: string[] = [];
+  if (search) parts.push(`(name~'*${search}*' or username~'*${search}*')`);
+  if (status && status !== "all") {
+    parts.push(`active:'${status === "Active" ? "true" : "false"}'`);
+  }
+  return parts.length > 0 ? parts.join(" and ") : undefined;
+};
+
 const userService = {
-  /**
-   * Lấy thông tin user hiện tại
-   * GET /users/my-info
-   */
   getCurrentUser: async (): Promise<User> => {
     const response = await axiosInstance.get<ApiResponse<User>>(
       `${API_ENDPOINTS.USERS.BASE}/my-info`,
@@ -71,38 +75,32 @@ const userService = {
     return response.data.data;
   },
 
-  /**
-   * Cập nhật profile
-   * PUT /users/:id
-   */
   updateProfile: async (data: UpdateProfileRequest): Promise<User> => {
     const userStr = localStorage.getItem(STORAGE_KEYS.USER);
-    const userId = userStr ? (JSON.parse(userStr)?._id ?? JSON.parse(userStr)?.id) : null;
-    if (!userId) throw new Error('User not found');
+    const userId = userStr
+      ? (JSON.parse(userStr)?._id ?? JSON.parse(userStr)?.id)
+      : null;
+    if (!userId) throw new Error("User not found");
 
     const response = await axiosInstance.put<ApiResponse<User>>(
       `${API_ENDPOINTS.USERS.BASE}/${userId}`,
       data,
     );
     const updated = response.data.data;
-
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify({ ...JSON.parse(userStr!), ...updated }));
-
+    localStorage.setItem(
+      STORAGE_KEYS.USER,
+      JSON.stringify({ ...JSON.parse(userStr!), ...updated }),
+    );
     return updated;
   },
 
-  /**
-   * Đổi mật khẩu
-   * PATCH /users/change-password
-   */
   changePassword: async (data: ChangePasswordRequest): Promise<void> => {
-    await axiosInstance.patch(`${API_ENDPOINTS.USERS.BASE}/change-password`, data);
+    await axiosInstance.patch(
+      `${API_ENDPOINTS.USERS.BASE}/change-password`,
+      data,
+    );
   },
 
-  /**
-   * Lấy user theo ID
-   * GET /users/:id
-   */
   getUserById: async (id: string): Promise<User | null> => {
     try {
       const response = await axiosInstance.get<ApiResponse<User>>(
@@ -114,23 +112,21 @@ const userService = {
     }
   },
 
-  // ==================== Admin Methods ====================
-
-  getStudents: async (params?: GetStudentsParams): Promise<ApiPagination<Student>> => {
+  getStudents: async (
+    params?: GetStudentsParams,
+  ): Promise<ApiPagination<Student>> => {
     try {
       const page = params?.page || 1;
       const pageSize = params?.pageSize || 10;
-      const response = await axiosInstance.get<ApiResponse<RawPaginatedResponse>>(
-        `${API_ENDPOINTS.USERS.BASE}`,
-        {
-          params: {
-            page: Math.max(0, page - 1),
-            size: pageSize,
-            search: params?.search,
-            status: params?.status,
-          },
+      const response = await axiosInstance.get<
+        ApiResponse<RawPaginatedResponse>
+      >(`${API_ENDPOINTS.USERS.BASE}`, {
+        params: {
+          page: Math.max(0, page - 1),
+          size: pageSize,
+          filter: buildFilter(params?.search, params?.status),
         },
-      );
+      });
       const payload = response.data.data;
       const list: RawUserResponse[] = payload?.result ?? [];
       const meta = payload?.meta ?? {
@@ -141,25 +137,25 @@ const userService = {
       };
 
       const students: Student[] = list.map((u) => ({
-        id: u._id ?? u.id ?? '',
-        name: u.name ?? u.username ?? '',
-        email: u.username ?? u.email ?? '',
-        avatar: u.avatar ?? '',
-        phone: u.phone ?? '',
-        bio: u.bio ?? '',
-        dateOfBirth: u.dateOfBirth ?? '',
+        id: u._id ?? u.id ?? "",
+        name: u.name ?? u.username ?? "",
+        email: u.username ?? u.email ?? "",
+        avatar: u.avatar ?? "",
+        phone: u.phone ?? "",
+        bio: u.bio ?? "",
+        dateOfBirth: u.dateOfBirth ?? "",
         enrolledCourses: u.enrollmentCount ?? 0,
         completedCourses: u.completedCount ?? 0,
         totalSpent: u.totalSpent ?? 0,
-        joinedAt: u.createdAt ?? '',
-        lastActive: u.updatedAt ?? '',
-        status: (u.active ?? u.status) ? 'Active' : 'Inactive',
+        joinedAt: u.createdAt ?? "",
+        lastActive: u.updatedAt ?? "",
+        status: (u.active ?? u.status) ? "Active" : "Inactive",
         role: u.role ? u.role.toString().toUpperCase() : undefined,
       }));
 
       return {
         meta: {
-          current: meta.current ?? (page - 1),
+          current: meta.current ?? page - 1,
           pageSize: meta.pageSize ?? pageSize,
           pages: meta.pages ?? 1,
           total: meta.total ?? students.length,
@@ -167,18 +163,23 @@ const userService = {
         result: students,
       };
     } catch {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      let filteredStudents: (Student & { role?: string })[] = [...mockStudents].map(s => ({ ...s, role: 'USER' }));
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      let filteredStudents: (Student & { role?: string })[] = [
+        ...mockStudents,
+      ].map((s) => ({ ...s, role: "USER" }));
 
       if (params?.search) {
         const search = params.search.toLowerCase();
-        filteredStudents = filteredStudents.filter(s =>
-          s.name.toLowerCase().includes(search) ||
-          s.email.toLowerCase().includes(search),
+        filteredStudents = filteredStudents.filter(
+          (s) =>
+            s.name.toLowerCase().includes(search) ||
+            s.email.toLowerCase().includes(search),
         );
       }
       if (params?.status) {
-        filteredStudents = filteredStudents.filter(s => s.status === params.status);
+        filteredStudents = filteredStudents.filter(
+          (s) => s.status === params.status,
+        );
       }
 
       const page = params?.page || 1;
@@ -197,13 +198,19 @@ const userService = {
     }
   },
 
-  updateStudentStatus: async (studentId: string, status: 'Active' | 'Inactive' | boolean): Promise<void> => {
-    const active = typeof status === 'boolean' ? status : status === 'Active';
+  updateStudentStatus: async (
+    studentId: string,
+    status: "Active" | "Inactive" | boolean,
+  ): Promise<void> => {
+    const active = typeof status === "boolean" ? status : status === "Active";
     try {
-      await axiosInstance.patch(`${API_ENDPOINTS.USERS.BASE}/${studentId}/status`, active);
+      await axiosInstance.patch(
+        `${API_ENDPOINTS.USERS.BASE}/${studentId}/status`,
+        active,
+      );
     } catch {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      console.log('Student status updated (mock):', studentId, active);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      console.log("Student status updated (mock):", studentId, active);
     }
   },
 
@@ -211,17 +218,22 @@ const userService = {
     try {
       await axiosInstance.delete(`${API_ENDPOINTS.USERS.BASE}/${studentId}`);
     } catch {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      console.log('Student deleted (mock):', studentId);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      console.log("Student deleted (mock):", studentId);
     }
   },
 
-  createUser: async (data: { name: string; email: string; password?: string; role?: string }): Promise<User> => {
+  createUser: async (data: {
+    name: string;
+    email: string;
+    password?: string;
+    role?: string;
+  }): Promise<User> => {
     const payload: CreateUserPayload = {
       name: data.name,
       username: data.email,
       password: data.password,
-      role: data.role ? data.role.toString().toUpperCase() : 'USER',
+      role: data.role ? data.role.toString().toUpperCase() : "USER",
     };
 
     try {
@@ -231,22 +243,46 @@ const userService = {
       );
       return response.data?.data ?? response.data;
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { message?: string; error?: string } }; message?: string };
-      const msg = axiosErr?.response?.data?.message ||
+      const axiosErr = err as {
+        response?: { data?: { message?: string; error?: string } };
+        message?: string;
+      };
+      const msg =
+        axiosErr?.response?.data?.message ||
         axiosErr?.response?.data?.error ||
         axiosErr?.message ||
-        'Create user failed';
+        "Create user failed";
       throw new Error(msg);
     }
   },
 
-  updateUser: async (id: string, data: Partial<{ name: string; role?: string; phone?: string; bio?: string; dateOfBirth?: string; avatar?: string }>): Promise<User> => {
+  updateUser: async (
+    id: string,
+    data: Partial<{
+      name: string;
+      role?: string;
+      phone?: string;
+      bio?: string;
+      dateOfBirth?: string;
+      avatar?: string;
+    }>,
+  ): Promise<User> => {
     const payload: UpdateUserPayload = { name: data.name };
-    if (data.role)        { payload.role = data.role.toString().toUpperCase(); }
-    if (data.phone !== undefined)       { payload.phone = data.phone; }
-    if (data.bio !== undefined)         { payload.bio = data.bio; }
-    if (data.dateOfBirth !== undefined) { payload.dateOfBirth = data.dateOfBirth; }
-    if (data.avatar !== undefined)      { payload.avatar = data.avatar; }
+    if (data.role) {
+      payload.role = data.role.toString().toUpperCase();
+    }
+    if (data.phone !== undefined) {
+      payload.phone = data.phone;
+    }
+    if (data.bio !== undefined) {
+      payload.bio = data.bio;
+    }
+    if (data.dateOfBirth !== undefined) {
+      payload.dateOfBirth = data.dateOfBirth;
+    }
+    if (data.avatar !== undefined) {
+      payload.avatar = data.avatar;
+    }
 
     const response = await axiosInstance.put<ApiResponse<User>>(
       `${API_ENDPOINTS.USERS.BASE}/${id}`,

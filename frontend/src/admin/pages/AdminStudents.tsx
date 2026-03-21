@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Search, Mail, MoreVertical, Eye, Ban, UserCheck,
-  UserPlus, Edit, Trash2, Phone, Calendar, BookOpen, Star, Upload, Image,
+  UserPlus, Edit, Trash2, Phone, Calendar, BookOpen, Star, Upload,
 } from "lucide-react";
 import userService from "@/services/userService";
 import notificationService from "@/services/notificationService";
@@ -51,7 +51,7 @@ export default function AdminStudents() {
   const [currentPage, setCurrentPage] = useState(1);
   const [students, setStudents] = useState<Student[]>([]);
   const [totalItems, setTotalItems] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -59,6 +59,7 @@ export default function AdminStudents() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const isMounted = useRef(false);
 
   const [newStudent, setNewStudent] = useState<{ name: string; email: string; password: string; role: RoleType }>({
     name: "", email: "", password: "", role: ROLE.USER,
@@ -78,13 +79,18 @@ export default function AdminStudents() {
   const itemsPerPage = 15;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-  const fetchStudents = async () => {
+  const fetchStudents = async (
+    page = currentPage,
+    search = searchQuery,
+    status = statusFilter
+  ) => {
     setIsLoading(true);
     try {
       const res = await userService.getStudents({
-        page: currentPage, pageSize: itemsPerPage,
-        search: searchQuery || undefined,
-        status: statusFilter === "all" ? undefined : statusFilter,
+        page,
+        pageSize: itemsPerPage,
+        search: search || undefined,
+        status: status === "all" ? undefined : status,
       });
       setStudents(res.result);
       setTotalItems(res.meta.total);
@@ -95,9 +101,21 @@ export default function AdminStudents() {
     }
   };
 
-  useEffect(() => { fetchStudents(); }, [currentPage, statusFilter]);
+  // Fetch khi page hoặc filter thay đổi
   useEffect(() => {
-    const delay = setTimeout(() => { setCurrentPage(1); fetchStudents(); }, 350);
+    fetchStudents(currentPage, searchQuery, statusFilter);
+  }, [currentPage, statusFilter]);
+
+  // Fetch khi search thay đổi (bỏ qua lần mount đầu)
+  useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
+    const delay = setTimeout(() => {
+      setCurrentPage(1);
+      fetchStudents(1, searchQuery, statusFilter);
+    }, 350);
     return () => clearTimeout(delay);
   }, [searchQuery]);
 
@@ -141,7 +159,7 @@ export default function AdminStudents() {
       if (avatarFile) {
         const fd = new FormData();
         fd.append("file", avatarFile);
-        const res = await fetch("http://localhost:8080/api/v1/upload/image", {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1"}/upload/image`, {
           method: "POST",
           headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
           body: fd,
@@ -149,7 +167,7 @@ export default function AdminStudents() {
         if (res.ok) {
           const data = await res.json();
           const url = data.data.url;
-          avatarUrl = url.startsWith("http") ? url : `http://localhost:8080${url}`;
+          avatarUrl = url.startsWith("http") ? url : `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1"}${url}`;
         }
       }
       await userService.updateUser(selectedStudent.id, {
@@ -161,7 +179,7 @@ export default function AdminStudents() {
       });
       setIsEditDialogOpen(false); setSelectedStudent(null); setAvatarFile(null);
       toast.success("Cập nhật học viên thành công!");
-      await refreshAdmin(); // cập nhật topbar nếu đang sửa chính mình
+      await refreshAdmin();
       fetchStudents();
     } catch (err) { toast.error("Cập nhật thất bại"); }
   };
@@ -269,7 +287,24 @@ export default function AdminStudents() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={6} className="py-12 text-center text-admin-muted-foreground text-sm">Đang tải...</td></tr>
+                Array(5).fill(0).map((_, i) => (
+                  <tr key={i} className="border-t border-admin-border animate-pulse">
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-admin-accent" />
+                        <div className="space-y-1.5">
+                          <div className="h-3 w-24 bg-admin-accent rounded" />
+                          <div className="h-2.5 w-32 bg-admin-accent rounded" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 hidden md:table-cell"><div className="h-3 w-16 bg-admin-accent rounded" /></td>
+                    <td className="py-4 px-4 hidden lg:table-cell"><div className="h-3 w-20 bg-admin-accent rounded" /></td>
+                    <td className="py-4 px-4 hidden sm:table-cell"><div className="h-3 w-16 bg-admin-accent rounded" /></td>
+                    <td className="py-4 px-4"><div className="h-5 w-16 bg-admin-accent rounded-full" /></td>
+                    <td className="py-4 px-4"><div className="h-6 w-6 bg-admin-accent rounded ml-auto" /></td>
+                  </tr>
+                ))
               ) : students.length === 0 ? (
                 <tr><td colSpan={6} className="py-12 text-center text-admin-muted-foreground text-sm">Không có học viên nào</td></tr>
               ) : students.map((student) => (
@@ -377,7 +412,6 @@ export default function AdminStudents() {
         <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden [&::-webkit-scrollbar]:hidden" style={{ background: '#0f1117', border: '1px solid #1e2230' }}>
           {selectedStudent && (
             <>
-              {/* Header với gradient */}
               <div className="relative px-6 pt-6 pb-4" style={{ background: 'linear-gradient(135deg, #1a1f35 0%, #161b27 100%)', borderBottom: '1px solid #1e2230' }}>
                 <div className="flex items-center gap-4">
                   <div className="relative">
@@ -406,8 +440,6 @@ export default function AdminStudents() {
                   <p className="mt-3 text-sm italic" style={{ color: '#475569' }}>"{(selectedStudent as any).bio}"</p>
                 )}
               </div>
-
-              {/* Stats */}
               <div className="px-6 py-4 space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   {[
@@ -422,15 +454,7 @@ export default function AdminStudents() {
                     </div>
                   ))}
                 </div>
-
-                {(selectedStudent as any).dateOfBirth && (
-                  <div className="rounded-xl p-3.5" style={{ background: 'linear-gradient(135deg, #161b27 0%, #1a2035 100%)', border: '1px solid #252d42' }}>
-                    <p className="text-[11px] uppercase tracking-wider font-semibold mb-1" style={{ color: '#475569' }}>Ngày sinh</p>
-                    <p className="text-sm font-bold" style={{ color: '#e2e8f0' }}>{formatDate((selectedStudent as any).dateOfBirth)}</p>
-                  </div>
-                )}
               </div>
-
               <div className="px-6 pb-5 flex justify-end">
                 <button onClick={() => setIsViewDialogOpen(false)}
                   className="px-5 py-2 rounded-lg text-sm font-medium transition-all"
@@ -448,16 +472,12 @@ export default function AdminStudents() {
       {/* ── Edit Dialog ── */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&::-webkit-scrollbar]:hidden" style={{ background: '#0f1117', border: '1px solid #1e2230' }}>
-
-          {/* Header */}
           <div className="px-6 pt-5 pb-4" style={{ borderBottom: '1px solid #1e2230' }}>
             <p className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: '#6366f1' }}>Chỉnh sửa học viên</p>
             <h3 className="text-xl font-bold" style={{ color: '#f1f5f9' }}>{selectedStudent?.name}</h3>
             <p className="text-sm mt-0.5" style={{ color: '#475569' }}>Cập nhật thông tin tài khoản</p>
           </div>
-
           <div className="px-6 py-5 space-y-5">
-            {/* Avatar upload */}
             <div className="flex items-center gap-5">
               <div className="relative shrink-0">
                 <Avatar className="w-20 h-20 ring-2 ring-admin-primary/30">
@@ -481,8 +501,6 @@ export default function AdminStudents() {
                 {avatarFile && <p className="text-xs mt-1.5" style={{ color: '#4ade80' }}>✓ Đã chọn ảnh mới</p>}
               </div>
             </div>
-
-            {/* Form fields */}
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 space-y-1.5">
                 <Label className={LABEL_CLS}>Họ và tên</Label>
@@ -490,7 +508,7 @@ export default function AdminStudents() {
                   onChange={e => setEditStudent({ ...editStudent, name: e.target.value })} className={INPUT_CLS} />
               </div>
               <div className="col-span-2 space-y-1.5">
-                <Label className={LABEL_CLS}>Email <span className="normal-case font-normal text-[10px] ml-1" style={{ color: '#475569' }}></span></Label>
+                <Label className={LABEL_CLS}>Email</Label>
                 <div className="px-3 py-2 rounded-lg text-sm" style={{ background: '#161b27', border: '1px solid #1e2a3a', color: '#475569' }}>
                   {selectedStudent?.email}
                 </div>
@@ -521,8 +539,6 @@ export default function AdminStudents() {
                 </Select>
               </div>
             </div>
-
-            {/* Footer */}
             <div className="flex justify-end gap-3 pt-1">
               <button onClick={() => setIsEditDialogOpen(false)}
                 className="px-5 py-2 rounded-lg text-sm font-medium"

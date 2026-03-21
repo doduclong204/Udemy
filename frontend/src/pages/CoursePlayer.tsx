@@ -48,8 +48,15 @@ import type {
 
 const getMediaUrl = (url?: string | null) => {
   if (!url) return "";
-  if (url.startsWith("http")) return url;
-  return `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"}${url}`;
+  const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
+  const baseOrigin = import.meta.env.VITE_BASE_ORIGIN || "http://localhost:8080";
+  if (url.startsWith("http")) {
+    if (url.startsWith(baseOrigin) && !url.includes("/api/v1")) {
+      return url.replace(baseOrigin, apiBase);
+    }
+    return url;
+  }
+  return `${apiBase}${url}`;
 };
 
 export default function CoursePlayer() {

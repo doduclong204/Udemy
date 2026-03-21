@@ -84,7 +84,8 @@ const secondsToMMSS = (secs?: number): string => {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 };
 
-const BASE_URL = "http://localhost:8080/api/v1";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_ORIGIN = import.meta.env.VITE_BASE_ORIGIN;
 
 export default function AdminCourseForm() {
   const dispatch = useDispatch<AppDispatch>();
@@ -231,11 +232,10 @@ export default function AdminCourseForm() {
     const data = await res.json();
 
     const url = data.data.url;
-    // Nếu server trả về URL tương đối thì ghép với BASE_URL, còn URL tuyệt đối thì dùng thẳng
-    return url.startsWith("http") ? url : `${BASE_URL.replace("/api/v1", "")}${url}`;
+    return url.startsWith("http") ? url : `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1"}${url}`;
   };
 
-  // ✅ Hàm upload video
+  //Hàm upload video
   const uploadVideo = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append("file", file);
