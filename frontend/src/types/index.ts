@@ -37,6 +37,7 @@ export interface User {
   bio?: string;
   dateOfBirth?: string;
   active?: boolean;
+  provider?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: string;
@@ -69,6 +70,32 @@ export interface RegisterRequest {
   avatar?: string;
   bio?: string;
   role?: string;
+}
+
+export interface SendOtpRequest {
+  email: string;
+  password: string;
+  name: string;
+  phone?: string;
+}
+
+export interface VerifyOtpRequest {
+  email: string;
+  otp: string;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  email: string;
+  otp: string;
+  newPassword: string;
+}
+
+export interface OAuthRequest {
+  token: string;
 }
 
 // ==================== Category Types ====================

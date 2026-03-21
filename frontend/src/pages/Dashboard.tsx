@@ -71,6 +71,7 @@ const formatTime = (iso: string) => {
 
 export default function Dashboard() {
   const { user, isAuthenticated, logout } = useAuth();
+  console.log("provider:", user?.provider);
   const { wishlist, removeFromWishlist } = useWishlist();
   const dispatch = useAppDispatch();
   const location = useLocation();
@@ -798,55 +799,67 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Bảo mật */}
-                  <div className="bg-card border border-border rounded-lg p-6">
-                    <h2 className="text-lg font-semibold mb-4">Bảo mật</h2>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Mật khẩu hiện tại
-                        </label>
-                        <input
-                          ref={currentPwRef}
-                          type="password"
-                          placeholder="••••••••"
-                          className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                        />
+                  {/* Bảo mật — ẩn nếu là social account */}
+                  {user?.provider?.toUpperCase() === "LOCAL" ||
+                  !user?.provider ? (
+                    <div className="bg-card border border-border rounded-lg p-6">
+                      <h2 className="text-lg font-semibold mb-4">Bảo mật</h2>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Mật khẩu hiện tại
+                          </label>
+                          <input
+                            ref={currentPwRef}
+                            type="password"
+                            placeholder="••••••••"
+                            className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Mật khẩu mới
+                          </label>
+                          <input
+                            ref={newPwRef}
+                            type="password"
+                            placeholder="••••••••"
+                            className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Xác nhận mật khẩu mới
+                          </label>
+                          <input
+                            ref={confirmPwRef}
+                            type="password"
+                            placeholder="••••••••"
+                            className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
+                        <button
+                          onClick={handleChangePassword}
+                          disabled={savingPw}
+                          className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-udemy-purple-dark transition-colors disabled:opacity-60 flex items-center gap-2"
+                        >
+                          {savingPw && (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          )}
+                          Đổi mật khẩu
+                        </button>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Mật khẩu mới
-                        </label>
-                        <input
-                          ref={newPwRef}
-                          type="password"
-                          placeholder="••••••••"
-                          className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Xác nhận mật khẩu mới
-                        </label>
-                        <input
-                          ref={confirmPwRef}
-                          type="password"
-                          placeholder="••••••••"
-                          className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                        />
-                      </div>
-                      <button
-                        onClick={handleChangePassword}
-                        disabled={savingPw}
-                        className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-udemy-purple-dark transition-colors disabled:opacity-60 flex items-center gap-2"
-                      >
-                        {savingPw && (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        )}
-                        Đổi mật khẩu
-                      </button>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="bg-card border border-border rounded-lg p-6">
+                      <h2 className="text-lg font-semibold mb-4">Bảo mật</h2>
+                      <p className="text-sm text-muted-foreground">
+                        Tài khoản của bạn đăng nhập bằng{" "}
+                        <span className="font-semibold">{user?.provider}</span>.
+                        Vui lòng đổi mật khẩu trên nền tảng đó.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Liên kết tài khoản */}
                   <div className="bg-card border border-border rounded-lg p-6">
@@ -855,38 +868,54 @@ export default function Dashboard() {
                     </h2>
                     <div className="space-y-3">
                       {[
-                        { label: "Google", color: "bg-red-500", letter: "G" },
+                        {
+                          label: "Google",
+                          color: "bg-red-500",
+                          letter: "G",
+                          provider: "GOOGLE",
+                        },
                         {
                           label: "Facebook",
                           color: "bg-blue-600",
                           letter: "F",
+                          provider: "FACEBOOK",
                         },
-                      ].map((s) => (
-                        <div
-                          key={s.label}
-                          className="flex items-center justify-between p-3 bg-secondary rounded-lg"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`w-8 h-8 ${s.color} rounded-full flex items-center justify-center text-white font-bold text-sm`}
-                            >
-                              {s.letter}
-                            </div>
-                            <span>{s.label}</span>
-                          </div>
-                          <button
-                            onClick={() =>
-                              toast({
-                                title: "Tính năng đang phát triển",
-                                description: `Liên kết với ${s.label} sẽ sớm có.`,
-                              })
-                            }
-                            className="text-primary font-medium hover:underline text-sm"
+                      ].map((s) => {
+                        const isLinked =
+                          user?.provider?.toUpperCase() === s.provider;
+                        return (
+                          <div
+                            key={s.label}
+                            className="flex items-center justify-between p-3 bg-secondary rounded-lg"
                           >
-                            Liên kết
-                          </button>
-                        </div>
-                      ))}
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`w-8 h-8 ${s.color} rounded-full flex items-center justify-center text-white font-bold text-sm`}
+                              >
+                                {s.letter}
+                              </div>
+                              <span>{s.label}</span>
+                            </div>
+                            {isLinked ? (
+                              <span className="text-green-500 font-medium text-sm flex items-center gap-1">
+                                <Check className="w-4 h-4" /> Đã liên kết
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  toast({
+                                    title: "Tính năng đang phát triển",
+                                    description: `Liên kết với ${s.label} sẽ sớm có.`,
+                                  })
+                                }
+                                className="text-primary font-medium hover:underline text-sm"
+                              >
+                                Liên kết
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 

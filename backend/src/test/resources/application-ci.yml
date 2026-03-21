@@ -43,3 +43,5 @@ resend:
 oauth2:
   google:
     client-id: dummy-client-id
+  facebook:
+    app-id: dummy-app-id

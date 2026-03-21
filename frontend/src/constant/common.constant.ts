@@ -74,6 +74,10 @@ export const API_ENDPOINTS = {
     FORGOT_PASSWORD: "/auth/forgot-password",
     RESET_PASSWORD: "/auth/reset-password",
     ACCOUNT: "/auth/account",
+    SEND_REGISTER_OTP: "/auth/register/send-otp",  
+    VERIFY_OTP: "/auth/verify-otp",                
+    GOOGLE: "/auth/google",                         
+    FACEBOOK: "/auth/facebook", 
   },
   USERS: {
     BASE: "/users",

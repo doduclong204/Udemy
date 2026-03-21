@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -55,9 +55,15 @@ axiosInstance.interceptors.response.use(
             url.includes('/auth/refresh') ||
             url.includes('/auth/login');
 
-          const isOnLoginPage = window.location.pathname === '/login';
+          const isPublicPage =
+            window.location.pathname === '/' ||
+            window.location.pathname.startsWith('/course') ||
+            window.location.pathname.startsWith('/search') ||
+            window.location.pathname === '/login' ||
+            window.location.pathname === '/signup' ||
+            window.location.pathname === '/forgot-password';
 
-          if (!isAuthEndpoint && !isOnLoginPage) {
+          if (!isAuthEndpoint && !isPublicPage) {
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
             localStorage.removeItem('user');

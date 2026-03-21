@@ -3,6 +3,7 @@ package com.education.udemy.service;
 import com.education.udemy.dto.request.user.ChangePasswordRequest;
 import java.util.List;
 
+import com.education.udemy.enums.Provider;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -165,6 +166,10 @@ public class UserService {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        if (!Provider.LOCAL.equals(user.getProvider())) {
+            throw new AppException(ErrorCode.SOCIAL_ACCOUNT_NO_PASSWORD);
+        }
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
             throw new AppException(ErrorCode.PASSWORD_INCORRECT);

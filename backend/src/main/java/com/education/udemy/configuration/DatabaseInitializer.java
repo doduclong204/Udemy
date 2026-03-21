@@ -1,5 +1,6 @@
 package com.education.udemy.configuration;
 import com.education.udemy.entity.Setting;
+import com.education.udemy.enums.Provider;
 import com.education.udemy.repository.SettingRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,6 +37,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     .password(passwordEncoder.encode("Long752004"))
                     .role("ADMIN")
                     .active(true)
+                    .provider(Provider.LOCAL)
                     .phone("0969654190")
                     .bio("Quản trị viên hệ thống")
                     .dateOfBirth(LocalDate.of(2004, 5, 7))

@@ -1,9 +1,9 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
-import { 
-  loginAsync, registerAsync, logoutAsync, 
+import {
+  loginAsync, logoutAsync,
   selectUser, selectIsAuthenticated, selectAuthLoading, selectAuthError,
-  clearError
+  selectIsSocialAccount, clearError
 } from '@/redux/slices/authSlice';
 import { User } from '@/types';
 
@@ -11,10 +11,10 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isSocialAccount: boolean;
   loading: boolean;
   error: string | null;
   login: (username: string, password: string) => Promise<boolean>;
-  signup: (username: string, password: string, name: string) => Promise<boolean>;
   logout: () => void;
   clearAuthError: () => void;
 }
@@ -25,21 +25,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch();
   const user = useAppSelector(selectUser);
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const isSocialAccount = useAppSelector(selectIsSocialAccount);
   const loading = useAppSelector(selectAuthLoading);
   const error = useAppSelector(selectAuthError);
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
       await dispatch(loginAsync({ username, password })).unwrap();
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const signup = async (username: string, password: string, name: string): Promise<boolean> => {
-    try {
-      await dispatch(registerAsync({ username, password, name })).unwrap();
       return true;
     } catch {
       return false;
@@ -55,14 +47,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated,
       isAdmin: user?.role === 'ADMIN',
+      isSocialAccount,
       loading,
       error,
-      login, 
-      signup, 
+      login,
       logout,
       clearAuthError,
     }}>

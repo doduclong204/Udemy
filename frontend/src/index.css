@@ -366,4 +366,111 @@ body:has(.admin-theme) [role="alertdialog"] * {
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+
+  /* ===== Auth Buttons ===== */
+  .btn-login {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.45rem 1.1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    border-radius: 8px;
+    border: 1.5px solid hsl(var(--border));
+    color: hsl(var(--foreground));
+    background: transparent;
+    text-decoration: none;
+    transition:
+      border-color 0.2s ease,
+      color 0.2s ease,
+      background 0.2s ease,
+      box-shadow 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .btn-login:hover {
+    border-color: hsl(var(--primary));
+    color: hsl(var(--primary));
+    background: hsl(var(--primary) / 0.06);
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
+  }
+
+  .btn-signup {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.45rem 1.1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    border-radius: 8px;
+    border: 1.5px solid transparent;
+    color: hsl(var(--primary-foreground));
+    background: hsl(var(--primary));
+    text-decoration: none;
+    overflow: hidden;
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.18s ease,
+      filter 0.18s ease;
+    white-space: nowrap;
+  }
+
+  .btn-signup::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.15) 0%,
+      transparent 60%
+    );
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .btn-signup:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px hsl(var(--primary) / 0.4);
+    filter: brightness(1.08);
+  }
+
+  .btn-signup:hover::after {
+    opacity: 1;
+  }
+
+  .btn-signup:active,
+  .btn-login:active {
+    transform: translateY(0);
+  }
+  .btn-google {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 8px;
+    border: 1.5px solid hsl(var(--border));
+    color: hsl(var(--foreground));
+    background: transparent;
+    cursor: pointer;
+    transition:
+      border-color 0.2s ease,
+      background 0.2s ease,
+      box-shadow 0.2s ease,
+      transform 0.18s ease;
+  }
+
+  .btn-google:hover {
+    border-color: #4285f4;
+    background: rgba(66, 133, 244, 0.05);
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.15);
+    transform: translateY(-1px);
+  }
 }

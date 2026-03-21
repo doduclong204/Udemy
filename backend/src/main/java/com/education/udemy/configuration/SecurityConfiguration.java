@@ -31,6 +31,7 @@ public class SecurityConfiguration {
                 "/auth/reset-password",
                 "/auth/google",
                 "/auth/facebook",
+                "/auth/stats",
                 "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
                 "/storage/**", "/files/**", "/images/**", "/videos/**",
                 "/upload/**"

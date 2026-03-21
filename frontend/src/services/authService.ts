@@ -4,51 +4,112 @@ import {
   ApiResponse,
   AuthResponse,
   LoginRequest,
-  RegisterRequest,
+  SendOtpRequest,
+  VerifyOtpRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+  OAuthRequest,
   User,
 } from "@/types";
 
 const authService = {
-  /**
-   * Đăng nhập - Backend trả { statusCode, message, data: { access_token, user } }
-   */
   login: async (data: LoginRequest): Promise<AuthResponse> => {
     const response = await axiosInstance.post<ApiResponse<AuthResponse>>(
       API_ENDPOINTS.AUTH.LOGIN,
       data,
     );
-
-    // Fix: đọc response.data.data thay vì response.data
     const authData = response.data.data;
-
-    // Normalize user id (backend may return _id)
-    if (authData.user && (authData.user as User & { _id?: string })._id && !(authData.user as User & { _id?: string }).id) {
-      (authData.user as User & { _id?: string }).id = (authData.user as User & { _id?: string })._id;
+    if (
+      authData.user &&
+      (authData.user as User & { _id?: string })._id &&
+      !(authData.user as User & { _id?: string }).id
+    ) {
+      (authData.user as User & { _id?: string }).id = (
+        authData.user as User & { _id?: string }
+      )._id;
     }
-    // Lưu token vào localStorage
     localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, authData.access_token);
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(authData.user));
-
     return authData;
   },
 
-  /**
-   * Đăng ký - Backend chỉ trả UserResponse (không có token)
-   * User cần login sau khi đăng ký
-   */
-  register: async (data: RegisterRequest): Promise<User> => {
-    const response = await axiosInstance.post<ApiResponse<User>>(
-      API_ENDPOINTS.AUTH.REGISTER,
-      data,
-    );
-    // Nếu backend cũng bọc data thì dùng response.data.data
-    // Nếu không bọc thì dùng response.data
-    return response.data.data ?? response.data;
+  sendRegisterOtp: async (data: SendOtpRequest): Promise<void> => {
+    await axiosInstance.post(API_ENDPOINTS.AUTH.SEND_REGISTER_OTP, data);
   },
 
-  /**
-   * Lấy thông tin account hiện tại (bỏ qua nếu endpoint chưa có)
-   */
+  verifyOtp: async (data: VerifyOtpRequest): Promise<AuthResponse> => {
+    const response = await axiosInstance.post<ApiResponse<AuthResponse>>(
+      API_ENDPOINTS.AUTH.VERIFY_OTP,
+      data,
+    );
+    const authData = response.data.data;
+    return authData;
+  },
+
+  forgotPassword: async (data: ForgotPasswordRequest): Promise<void> => {
+    await axiosInstance.post(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, data);
+  },
+
+  resetPassword: async (data: ResetPasswordRequest): Promise<AuthResponse> => {
+    const response = await axiosInstance.post<ApiResponse<AuthResponse>>(
+      API_ENDPOINTS.AUTH.RESET_PASSWORD,
+      data,
+    );
+    const authData = response.data.data;
+    if (
+      authData.user &&
+      (authData.user as User & { _id?: string })._id &&
+      !(authData.user as User & { _id?: string }).id
+    ) {
+      (authData.user as User & { _id?: string }).id = (
+        authData.user as User & { _id?: string }
+      )._id;
+    }
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, authData.access_token);
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(authData.user));
+    return authData;
+  },
+
+  loginGoogle: async (data: OAuthRequest): Promise<AuthResponse> => {
+    const response = await axiosInstance.post<ApiResponse<AuthResponse>>(
+      API_ENDPOINTS.AUTH.GOOGLE,
+      data,
+    );
+    const authData = response.data.data;
+    if (
+      authData.user &&
+      (authData.user as User & { _id?: string })._id &&
+      !(authData.user as User & { _id?: string }).id
+    ) {
+      (authData.user as User & { _id?: string }).id = (
+        authData.user as User & { _id?: string }
+      )._id;
+    }
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, authData.access_token);
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(authData.user));
+    return authData;
+  },
+
+  loginFacebook: async (data: OAuthRequest): Promise<AuthResponse> => {
+    const response = await axiosInstance.post<ApiResponse<AuthResponse>>(
+      API_ENDPOINTS.AUTH.FACEBOOK,
+      data,
+    );
+    const authData = response.data.data;
+    if (
+      authData.user &&
+      (authData.user as User & { _id?: string })._id &&
+      !(authData.user as User & { _id?: string }).id
+    ) {
+      (authData.user as User & { _id?: string }).id = (
+        authData.user as User & { _id?: string }
+      )._id;
+    }
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, authData.access_token);
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(authData.user));
+    return authData;
+  },
+
   getAccount: async (): Promise<User> => {
     const response = await axiosInstance.get<ApiResponse<User>>(
       API_ENDPOINTS.AUTH.ACCOUNT,
@@ -56,23 +117,17 @@ const authService = {
     return response.data.data ?? response.data;
   },
 
-  /**
-   * Đăng xuất
-   */
   logout: async (): Promise<void> => {
-    try {
-      await axiosInstance.post(API_ENDPOINTS.AUTH.LOGOUT);
-    } catch (error) {
-      console.error("Logout API error:", error);
-    }
+  try {
+    await axiosInstance.post(API_ENDPOINTS.AUTH.LOGOUT);
+  } catch (error) {
+    console.error("Logout API error:", error);
+  }
+  localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+  localStorage.removeItem(STORAGE_KEYS.USER);
+  window.location.href = "/";
+},
 
-    localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
-    localStorage.removeItem(STORAGE_KEYS.USER);
-  },
-
-  /**
-   * Refresh token
-   */
   refreshToken: async (): Promise<AuthResponse> => {
     const response = await axiosInstance.post<ApiResponse<AuthResponse>>(
       API_ENDPOINTS.AUTH.REFRESH_TOKEN,
@@ -80,36 +135,36 @@ const authService = {
       { withCredentials: true },
     );
     const authData = response.data.data;
-    if (authData.user && (authData.user as User & { _id?: string })._id && !(authData.user as User & { _id?: string }).id) {
-      (authData.user as User & { _id?: string }).id = (authData.user as User & { _id?: string })._id;
+    if (
+      authData.user &&
+      (authData.user as User & { _id?: string })._id &&
+      !(authData.user as User & { _id?: string }).id
+    ) {
+      (authData.user as User & { _id?: string }).id = (
+        authData.user as User & { _id?: string }
+      )._id;
     }
-
     localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, authData.access_token);
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(authData.user));
-
     return authData;
   },
 
-  /**
-   * Lấy user từ localStorage
-   */
   getCurrentUser: (): User | null => {
     const userStr = localStorage.getItem(STORAGE_KEYS.USER);
     return userStr ? JSON.parse(userStr) : null;
   },
 
-  /**
-   * Kiểm tra đã đăng nhập chưa
-   */
   isAuthenticated: (): boolean => {
     return !!localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
   },
 
-  /**
-   * Lấy access token
-   */
   getAccessToken: (): string | null => {
     return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+  },
+
+  isSocialAccount: (): boolean => {
+    const user = authService.getCurrentUser();
+    return !!user?.provider && user.provider !== "LOCAL";
   },
 };
 

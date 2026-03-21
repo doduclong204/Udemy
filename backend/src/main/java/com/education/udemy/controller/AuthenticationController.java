@@ -1,6 +1,7 @@
 package com.education.udemy.controller;
 
 import java.text.ParseException;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -127,5 +128,12 @@ public class AuthenticationController {
     ResponseEntity<AuthenticationResponse> loginFacebook(
             @Valid @RequestBody OAuthRequest request) {
         return oAuthService.loginFacebook(request.getToken());
+    }
+
+    @PublicEndpoint
+    @GetMapping("/stats")
+    @ApiMessage("Get public stats")
+    ResponseEntity<Map<String, Object>> getPublicStats() {
+        return authenticationService.getPublicStats();
     }
 }

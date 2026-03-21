@@ -15,6 +15,9 @@ import lombok.experimental.FieldDefaults;
 import lombok.experimental.NonFinal;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -38,27 +41,40 @@ public class OAuthService {
 
     RestTemplate restTemplate = new RestTemplate();
 
-    public ResponseEntity<AuthenticationResponse> loginGoogle(String idToken) {
-        String verifyUrl = "https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken;
+    public ResponseEntity<AuthenticationResponse> loginGoogle(String accessToken) {
+        String verifyUrl = "https://oauth2.googleapis.com/tokeninfo?access_token=" + accessToken;
 
-        Map<String, Object> payload;
+        Map<String, Object> tokenInfo;
         try {
-            payload = restTemplate.getForObject(verifyUrl, Map.class);
+            tokenInfo = restTemplate.getForObject(verifyUrl, Map.class);
         } catch (Exception e) {
             throw new AppException(ErrorCode.OAUTH2_TOKEN_INVALID);
         }
 
-        if (payload == null) throw new AppException(ErrorCode.OAUTH2_TOKEN_INVALID);
+        if (tokenInfo == null) throw new AppException(ErrorCode.OAUTH2_TOKEN_INVALID);
 
-        String aud = (String) payload.get("aud");
-        if (!googleClientId.equals(aud)) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+
+        Map<String, Object> userInfo;
+        try {
+            userInfo = restTemplate.exchange(
+                    "https://www.googleapis.com/oauth2/v2/userinfo",
+                    HttpMethod.GET,
+                    entity,
+                    Map.class
+            ).getBody();
+        } catch (Exception e) {
             throw new AppException(ErrorCode.OAUTH2_TOKEN_INVALID);
         }
 
-        String email      = (String) payload.get("email");
-        String name       = (String) payload.get("name");
-        String avatar     = (String) payload.get("picture");
-        String providerId = (String) payload.get("sub");
+        if (userInfo == null) throw new AppException(ErrorCode.OAUTH2_TOKEN_INVALID);
+
+        String email      = (String) userInfo.get("email");
+        String name       = (String) userInfo.get("name");
+        String avatar     = (String) userInfo.get("picture");
+        String providerId = (String) userInfo.get("id");
 
         return processOAuthUser(email, name, avatar, providerId, Provider.GOOGLE);
     }

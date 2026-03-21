@@ -3,7 +3,11 @@ package com.education.udemy.service;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
+import com.education.udemy.repository.CourseRepository;
+import com.education.udemy.repository.OrderRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
@@ -67,6 +71,8 @@ public class AuthenticationService {
     UserRepository userRepository;
     InvalidatedTokenRepository invalidatedTokenRepository;
     OtpService otpService;
+    CourseRepository courseRepository;
+    OrderRepository orderRepository;
 
     @Value("${auth.jwt.refresh-token-validity-in-seconds}")
     @NonFinal
@@ -324,5 +330,18 @@ public class AuthenticationService {
         if (username.equals("")) throw new AppException(ErrorCode.UNAUTHENTICATED);
 
         return signedJWT;
+    }
+
+    public ResponseEntity<Map<String, Object>> getPublicStats() {
+        long totalStudents = userRepository.count();
+        long totalCourses = courseRepository.count();
+        long totalOrders = orderRepository.count();
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalStudents", totalStudents);
+        stats.put("totalCourses", totalCourses);
+        stats.put("totalOrders", totalOrders);
+
+        return ResponseEntity.ok(stats);
     }
 }

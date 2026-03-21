@@ -27,6 +27,7 @@ public class UserResponse {
     String bio;
     String role;
     Boolean active;
+    String provider;
     BigDecimal totalSpent;
     Integer enrollmentCount;
     Integer completedCount;
