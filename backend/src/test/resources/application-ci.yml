@@ -11,6 +11,17 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 upload:
   file:
@@ -24,3 +35,11 @@ auth:
     base64-secret-fresh: ${JWT_SECRET_REFRESH}
     access-token-validity-in-seconds: 3600
     refresh-token-validity-in-seconds: 3600
+
+resend:
+  api-key: ${RESEND_API_KEY}
+  from-email: ${RESEND_FROM_EMAIL}
+
+oauth2:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID}
