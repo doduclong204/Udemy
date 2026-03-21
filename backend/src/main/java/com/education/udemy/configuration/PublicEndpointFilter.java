@@ -29,7 +29,7 @@ public class PublicEndpointFilter extends OncePerRequestFilter {
             }
         }
 
-        // Tiếp tục các bộ lọc khác
+
         filterChain.doFilter(request, response);
     }
 }

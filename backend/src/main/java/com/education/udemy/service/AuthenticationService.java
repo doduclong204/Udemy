@@ -3,8 +3,11 @@ package com.education.udemy.service;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,18 +17,23 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 
 import com.education.udemy.constant.PredefinedRole;
 import com.education.udemy.dto.request.auth.AuthenticationRequest;
+import com.education.udemy.dto.request.auth.ForgotPasswordRequest;
 import com.education.udemy.dto.request.auth.IntrospectRequest;
+import com.education.udemy.dto.request.auth.RegisterRequest;
+import com.education.udemy.dto.request.auth.ResetPasswordRequest;
+import com.education.udemy.dto.request.auth.VerifyOtpRequest;
 import com.education.udemy.dto.request.user.UserCreationRequest;
 import com.education.udemy.dto.response.auth.AuthenticationResponse;
 import com.education.udemy.dto.response.auth.IntrospectResponse;
 import com.education.udemy.dto.response.user.UserResponse;
 import com.education.udemy.entity.InvalidatedToken;
+import com.education.udemy.entity.OtpToken;
 import com.education.udemy.entity.User;
+import com.education.udemy.enums.OtpPurpose;
+import com.education.udemy.enums.Provider;
 import com.education.udemy.exception.AppException;
 import com.education.udemy.exception.ErrorCode;
 import com.education.udemy.mapper.AuthMapper;
@@ -49,6 +57,7 @@ import lombok.extern.slf4j.Slf4j;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Slf4j
 public class AuthenticationService {
+
     AuthenticationManagerBuilder authenticationManagerBuilder;
     SecurityUtil securityUtil;
     UserService userService;
@@ -57,6 +66,7 @@ public class AuthenticationService {
     UserMapper userMapper;
     UserRepository userRepository;
     InvalidatedTokenRepository invalidatedTokenRepository;
+    OtpService otpService;
 
     @Value("${auth.jwt.refresh-token-validity-in-seconds}")
     @NonFinal
@@ -73,13 +83,11 @@ public class AuthenticationService {
     public IntrospectResponse introspect(IntrospectRequest request) throws JOSEException, ParseException {
         var token = request.getToken();
         boolean isValid = true;
-
         try {
             verifyToken(token, false);
         } catch (AppException e) {
             isValid = false;
         }
-
         return IntrospectResponse.builder().valid(isValid).build();
     }
 
@@ -89,7 +97,6 @@ public class AuthenticationService {
 
         Authentication authentication = authenticationManagerBuilder.getObject()
                 .authenticate(authenticationToken);
-
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         AuthenticationResponse res = new AuthenticationResponse();
@@ -98,7 +105,6 @@ public class AuthenticationService {
         if (currentUserDB != null && !currentUserDB.getActive()) {
             throw new AppException(ErrorCode.ACCOUNT_LOCKED);
         }
-
         if (currentUserDB != null) {
             res.setUser(this.authMapper.toUserResponse(currentUserDB));
         }
@@ -112,11 +118,8 @@ public class AuthenticationService {
 
         ResponseCookie resCookies = ResponseCookie
                 .from("refresh_token", refresh_token)
-                .httpOnly(false)
-                .secure(true)
-                .path("/")
-                .maxAge(refreshTokenExpiration)
-                .build();
+                .httpOnly(false).secure(true).path("/")
+                .maxAge(refreshTokenExpiration).build();
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, resCookies.toString())
@@ -126,63 +129,49 @@ public class AuthenticationService {
     public ResponseEntity<UserResponse> register(UserCreationRequest request) throws AppException {
         User user = this.userMapper.toUser(request);
         user.setPassword(this.passwordEncoder.encode(request.getPassword()));
+        user.setProvider(Provider.LOCAL);
         if (request.getRole() == null) {
             request.setRole(PredefinedRole.USER_ROLE);
             user.setRole(PredefinedRole.USER_ROLE);
         } else {
             user.setRole(request.getRole());
         }
-
         try {
             user = userRepository.save(user);
         } catch (DataIntegrityViolationException exception) {
             throw new AppException(ErrorCode.USER_EXISTED);
         }
-
-        UserResponse response = this.authMapper.toUserResponse(user);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(this.authMapper.toUserResponse(user));
     }
 
     public ResponseEntity<UserResponse> getAccount() {
         String email = SecurityUtil.getCurrentUserLogin().isPresent()
-                ? SecurityUtil.getCurrentUserLogin().get()
-                : "";
-
+                ? SecurityUtil.getCurrentUserLogin().get() : "";
         User currentUserDB = this.userService.handleGetUserByUsername(email);
         UserResponse res = this.userMapper.toUserResponse(currentUserDB);
         return ResponseEntity.ok().body(res);
     }
 
-    public ResponseEntity<Void> logout(String authorizationHeader) throws AppException, ParseException, JOSEException {
+    public ResponseEntity<Void> logout(String authorizationHeader)
+            throws AppException, ParseException, JOSEException {
         String username = SecurityUtil.getCurrentUserLogin().isPresent()
-                ? SecurityUtil.getCurrentUserLogin().get()
-                : "";
-
-        if (username.equals("")) {
-            throw new AppException(ErrorCode.INVALID_ACCESSTOKEN);
-        }
+                ? SecurityUtil.getCurrentUserLogin().get() : "";
+        if (username.equals("")) throw new AppException(ErrorCode.INVALID_ACCESSTOKEN);
 
         User currentUserDB = this.userService.handleGetUserByUsername(username);
-        if (currentUserDB != null) {
-            this.userService.handleLogout(currentUserDB);
-        }
+        if (currentUserDB != null) this.userService.handleLogout(currentUserDB);
 
         String token = "";
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             token = authorizationHeader.substring(7);
         }
 
-        SignedJWT signToken = SignedJWT.parse(token);
-        InvalidatedToken invalidatedToken = InvalidatedToken.builder().accessToken(token).build();
-        invalidatedTokenRepository.save(invalidatedToken);
+        SignedJWT.parse(token);
+        invalidatedTokenRepository.save(InvalidatedToken.builder().accessToken(token).build());
 
         ResponseCookie deleteSpringCookie = ResponseCookie
                 .from("refresh_token", null)
-                .httpOnly(true)
-                .secure(true)
-                .path("/")
-                .maxAge(0)
-                .build();
+                .httpOnly(true).secure(true).path("/").maxAge(0).build();
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, deleteSpringCookie.toString())
@@ -191,31 +180,21 @@ public class AuthenticationService {
 
     public ResponseEntity<AuthenticationResponse> refreshToken(String refresh_token)
             throws AppException, JOSEException, ParseException {
-
-        if (refresh_token.equals("long")) {
-            throw new AppException(ErrorCode.COOKIES_EMPTY);
-        }
+        if (refresh_token.equals("long")) throw new AppException(ErrorCode.COOKIES_EMPTY);
 
         Jwt decodedToken = this.securityUtil.checkValidRefreshToken(refresh_token);
-        var check = verifyToken(refresh_token, true);
+        verifyToken(refresh_token, true);
 
         String username = decodedToken.getSubject();
-
         User currentUser = this.userService.getUserByRefreshTokenAndUsername(refresh_token, username);
-        if (currentUser == null) {
-            throw new AppException(ErrorCode.INVALID_REFRESH_TOKEN);
-        }
-
-        if (!currentUser.getActive()) {
-            throw new AppException(ErrorCode.ACCOUNT_LOCKED);
-        }
+        if (currentUser == null) throw new AppException(ErrorCode.INVALID_REFRESH_TOKEN);
+        if (!currentUser.getActive()) throw new AppException(ErrorCode.ACCOUNT_LOCKED);
 
         AuthenticationResponse res = new AuthenticationResponse();
         User currentUserDB = this.userService.handleGetUserByUsername(username);
         if (currentUserDB != null) {
             res = AuthenticationResponse.builder()
-                    .user(this.authMapper.toUserResponse(currentUserDB))
-                    .build();
+                    .user(this.authMapper.toUserResponse(currentUserDB)).build();
         }
 
         String access_token = this.securityUtil.createAccessToken(username, res.getUser());
@@ -227,11 +206,100 @@ public class AuthenticationService {
 
         ResponseCookie resCookies = ResponseCookie
                 .from("refresh_token", new_refresh_token)
-                .httpOnly(true)
-                .secure(true)
-                .path("/")
-                .maxAge(refreshTokenExpiration)
+                .httpOnly(true).secure(true).path("/").maxAge(refreshTokenExpiration).build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, resCookies.toString())
+                .body(res);
+    }
+
+    public ResponseEntity<String> sendRegisterOtp(RegisterRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new AppException(ErrorCode.EMAIL_EXISTED);
+        }
+        otpService.sendOtp(request.getEmail(), OtpPurpose.REGISTER,
+                request.getPassword(), request.getName(), request.getPhone());
+        return ResponseEntity.ok("OTP sent to " + request.getEmail());
+    }
+
+    public ResponseEntity<AuthenticationResponse> verifyRegisterOtp(VerifyOtpRequest request)
+            throws JOSEException {
+        OtpToken otpToken = otpService.verifyOtp(
+                request.getEmail(), request.getOtp(), OtpPurpose.REGISTER);
+
+        User user = User.builder()
+                .username(request.getEmail())
+                .password(otpToken.getTempPassword())
+                .email(request.getEmail())
+                .name(otpToken.getTempName())
+                .phone(otpToken.getTempPhone())
+                .role(PredefinedRole.USER_ROLE)
+                .provider(Provider.LOCAL)
+                .active(true)
                 .build();
+
+        try {
+            user = userRepository.save(user);
+        } catch (DataIntegrityViolationException e) {
+            throw new AppException(ErrorCode.USER_EXISTED);
+        }
+
+        AuthenticationResponse res = new AuthenticationResponse();
+        res.setUser(authMapper.toUserResponse(user));
+
+        String accessToken = securityUtil.createAccessToken(user.getUsername(), res.getUser());
+        res.setAccessToken(accessToken);
+
+        String refreshToken = securityUtil.createRefreshToken(user.getUsername(), res);
+        res.setRefreshToken(refreshToken);
+        userService.updateUserToken(refreshToken, user.getUsername());
+
+        ResponseCookie resCookies = ResponseCookie
+                .from("refresh_token", refreshToken)
+                .httpOnly(false).secure(true).path("/")
+                .maxAge(refreshTokenExpiration).build();
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .header(HttpHeaders.SET_COOKIE, resCookies.toString())
+                .body(res);
+    }
+
+    public ResponseEntity<String> sendForgotPasswordOtp(ForgotPasswordRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        if (!Provider.LOCAL.equals(user.getProvider())) {
+            throw new AppException(ErrorCode.SOCIAL_ACCOUNT_NO_PASSWORD);
+        }
+
+        otpService.sendOtp(request.getEmail(), OtpPurpose.FORGOT_PASSWORD, null, null, null);
+        return ResponseEntity.ok("OTP sent to " + request.getEmail());
+    }
+
+    public ResponseEntity<AuthenticationResponse> resetPassword(ResetPasswordRequest request)
+            throws JOSEException {
+        otpService.verifyOtp(request.getEmail(), request.getOtp(), OtpPurpose.FORGOT_PASSWORD);
+
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        AuthenticationResponse res = new AuthenticationResponse();
+        res.setUser(authMapper.toUserResponse(user));
+
+        String accessToken = securityUtil.createAccessToken(user.getUsername(), res.getUser());
+        res.setAccessToken(accessToken);
+
+        String refreshToken = securityUtil.createRefreshToken(user.getUsername(), res);
+        res.setRefreshToken(refreshToken);
+        userService.updateUserToken(refreshToken, user.getUsername());
+
+        ResponseCookie resCookies = ResponseCookie
+                .from("refresh_token", refreshToken)
+                .httpOnly(false).secure(true).path("/")
+                .maxAge(refreshTokenExpiration).build();
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, resCookies.toString())
@@ -241,26 +309,19 @@ public class AuthenticationService {
     private SignedJWT verifyToken(String token, boolean isRefresh)
             throws JOSEException, ParseException {
         JWSVerifier verifier = new MACVerifier(SIGNER_KEY_REFRESH.getBytes());
-
         SignedJWT signedJWT = SignedJWT.parse(token);
 
-        Date expiryTime = (isRefresh)
+        Date expiryTime = isRefresh
                 ? new Date(signedJWT.getJWTClaimsSet().getIssueTime()
-                .toInstant().plus(refreshTokenExpiration, ChronoUnit.SECONDS)
-                .toEpochMilli())
+                .toInstant().plus(refreshTokenExpiration, ChronoUnit.SECONDS).toEpochMilli())
                 : signedJWT.getJWTClaimsSet().getExpirationTime();
 
-        var verified = signedJWT.verify(verifier);
-
-        if (!(expiryTime.after(new Date())))
-            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        signedJWT.verify(verifier);
+        if (!expiryTime.after(new Date())) throw new AppException(ErrorCode.UNAUTHENTICATED);
 
         String username = SecurityUtil.getCurrentUserLogin().isPresent()
-                ? SecurityUtil.getCurrentUserLogin().get()
-                : "";
-        if (username.equals("")) {
-            throw new AppException(ErrorCode.UNAUTHENTICATED);
-        }
+                ? SecurityUtil.getCurrentUserLogin().get() : "";
+        if (username.equals("")) throw new AppException(ErrorCode.UNAUTHENTICATED);
 
         return signedJWT;
     }

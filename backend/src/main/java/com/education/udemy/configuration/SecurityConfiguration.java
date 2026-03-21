@@ -25,6 +25,12 @@ public class SecurityConfiguration {
 
         String[] whileList = {
                 "/", "/auth/login", "/auth/refresh", "/auth/register",
+                "/auth/register/send-otp",
+                "/auth/verify-otp",
+                "/auth/forgot-password",
+                "/auth/reset-password",
+                "/auth/google",
+                "/auth/facebook",
                 "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
                 "/storage/**", "/files/**", "/images/**", "/videos/**",
                 "/upload/**"

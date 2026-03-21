@@ -25,6 +25,17 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQL8Dialect
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 auth:
   jwt:
@@ -38,3 +49,11 @@ upload:
     uri: ${UPLOAD_URI:file:///E:/Udemy/upload/}
     image-uri: ${UPLOAD_IMAGE_URI:file:///E:/Udemy/upload/images/}
     video-uri: ${UPLOAD_VIDEO_URI:file:///E:/Udemy/upload/videos/}
+
+resend:
+  api-key: ${RESEND_API_KEY}
+  from-email: onboarding@resend.dev
+
+oauth2:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:placeholder}

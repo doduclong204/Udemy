@@ -1,5 +1,6 @@
 package com.education.udemy.repository;
 
+import java.security.Provider;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,5 +20,11 @@ public interface UserRepository extends JpaRepository<User, String>, JpaSpecific
     User findByRefreshTokenAndUsername(String refreshToken, String username);
 
     List<User> findByRole(String role);
+
+    Optional<User> findByEmail(String email);
+
+    Optional<User> findByProviderAndProviderId(Provider provider, String providerId);
+
+    boolean existsByEmail(String email);
 }
 

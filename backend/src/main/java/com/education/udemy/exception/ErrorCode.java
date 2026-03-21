@@ -17,6 +17,20 @@ public enum ErrorCode {
     INVALID_DOB(400, "Your age must be at least {min}", HttpStatus.BAD_REQUEST),
     USER_NOT_AUTHENTICATED(401, "User is not authenticated", HttpStatus.UNAUTHORIZED),
 
+    // OTP
+    OTP_NOT_FOUND(404, "OTP not found or already used", HttpStatus.NOT_FOUND),
+    OTP_EXPIRED(400, "OTP has expired", HttpStatus.BAD_REQUEST),
+    OTP_INVALID(400, "OTP is incorrect", HttpStatus.BAD_REQUEST),
+    OTP_MAX_ATTEMPTS(400, "Too many incorrect OTP attempts", HttpStatus.BAD_REQUEST),
+
+    // OAUTH2
+    OAUTH2_TOKEN_INVALID(400, "Invalid OAuth2 token", HttpStatus.BAD_REQUEST),
+    OAUTH2_EMAIL_NOT_FOUND(400, "Could not retrieve email from social account", HttpStatus.BAD_REQUEST),
+    SOCIAL_ACCOUNT_NO_PASSWORD(400, "This account uses Google/Facebook login, please change password on that platform", HttpStatus.BAD_REQUEST),
+
+    // EMAIL
+    EMAIL_EXISTED(409, "Email already exists", HttpStatus.CONFLICT),
+
     // USER
     USER_EXISTED(409, "User existed", HttpStatus.CONFLICT),
     USER_NOT_EXISTED(404, "User not existed", HttpStatus.NOT_FOUND),
