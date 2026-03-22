@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
-import { Link, useParams, Navigate, useLocation, useNavigate } from "react-router-dom";
+import {
+  Link,
+  useParams,
+  Navigate,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,8 +54,10 @@ import type {
 
 const getMediaUrl = (url?: string | null) => {
   if (!url) return "";
-  const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
-  const baseOrigin = import.meta.env.VITE_BASE_ORIGIN || "http://localhost:8080";
+  const apiBase =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
+  const baseOrigin =
+    import.meta.env.VITE_BASE_ORIGIN || "http://localhost:8080";
   if (url.startsWith("http")) {
     if (url.startsWith(baseOrigin) && !url.includes("/api/v1")) {
       return url.replace(baseOrigin, apiBase);
@@ -62,7 +70,7 @@ const getMediaUrl = (url?: string | null) => {
 export default function CoursePlayer() {
   const { slug } = useParams();
   const { isAuthenticated, user } = useAuth();
-  const isAdmin = user?.role?.toUpperCase() === 'ADMIN';
+  const isAdmin = user?.role?.toUpperCase() === "ADMIN";
   const location = useLocation();
   const navigate = useNavigate();
   const defaultTab = (location.state as any)?.defaultTab ?? "overview";
@@ -112,7 +120,7 @@ export default function CoursePlayer() {
     courseService
       .getCourseById(slug)
       .then(async (c) => {
-        console.log('Course fetched:', c);
+        console.log("Course fetched:", c);
         setCourse(c);
         try {
           const enrollments = await enrollmentService.getMyEnrollments();
@@ -130,13 +138,17 @@ export default function CoursePlayer() {
         } catch (_e) {}
       })
       .catch((err) => {
-        console.error('CoursePlayer error:', err);
+        console.error("CoursePlayer error:", err);
         toast.error("Không tìm thấy khóa học. Đang chuyển về trang chủ...");
         navigate("/dashboard", { replace: true });
       })
       .finally(() => setLoading(false));
   }, [slug]);
 
+  const handleVideoEnded = async () => {
+    await handleMarkComplete();
+    handleNextLecture();
+  };
   const sections = course?.sections || [];
   const totalLectures = sections.reduce((sum, s) => sum + s.lectures.length, 0);
   const progress =
@@ -191,7 +203,9 @@ export default function CoursePlayer() {
       .finally(() => setReviewsLoading(false));
   }, [course?._id]);
 
-  const handleNextLecture = () => {
+  const handleNextLecture = async () => {
+    await handleMarkComplete();
+
     const section = sections[currentLecture.section];
     if (currentLecture.lecture < section.lectures.length - 1) {
       setCurrentLecture({
@@ -337,7 +351,7 @@ export default function CoursePlayer() {
     }
   };
 
-  const handleDownloadArticle = () => {
+  const handleDownloadArticle = async () => {
     const content = currentLectureData?.content || "";
     const title = currentLectureData?.title || "bai-tap";
     const filename = `${title}.md`;
@@ -349,6 +363,8 @@ export default function CoursePlayer() {
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Đã tải xuống bài tập!");
+
+    await handleMarkComplete();
   };
 
   const formatDuration = (seconds?: number) => {
@@ -506,7 +522,7 @@ export default function CoursePlayer() {
                       onClick={handleDownloadArticle}
                       className="flex items-center gap-2 px-4 py-2 rounded-lg border border-violet-200 bg-violet-50 hover:bg-violet-100 text-violet-600 text-sm font-medium transition-colors"
                     >
-                      <Download className="w-4 h-4" /> Tải xuống (.md)
+                      <Download className="w-4 h-4" /> Tải xuống
                     </button>
                     <button
                       onClick={handleNextLecture}
@@ -538,7 +554,7 @@ export default function CoursePlayer() {
                     : undefined
                 }
                 subtitleLabel="Tiếng Việt"
-                onEnded={handleNextLecture}
+                onEnded={handleVideoEnded}
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">

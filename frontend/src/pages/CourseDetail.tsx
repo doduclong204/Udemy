@@ -22,6 +22,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import VideoPlayer from "@/pages/VideoPlayer";
+import {
   Play,
   FileText,
   BarChart3,
@@ -32,6 +39,7 @@ import {
   Check,
   Clock,
   BookOpen,
+  Download,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -49,6 +57,13 @@ const formatDuration = (seconds: number) => {
   return h > 0 ? `${h}g ${m}p` : `${m} phút`;
 };
 
+type PreviewLecture = {
+  title: string;
+  type: "VIDEO" | "ARTICLE";
+  videoUrl?: string;
+  content?: string;
+};
+
 export default function CourseDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -61,6 +76,7 @@ export default function CourseDetail() {
   const [relatedCourses, setRelatedCourses] = useState<CourseSummaryResponse[]>([]);
   const [reviews, setReviews] = useState<ReviewResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [previewLecture, setPreviewLecture] = useState<PreviewLecture | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -164,6 +180,17 @@ export default function CourseDetail() {
     navigate(`/course/${course._id}/learn`);
   };
 
+  const handleDownloadArticle = (title: string, content: string) => {
+    const filename = `${title}.md`;
+    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const getLectureIcon = (type: string) => {
     switch (type.toUpperCase()) {
       case "VIDEO":
@@ -178,6 +205,104 @@ export default function CourseDetail() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+
+      {/* ── Preview Modal ── */}
+      <Dialog
+        open={!!previewLecture}
+        onOpenChange={(open) => { if (!open) setPreviewLecture(null); }}
+      >
+        <DialogContent className="max-w-3xl p-0 overflow-hidden gap-0">
+          <DialogHeader className="px-6 pt-5 pb-3 border-b">
+            <DialogTitle className="text-base font-semibold pr-8 flex items-center gap-2">
+              {previewLecture?.type === "ARTICLE"
+                ? <FileText className="w-4 h-4 text-violet-500" />
+                : <Play className="w-4 h-4 text-violet-500" />}
+              {previewLecture?.title}
+            </DialogTitle>
+          </DialogHeader>
+
+          {previewLecture?.type === "VIDEO" && (
+            <div className="w-full bg-black">
+              {previewLecture.videoUrl ? (
+                <VideoPlayer
+                  key={previewLecture.videoUrl}
+                  src={previewLecture.videoUrl}
+                />
+              ) : (
+                <div className="aspect-video flex items-center justify-center">
+                  <p className="text-white/50 text-sm">Không có video preview</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {previewLecture?.type === "ARTICLE" && (
+            <div
+              className="overflow-y-auto"
+              style={{
+                maxHeight: "70vh",
+                background: "linear-gradient(135deg, #f8f7ff 0%, #f0f4ff 100%)",
+              }}
+            >
+              {/* Article header */}
+              <div className="sticky top-0 z-10 backdrop-blur-md bg-white/80 border-b border-violet-100 px-6 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-violet-100 flex items-center justify-center">
+                    <FileText className="w-3.5 h-3.5 text-violet-600" />
+                  </div>
+                  <span className="text-xs font-bold text-violet-600 uppercase tracking-widest">
+                    Bài tập
+                  </span>
+                </div>
+                <button
+                  onClick={() =>
+                    handleDownloadArticle(
+                      previewLecture.title,
+                      previewLecture.content ?? ""
+                    )
+                  }
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Tải xuống
+                </button>
+              </div>
+
+              {/* Article content */}
+              <div className="max-w-2xl mx-auto px-6 py-6">
+                <div className="bg-white rounded-2xl border border-violet-100 shadow-sm p-6 mb-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-violet-500 uppercase tracking-widest mb-0.5">
+                        Bài tập thực hành
+                      </p>
+                      <h2 className="text-base font-bold text-slate-800">
+                        {previewLecture.title}
+                      </h2>
+                    </div>
+                  </div>
+                </div>
+
+                {previewLecture.content ? (
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                    <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
+                      {previewLecture.content}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-10 text-center">
+                    <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <p className="text-sm text-slate-400">Bài tập này chưa có nội dung</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="bg-udemy-navy text-background">
         <div className="container mx-auto px-4 py-8">
@@ -270,7 +395,19 @@ export default function CourseDetail() {
                               {getLectureIcon(lecture.type)}
                               <span className="text-sm">{lecture.title}</span>
                               {lecture.isFree && (
-                                <button className="text-primary text-sm underline">
+                                <button
+                                  onClick={() =>
+                                    setPreviewLecture({
+                                      title: lecture.title,
+                                      type: lecture.type?.toUpperCase() === "ARTICLE"
+                                        ? "ARTICLE"
+                                        : "VIDEO",
+                                      videoUrl: lecture.videoUrl ?? undefined,
+                                      content: (lecture as any).content ?? undefined,
+                                    })
+                                  }
+                                  className="text-primary text-sm underline hover:text-primary/80 transition-colors"
+                                >
                                   Xem trước
                                 </button>
                               )}
