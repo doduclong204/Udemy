@@ -28,7 +28,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     axiosInstance
       .get<ApiResponse<ApiPagination<WishlistResponse>>>(API_ENDPOINTS.WISHLIST.BASE, {
-        params: { page: 0, size: 100 },
+        params: { page: 0, size: 10 },
       })
       .then((res) => setWishlist(res.data.data.result))
       .catch(() => {})

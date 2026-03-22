@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Bell, BookOpen, Info, CheckCircle, Loader2 } from 'lucide-react';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { useSelector, useDispatch } from 'react-redux';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import userNotificationService from '@/services/userNotificationService';
+import { fetchUnreadCount, selectUnreadCount } from '@/redux/slices/notificationSlice';
+import type { AppDispatch } from '@/redux/store';
 import type { UserNotificationResponse, NotificationType } from '@/types';
 
 const getIconStyle = (type: NotificationType) => {
@@ -30,22 +29,31 @@ const formatTime = (iso: string) => {
 };
 
 export function NotificationDropdown() {
-  const [isOpen, setIsOpen]         = useState(false);
+  const dispatch                          = useDispatch<AppDispatch>();
+  const unreadCount                       = useSelector(selectUnreadCount);
+  const location                          = useLocation();
+  const [isOpen, setIsOpen]               = useState(false);
   const [notifications, setNotifications] = useState<UserNotificationResponse[]>([]);
-  const [loading, setLoading]       = useState(false);
+  const [loading, setLoading]             = useState(false);
 
-  // Fetch khi mở dropdown
+  // Fetch lại mỗi khi user navigate sang trang khác
+  useEffect(() => {
+    dispatch(fetchUnreadCount());
+  }, [dispatch, location.pathname]);
+
+  // Fetch danh sách khi mở dropdown
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
     userNotificationService
       .getMyNotifications({ pageSize: 7 })
-      .then((res) => setNotifications(res.result))
+      .then((res) => {
+        setNotifications(res.result);
+        dispatch(fetchUnreadCount());
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [isOpen]);
-
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  }, [isOpen, dispatch]);
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -65,7 +73,6 @@ export function NotificationDropdown() {
         className="w-80 p-0 bg-card border border-border shadow-xl"
         sideOffset={8}
       >
-        {/* Header */}
         <div className="p-3 border-b border-border flex items-center justify-between">
           <h3 className="font-semibold text-foreground">Thông báo</h3>
           {unreadCount > 0 && (
@@ -73,7 +80,6 @@ export function NotificationDropdown() {
           )}
         </div>
 
-        {/* List */}
         <div className="max-h-96 overflow-y-auto">
           {loading ? (
             <div className="flex justify-center py-8">
@@ -121,7 +127,6 @@ export function NotificationDropdown() {
           )}
         </div>
 
-        {/* Footer — ✅ đúng route /dashboard/notifications */}
         <div className="p-3 border-t border-border">
           <Link
             to="/dashboard/notifications"

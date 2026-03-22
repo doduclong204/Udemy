@@ -257,6 +257,7 @@ public class AuthenticationService {
                     "Chào mừng bạn đến với Udemy! 🎉",
                     "Tài khoản của bạn đã được tạo thành công. Hãy khám phá các khóa học ngay!",
                     user.getId(),
+                    null,
                     "USER",
                     List.of(user)
             );
@@ -267,7 +268,8 @@ public class AuthenticationService {
                         "Học viên mới đăng ký",
                         "Người dùng " + user.getName() + " (" + user.getEmail() + ") vừa đăng ký tài khoản.",
                         user.getId(),
-                        "USER",
+                        null,
+                        "ADMIN_ALERT",
                         admins
                 );
             }

@@ -161,6 +161,7 @@ public class CourseService {
                         "Khóa học vừa được cập nhật",
                         "Khóa học \"" + updatedCourse.getTitle() + "\" vừa có nội dung mới. Hãy kiểm tra ngay!",
                         id,
+                        id,
                         "COURSE",
                         enrolledUsers
                 );

@@ -36,6 +36,7 @@ public class UserService {
     UserRepository userRepository;
     UserMapper userMapper;
     PasswordEncoder passwordEncoder;
+    NotificationService notificationService;
 
     public UserResponse create(UserCreationRequest request) {
         log.info("Create a user");
@@ -53,6 +54,34 @@ public class UserService {
         } catch (DataIntegrityViolationException exception) {
             throw new AppException(ErrorCode.USER_EXISTED);
         }
+
+        try {
+            final User savedUser = user;
+
+            notificationService.sendSilentNotification(
+                    "Chào mừng bạn đến với Udemy! 🎉",
+                    "Tài khoản của bạn đã được tạo thành công. Hãy khám phá các khóa học ngay!",
+                    savedUser.getId(),
+                    null,
+                    "USER",
+                    List.of(savedUser)
+            );
+
+            List<User> admins = userRepository.findByRole(PredefinedRole.ADMIN_ROLE);
+            if (!admins.isEmpty()) {
+                notificationService.sendSilentNotification(
+                        "Học viên mới đăng ký",
+                        "Người dùng " + savedUser.getName() + " (" + savedUser.getUsername() + ") vừa được tạo tài khoản.",
+                        savedUser.getId(),
+                        null,
+                        "ADMIN_ALERT",
+                        admins
+                );
+            }
+        } catch (Exception e) {
+            log.error("Lỗi khi gửi thông báo tạo user: {}", e.getMessage());
+        }
+
         return userMapper.toUserResponse(user);
     }
 

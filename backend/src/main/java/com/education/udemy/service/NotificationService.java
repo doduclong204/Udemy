@@ -12,6 +12,7 @@ import com.education.udemy.enums.NotificationType;
 import com.education.udemy.exception.AppException;
 import com.education.udemy.exception.ErrorCode;
 import com.education.udemy.mapper.NotificationMapper;
+import com.education.udemy.repository.CourseQuestionRepository;
 import com.education.udemy.repository.NotificationRepository;
 import com.education.udemy.repository.UserNotificationRepository;
 import com.education.udemy.repository.UserRepository;
@@ -37,6 +38,7 @@ public class NotificationService {
     UserNotificationRepository userNotificationRepository;
     UserRepository userRepository;
     NotificationMapper notificationMapper;
+    CourseQuestionRepository courseQuestionRepository;
 
     @Transactional
     public NotificationResponse createNotification(NotificationCreationRequest request) {
@@ -148,8 +150,23 @@ public class NotificationService {
     @Transactional
     public void delete(String id) {
         log.info("Delete a notification");
-        if (!notificationRepository.existsById(id)) {
-            throw new AppException(ErrorCode.NOTIFICATION_NOT_FOUND);
+        Notification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.NOTIFICATION_NOT_FOUND));
+
+        if ("QUESTION".equals(notification.getRelatedType()) && notification.getRelatedId() != null) {
+            String questionId = notification.getRelatedId();
+
+            List<Notification> answerNotifs = notificationRepository
+                    .findByRelatedIdAndRelatedType(questionId, "COURSE_ANSWER");
+            answerNotifs.forEach(n -> {
+                userNotificationRepository.deleteByNotificationId(n.getId());
+                notificationRepository.delete(n);
+            });
+
+            courseQuestionRepository.findById(questionId).ifPresent(question -> {
+                log.info("Xóa câu hỏi liên quan: {}", question.getId());
+                courseQuestionRepository.delete(question);
+            });
         }
 
         userNotificationRepository.deleteByNotificationId(id);
@@ -157,13 +174,33 @@ public class NotificationService {
     }
 
     @Transactional
-    public void sendSilentNotification(String title, String message, String relatedId, String relatedType, List<User> recipients) {
+    public void sendSilentNotification(String title, String message, String relatedId,
+                                       String relatedCourseId, String relatedType, List<User> recipients) {
+        NotificationType type = ("USER".equals(relatedType) || "ADMIN_ALERT".equals(relatedType))
+                ? NotificationType.SYSTEM
+                : NotificationType.COURSE;
+
+        NotificationTarget targetType;
+        if ("QUESTION".equals(relatedType) || "COURSE_ANSWER".equals(relatedType)) {
+            targetType = NotificationTarget.SPECIFIC_USERS;
+        } else if ("USER".equals(relatedType)) {
+            targetType = NotificationTarget.NEW_USER;
+        } else if ("ADMIN_ALERT".equals(relatedType)) {
+            targetType = NotificationTarget.SPECIFIC_USERS;
+        } else {
+            targetType = recipients.size() == 1
+                    ? NotificationTarget.SPECIFIC_USERS
+                    : NotificationTarget.ENROLLED;
+        }
+
         Notification notification = Notification.builder()
-                .type(NotificationType.COURSE)
+                .type(type)
                 .title(title)
                 .message(message)
                 .relatedId(relatedId)
+                .relatedCourseId(relatedCourseId)
                 .relatedType(relatedType)
+                .targetType(targetType)
                 .status(NotificationStatus.SENT)
                 .build();
         notificationRepository.save(notification);

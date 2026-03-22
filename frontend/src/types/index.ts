@@ -624,6 +624,7 @@ export interface NotificationResponse {
   targetType: NotificationTarget;
   status: NotificationStatus;
   relatedId?: string;
+  relatedCourseId?: string;
   relatedType?: string;
   totalSent: number;
   totalRead: number;

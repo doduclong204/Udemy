@@ -13,7 +13,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,8 +40,13 @@ public class UserNotificationService {
                 cb.equal(root.get("user").get("username"), currentUsername);
 
         Specification<UserNotification> combinedSpec = usernameSpec.and(spec);
+        Pageable sortedPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
 
-        Page<UserNotification> pageUserNoti = this.userNotificationRepository.findAll(combinedSpec, pageable);
+        Page<UserNotification> pageUserNoti = this.userNotificationRepository.findAll(combinedSpec, sortedPageable);
 
         List<UserNotificationResponse> listUserNoti = pageUserNoti.getContent().stream()
                 .map(notificationMapper::toUserNotificationResponse)

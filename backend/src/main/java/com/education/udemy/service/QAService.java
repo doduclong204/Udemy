@@ -65,6 +65,7 @@ public class QAService {
         notificationService.sendSilentNotification(
                 "Câu hỏi mới từ học viên",
                 "Học viên " + currentUser.getName() + " vừa hỏi tại bài: " + lectureTitle,
+                question.getId(),
                 course.getId(),
                 "QUESTION",
                 admins
@@ -100,6 +101,7 @@ public class QAService {
             notificationService.sendSilentNotification(
                     "Giảng viên đã trả lời",
                     "Thắc mắc của bạn tại bài học đã có phản hồi mới.",
+                    question.getId(),
                     question.getCourse().getId(),
                     "COURSE_ANSWER",
                     List.of(question.getUser())

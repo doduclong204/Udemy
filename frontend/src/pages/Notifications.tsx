@@ -4,12 +4,15 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   BookOpen, Heart, Settings, Bell,
   Info, CheckCircle, X, Check, Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import userNotificationService from '@/services/userNotificationService';
+import { decrementUnread, clearUnread, selectUnreadCount, fetchUnreadCount } from '@/redux/slices/notificationSlice';
+import type { AppDispatch } from '@/redux/store';
 import { UserNotificationResponse, NotificationType } from '@/types';
 
 const getIconStyle = (type: NotificationType) => {
@@ -41,6 +44,8 @@ const navItems = [
 
 export default function Notifications() {
   const { user, isAuthenticated } = useAuth();
+  const dispatch = useDispatch<AppDispatch>();
+  const unreadCount = useSelector(selectUnreadCount);
   const [notifications, setNotifications] = useState<UserNotificationResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -48,17 +53,25 @@ export default function Notifications() {
     if (!isAuthenticated) return;
     userNotificationService
       .getMyNotifications({ pageSize: 50 })
-      .then((res) => setNotifications(res.result))
+      .then((res) => {
+        setNotifications(res.result);
+        const realUnread = res.result.filter((n: UserNotificationResponse) => !n.isRead).length;
+        if (realUnread === 0) dispatch(clearUnread());
+        else dispatch(fetchUnreadCount());
+      })
       .catch(() => toast.error('Không thể tải thông báo'))
       .finally(() => setIsLoading(false));
-  }, [isAuthenticated]);
+  }, [isAuthenticated, dispatch]);
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   const handleMarkAsRead = async (id: string) => {
+    const target = notifications.find((n) => n._id === id);
+    if (!target || target.isRead) return;
     try {
       await userNotificationService.markAsRead(id);
       setNotifications((prev) => prev.map((n) => n._id === id ? { ...n, isRead: true } : n));
+      dispatch(decrementUnread());
       toast.success('Đã đánh dấu là đã đọc');
     } catch {
       toast.error('Có lỗi xảy ra');
@@ -66,10 +79,12 @@ export default function Notifications() {
   };
 
   const handleMarkAllAsRead = async () => {
-    if (!notifications.some((n) => !n.isRead)) return;
+    const unreadItems = notifications.filter((n) => !n.isRead);
+    if (unreadItems.length === 0) return;
     try {
       await userNotificationService.markAllAsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      dispatch(clearUnread());
       toast.success('Đã đánh dấu tất cả là đã đọc');
     } catch {
       toast.error('Có lỗi xảy ra');
@@ -77,16 +92,16 @@ export default function Notifications() {
   };
 
   const handleRemove = async (id: string) => {
+    const target = notifications.find((n) => n._id === id);
     try {
       await userNotificationService.deleteNotification(id);
       setNotifications((prev) => prev.filter((n) => n._id !== id));
+      if (target && !target.isRead) dispatch(decrementUnread());
       toast.success('Đã xóa thông báo');
     } catch {
       toast.error('Có lỗi xảy ra');
     }
   };
-
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -112,7 +127,13 @@ export default function Notifications() {
                       ? 'bg-primary/10 text-primary font-medium'
                       : 'hover:bg-secondary'
                   }`}>
-                  <item.icon className="w-5 h-5" />{item.label}
+                  <item.icon className="w-5 h-5" />
+                  {item.label}
+                  {item.path === '/dashboard/notifications' && unreadCount > 0 && (
+                    <span className="ml-auto bg-primary text-primary-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>

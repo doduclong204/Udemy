@@ -22,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -34,6 +35,7 @@ public class OAuthService {
     SecurityUtil securityUtil;
     AuthMapper authMapper;
     UserService userService;
+    NotificationService notificationService;
 
     @NonFinal
     @Value("${oauth2.google.client-id}")
@@ -112,6 +114,7 @@ public class OAuthService {
             String providerId, Provider provider) {
 
         User user = userRepository.findByEmail(email).orElse(null);
+        boolean isNewUser = false;
 
         if (user != null) {
             if (Provider.LOCAL.equals(user.getProvider())) {
@@ -137,6 +140,34 @@ public class OAuthService {
                     .active(true)
                     .build();
             userRepository.save(user);
+            isNewUser = true;
+        }
+
+        if (isNewUser) {
+            try {
+                notificationService.sendSilentNotification(
+                        "Chào mừng bạn đến với Udemy! 🎉",
+                        "Tài khoản của bạn đã được tạo thành công. Hãy khám phá các khóa học ngay!",
+                        user.getId(),
+                        null,
+                        "USER",
+                        List.of(user)
+                );
+
+                List<User> admins = userRepository.findByRole(PredefinedRole.ADMIN_ROLE);
+                if (!admins.isEmpty()) {
+                    notificationService.sendSilentNotification(
+                            "Học viên mới đăng ký",
+                            "Người dùng " + user.getName() + " (" + user.getEmail() + ") vừa đăng ký tài khoản.",
+                            user.getId(),
+                            null,
+                            "ADMIN_ALERT",
+                            admins
+                    );
+                }
+            } catch (Exception e) {
+                log.error("Lỗi khi gửi thông báo đăng ký OAuth: {}", e.getMessage());
+            }
         }
 
         AuthenticationResponse res = new AuthenticationResponse();

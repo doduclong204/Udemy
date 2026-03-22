@@ -46,7 +46,7 @@ export function Header() {
 
   useEffect(() => {
     categoryService
-      .getCategories({ pageSize: 50 })
+      .getCategories({ pageSize: 10 })
       .then((res) => setCategories(res.result))
       .catch(() => {});
   }, []);
@@ -278,10 +278,10 @@ export function Header() {
                     Danh sách yêu thích
                   </Link>
                   <Link
-                    to="/dashboard/messages"
+                    to="/dashboard/notifications"
                     className="px-4 py-2 hover:bg-secondary rounded-lg"
                   >
-                    Tin nhắn
+                    Thông báo
                   </Link>
                   <Link
                     to="/dashboard/settings"

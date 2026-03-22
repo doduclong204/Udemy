@@ -434,10 +434,11 @@ export default function AdminNotifications() {
         search: search || undefined,
         status: status !== "all" ? status : undefined,
       });
-      setNotifications(res.result.filter((n) => n.relatedType !== "COURSE_ANSWER"));
-      setTotalItems(res.meta.total);
+      const filtered = res.result.filter((n) => n.relatedType !== "COURSE_ANSWER");
+setNotifications(filtered);
+setTotalItems(res.meta.total - (res.result.length - filtered.length));
 
-      // Lấy danh sách câu hỏi đã được trả lời (COURSE_ANSWER)
+      // Lấy danh sách questionId đã được trả lời qua COURSE_ANSWER notification
       try {
         const allRes = await notificationService.getAdminNotifications({
           page: 1,
@@ -549,8 +550,8 @@ export default function AdminNotifications() {
   };
 
   const handleReplyQuestion = (n: NotificationResponse) => {
-    if (n.relatedId) {
-      navigate(`/course/${n.relatedId}/learn`, { state: { defaultTab: "qa" } });
+    if (n.relatedCourseId) {
+      navigate(`/course/${n.relatedCourseId}/learn`, { state: { defaultTab: "qa" } });
     }
   };
 
@@ -764,7 +765,7 @@ export default function AdminNotifications() {
                                 Xem chi tiết
                               </DropdownMenuItem>
 
-                              {isQuestionNotif(n) && n.relatedId && (
+                              {isQuestionNotif(n) && n.relatedCourseId && (
                                 <DropdownMenuItem
                                   onClick={() => handleReplyQuestion(n)}
                                   className="text-amber-400 hover:text-amber-300"
@@ -942,7 +943,7 @@ export default function AdminNotifications() {
                   </div>
                 )}
 
-              {isQuestionNotif(selected) && selected.relatedId && (
+              {isQuestionNotif(selected) && selected.relatedCourseId && (
                 <Button
                   onClick={() => {
                     handleReplyQuestion(selected);

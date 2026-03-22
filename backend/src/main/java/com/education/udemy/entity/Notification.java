@@ -41,6 +41,7 @@ public class Notification extends BaseEntity {
     NotificationStatus status;
 
     String relatedId;
+    String relatedCourseId;
     String relatedType;
 
     @ElementCollection

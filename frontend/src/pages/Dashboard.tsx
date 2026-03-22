@@ -919,28 +919,7 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Tùy chọn thông báo */}
-                  <div className="bg-card border border-border rounded-lg p-6">
-                    <h2 className="text-lg font-semibold mb-4">
-                      Tùy chọn thông báo
-                    </h2>
-                    <div className="space-y-3">
-                      {notifPrefItems.map((n) => (
-                        <label
-                          key={n.key}
-                          className="flex items-center gap-3 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={notifPrefs[n.key]}
-                            onChange={() => toggleNotifPref(n.key)}
-                            className="accent-primary w-4 h-4"
-                          />
-                          <span>{n.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
+                  
 
                   {/* Khóa tài khoản */}
                   <div className="bg-card border border-destructive rounded-lg p-6">

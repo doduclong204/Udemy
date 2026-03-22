@@ -74,6 +74,7 @@ public class EnrollmentService {
                     "Đăng ký khóa học thành công! 🎉",
                     "Bạn đã đăng ký thành công khóa học \"" + course.getTitle() + "\". Chúc bạn học tốt!",
                     course.getId(),
+                    course.getId(),
                     "COURSE",
                     List.of(user)
             );
@@ -112,6 +113,7 @@ public class EnrollmentService {
             notificationService.sendSilentNotification(
                     "Đăng ký khóa học thành công! 🎉",
                     "Bạn đã đăng ký thành công khóa học \"" + course.getTitle() + "\". Chúc bạn học tốt!",
+                    course.getId(),
                     course.getId(),
                     "COURSE",
                     List.of(user)

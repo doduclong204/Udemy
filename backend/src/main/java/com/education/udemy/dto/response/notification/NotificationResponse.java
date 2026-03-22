@@ -26,6 +26,7 @@ public class NotificationResponse {
     NotificationTarget targetType;
     NotificationStatus status;
     String relatedId;
+    String relatedCourseId;
     String relatedType;
 
     Long totalSent;
