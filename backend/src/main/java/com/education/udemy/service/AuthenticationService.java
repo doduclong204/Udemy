@@ -4,6 +4,7 @@ import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.education.udemy.repository.CourseRepository;
@@ -73,6 +74,7 @@ public class AuthenticationService {
     OtpService otpService;
     CourseRepository courseRepository;
     OrderRepository orderRepository;
+    NotificationService notificationService;
 
     @Value("${auth.jwt.refresh-token-validity-in-seconds}")
     @NonFinal
@@ -248,6 +250,29 @@ public class AuthenticationService {
             user = userRepository.save(user);
         } catch (DataIntegrityViolationException e) {
             throw new AppException(ErrorCode.USER_EXISTED);
+        }
+
+        try {
+            notificationService.sendSilentNotification(
+                    "Chào mừng bạn đến với Udemy! 🎉",
+                    "Tài khoản của bạn đã được tạo thành công. Hãy khám phá các khóa học ngay!",
+                    user.getId(),
+                    "USER",
+                    List.of(user)
+            );
+
+            List<User> admins = userRepository.findByRole(PredefinedRole.ADMIN_ROLE);
+            if (!admins.isEmpty()) {
+                notificationService.sendSilentNotification(
+                        "Học viên mới đăng ký",
+                        "Người dùng " + user.getName() + " (" + user.getEmail() + ") vừa đăng ký tài khoản.",
+                        user.getId(),
+                        "USER",
+                        admins
+                );
+            }
+        } catch (Exception e) {
+            log.error("Lỗi khi gửi thông báo đăng ký user: {}", e.getMessage());
         }
 
         AuthenticationResponse res = new AuthenticationResponse();

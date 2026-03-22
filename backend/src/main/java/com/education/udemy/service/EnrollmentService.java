@@ -38,6 +38,7 @@ public class EnrollmentService {
     EnrollmentMapper enrollmentMapper;
     UserRepository userRepository;
     CourseRepository courseRepository;
+    NotificationService notificationService;
 
     @Transactional
     public EnrollmentResponse create(EnrollmentCreationRequest request) {
@@ -66,7 +67,21 @@ public class EnrollmentService {
         );
         courseRepository.save(course);
 
-        return enrollmentMapper.toEnrollmentResponse(enrollmentRepository.save(enrollment));
+        EnrollmentResponse response = enrollmentMapper.toEnrollmentResponse(enrollmentRepository.save(enrollment));
+
+        try {
+            notificationService.sendSilentNotification(
+                    "Đăng ký khóa học thành công! 🎉",
+                    "Bạn đã đăng ký thành công khóa học \"" + course.getTitle() + "\". Chúc bạn học tốt!",
+                    course.getId(),
+                    "COURSE",
+                    List.of(user)
+            );
+        } catch (Exception e) {
+            log.error("Lỗi khi gửi thông báo đăng ký thành công: {}", e.getMessage());
+        }
+
+        return response;
     }
 
     @Transactional
@@ -92,6 +107,18 @@ public class EnrollmentService {
                 course.getTotalStudents() == null ? 1 : course.getTotalStudents() + 1
         );
         courseRepository.save(course);
+
+        try {
+            notificationService.sendSilentNotification(
+                    "Đăng ký khóa học thành công! 🎉",
+                    "Bạn đã đăng ký thành công khóa học \"" + course.getTitle() + "\". Chúc bạn học tốt!",
+                    course.getId(),
+                    "COURSE",
+                    List.of(user)
+            );
+        } catch (Exception e) {
+            log.error("Lỗi khi gửi thông báo internalEnroll: {}", e.getMessage());
+        }
     }
 
     public ApiPagination<EnrollmentResponse> getMyEnrollments(Specification<Enrollment> spec, Pageable pageable) {

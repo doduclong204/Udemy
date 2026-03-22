@@ -39,6 +39,7 @@ public class CourseService {
     CartItemRepository cartItemRepository;
     WishlistRepository wishlistRepository;
     CourseMapper courseMapper;
+    NotificationService notificationService;
 
     @Transactional
     public CourseDetailResponse create(CreateCourseRequest request) {
@@ -151,7 +152,24 @@ public class CourseService {
         course.setTotalLectures(totalLectures);
         course.setTotalDuration(totalDuration);
 
-        return courseMapper.toDetailResponse(courseRepository.save(course));
+        Course updatedCourse = courseRepository.save(course);
+
+        try {
+            List<User> enrolledUsers = enrollmentRepository.findUsersByCourseId(id);
+            if (!enrolledUsers.isEmpty()) {
+                notificationService.sendSilentNotification(
+                        "Khóa học vừa được cập nhật",
+                        "Khóa học \"" + updatedCourse.getTitle() + "\" vừa có nội dung mới. Hãy kiểm tra ngay!",
+                        id,
+                        "COURSE",
+                        enrolledUsers
+                );
+            }
+        } catch (Exception e) {
+            log.error("Lỗi khi gửi thông báo cập nhật khóa học: {}", e.getMessage());
+        }
+
+        return courseMapper.toDetailResponse(updatedCourse);
     }
 
     public void delete(String id) {
