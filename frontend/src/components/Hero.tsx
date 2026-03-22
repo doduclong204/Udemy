@@ -97,7 +97,7 @@ export function Hero() {
             {['Lập trình', 'Thiết kế', 'Marketing', 'Kinh doanh'].map((topic) => (
               <button
                 key={topic}
-                onClick={() => navigate(`/search?q=${encodeURIComponent(topic)}`)}
+                onClick={() => navigate(`/search?category=${encodeURIComponent(topic)}`)}
                 className="px-4 py-2 bg-white/20 text-white rounded-full text-sm font-medium hover:bg-white/30 transition-colors border border-white/30"
               >
                 {topic}

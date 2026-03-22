@@ -21,7 +21,7 @@ const searchService = {
     // ── Build spring-filter string ──────────────────────────────────────────
     const filters: string[] = [];
 
-    if (params.search)   filters.push(`title~'*${params.search}*'`);
+    if (params.search) filters.push(`title~'%${params.search}%'`);
     if (params.category) filters.push(`category.name:'${params.category}'`);
     if (params.level && params.level !== 'ALL') filters.push(`level:'${params.level}'`);
     if (params.minRating) filters.push(`rating>=${params.minRating}`);
