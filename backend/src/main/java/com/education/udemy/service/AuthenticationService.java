@@ -7,8 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.education.udemy.repository.CourseRepository;
-import com.education.udemy.repository.OrderRepository;
+import com.education.udemy.repository.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
@@ -43,8 +42,6 @@ import com.education.udemy.exception.AppException;
 import com.education.udemy.exception.ErrorCode;
 import com.education.udemy.mapper.AuthMapper;
 import com.education.udemy.mapper.UserMapper;
-import com.education.udemy.repository.InvalidatedTokenRepository;
-import com.education.udemy.repository.UserRepository;
 import com.education.udemy.util.SecurityUtil;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSVerifier;
@@ -75,6 +72,8 @@ public class AuthenticationService {
     CourseRepository courseRepository;
     OrderRepository orderRepository;
     NotificationService notificationService;
+    ReviewRepository reviewRepository;
+
 
     @Value("${auth.jwt.refresh-token-validity-in-seconds}")
     @NonFinal
@@ -363,11 +362,13 @@ public class AuthenticationService {
         long totalStudents = userRepository.count();
         long totalCourses = courseRepository.count();
         long totalOrders = orderRepository.count();
+        Double avgRating = reviewRepository.findAverageRating();
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalStudents", totalStudents);
         stats.put("totalCourses", totalCourses);
         stats.put("totalOrders", totalOrders);
+        stats.put("avgRating", avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : 4.8);
 
         return ResponseEntity.ok(stats);
     }

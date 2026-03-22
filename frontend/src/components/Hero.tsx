@@ -20,7 +20,7 @@ export function Hero() {
     totalCourses: 0,
     totalStudents: 0,
     totalOrders: 0,
-    avgRating: 4.8,
+    avgRating: 0,
   });
 
   useEffect(() => {
@@ -29,10 +29,10 @@ export function Hero() {
         const res = await axiosInstance.get('/auth/stats');
         const data = res.data.data;
         setStats({
-          totalCourses: data.totalCourses || 0,
-          totalStudents: data.totalStudents || 0,
-          totalOrders: data.totalOrders || 0,
-          avgRating: 4.8,
+          totalCourses: data.totalCourses || 20,
+          totalStudents: data.totalStudents || 10,
+          totalOrders: data.totalOrders || 20,
+          avgRating: data.avgRating || 4.8,
         });
       } catch {
         // Giữ nguyên giá trị mặc định nếu lỗi
