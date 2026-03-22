@@ -27,6 +27,7 @@ import {
 import { ROLE, RoleType } from "@/constant/common.constant";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { toast } from "sonner";
+import uploadService from "@/services/uploadService";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(value);
@@ -101,12 +102,10 @@ export default function AdminStudents() {
     }
   };
 
-  // Fetch khi page hoặc filter thay đổi
   useEffect(() => {
     fetchStudents(currentPage, searchQuery, statusFilter);
   }, [currentPage, statusFilter]);
 
-  // Fetch khi search thay đổi (bỏ qua lần mount đầu)
   useEffect(() => {
     if (!isMounted.current) {
       isMounted.current = true;
@@ -157,18 +156,7 @@ export default function AdminStudents() {
       if (!selectedStudent) return;
       let avatarUrl = editStudent.avatar;
       if (avatarFile) {
-        const fd = new FormData();
-        fd.append("file", avatarFile);
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1"}/upload/image`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
-          body: fd,
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const url = data.data.url;
-          avatarUrl = url.startsWith("http") ? url : `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1"}${url}`;
-        }
+        avatarUrl = await uploadService.uploadImage(avatarFile);
       }
       await userService.updateUser(selectedStudent.id, {
         name: editStudent.name,
@@ -370,7 +358,7 @@ export default function AdminStudents() {
         </div>
       </div>
 
-      {/* ── Add Dialog ── */}
+      {/* Add Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="admin-dialog sm:max-w-md" style={{ background: '#0f1117', border: '1px solid #1e2230' }}>
           <DialogHeader>
@@ -407,7 +395,7 @@ export default function AdminStudents() {
         </DialogContent>
       </Dialog>
 
-      {/* ── View Dialog ── */}
+      {/* View Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden [&::-webkit-scrollbar]:hidden" style={{ background: '#0f1117', border: '1px solid #1e2230' }}>
           {selectedStudent && (
@@ -469,7 +457,7 @@ export default function AdminStudents() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Edit Dialog ── */}
+      {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&::-webkit-scrollbar]:hidden" style={{ background: '#0f1117', border: '1px solid #1e2230' }}>
           <div className="px-6 pt-5 pb-4" style={{ borderBottom: '1px solid #1e2230' }}>
@@ -559,7 +547,7 @@ export default function AdminStudents() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Notification Dialog ── */}
+      {/* Notification Dialog */}
       <Dialog open={isNotifDialogOpen} onOpenChange={setIsNotifDialogOpen}>
         <DialogContent className="admin-dialog sm:max-w-lg" style={{ background: '#0f1117', border: '1px solid #1e2230' }}>
           <DialogHeader>
@@ -598,7 +586,7 @@ export default function AdminStudents() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Delete Dialog ── */}
+      {/* Delete Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="admin-dialog">
           <AlertDialogHeader>

@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import uploadService from "@/services/uploadService";
 
 type LectureType = "VIDEO" | "ARTICLE";
 
@@ -84,9 +85,6 @@ const secondsToMMSS = (secs?: number): string => {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 };
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const BASE_ORIGIN = import.meta.env.VITE_BASE_ORIGIN;
-
 export default function AdminCourseForm() {
   const dispatch = useDispatch<AppDispatch>();
   const { id } = useParams();
@@ -108,7 +106,6 @@ export default function AdminCourseForm() {
     isBestseller: false,
   });
 
-  // ✅ State cho ảnh
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string>("");
   const [bannerFile, setBannerFile] = useState<File | null>(null);
@@ -122,7 +119,6 @@ export default function AdminCourseForm() {
   ]);
   const [sections, setSections] = useState<Section[]>(DEFAULT_SECTIONS);
 
-  // Load categories
   useEffect(() => {
     const loadCategories = async () => {
       try {
@@ -140,7 +136,6 @@ export default function AdminCourseForm() {
     loadCategories();
   }, []);
 
-  // Load course khi edit
   useEffect(() => {
     if (!isEditing || !id) return;
     const loadCourse = async () => {
@@ -161,11 +156,9 @@ export default function AdminCourseForm() {
           isBestseller: course.isBestseller || false,
         });
 
-        // Load preview ảnh từ URL cũ
         if (course.thumbnail) setThumbnailPreview(course.thumbnail);
         if (course.banner) setBannerPreview(course.banner);
 
-        // Load learningOutcomes
         if (course.learningOutcomes) {
           try {
             const points = JSON.parse(course.learningOutcomes);
@@ -205,7 +198,6 @@ export default function AdminCourseForm() {
     loadCourse();
   }, [id, isEditing]);
 
-  // Validate file ảnh: chỉ chấp nhận PNG/JPG, tối đa 5MB
   const validateImageFile = (file: File): boolean => {
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
@@ -218,43 +210,16 @@ export default function AdminCourseForm() {
     }
     return true;
   };
-  const uploadImage = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const res = await fetch(`${BASE_URL}/upload/image`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-      },
-      body: formData,
-    });
-    if (!res.ok) throw new Error("Upload ảnh thất bại");
-    const data = await res.json();
 
-    const url = data.data.url;
-    return url.startsWith("http") ? url : `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1"}${url}`;
-  };
+  const uploadImage = (file: File): Promise<string> =>
+    uploadService.uploadImage(file);
 
-  //Hàm upload video
-  const uploadVideo = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const res = await fetch(`${BASE_URL}/upload/video`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-      },
-      body: formData,
-    });
-    if (!res.ok) throw new Error("Upload video thất bại");
-    const data = await res.json();
-    return data.data.url;
-  };
+  const uploadVideo = (file: File): Promise<string> =>
+    uploadService.uploadVideo(file);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // ✅ Validate ảnh khi tạo mới
     if (!isEditing && (!thumbnailFile || !bannerFile)) {
       toast.error("Vui lòng chọn Thumbnail và Banner");
       return;
@@ -274,7 +239,6 @@ export default function AdminCourseForm() {
       return;
     }
 
-    // Upload video mới nếu có
     const hasNewVideos = sections.some(s =>
       s.lectures.some(l => l.type === "VIDEO" && l.videoFile)
     );
@@ -478,7 +442,6 @@ export default function AdminCourseForm() {
     );
   };
 
-  // ✅ Chỉ lưu file vào state, CHƯA upload (upload khi submit)
   const handleVideoUpload = (
     sectionId: string,
     lectureId: string,
@@ -681,7 +644,7 @@ export default function AdminCourseForm() {
           </div>
         </div>
 
-        {/* ✅ Media - Upload thật */}
+        {/* Media */}
         <div className="bg-admin-card border border-admin-border rounded-xl p-6 space-y-6">
           <h2 className="text-lg font-semibold text-admin-foreground">
             Hình ảnh
@@ -835,15 +798,6 @@ export default function AdminCourseForm() {
               />
               <Label className="text-admin-foreground">Khoá học nổi bật</Label>
             </div>
-            {/* <div className="flex items-center gap-3">
-              <Switch
-                checked={formData.isBestseller}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, isBestseller: checked })
-                }
-              />
-              <Label className="text-admin-foreground">Bestseller</Label>
-            </div> */}
           </div>
         </div>
 

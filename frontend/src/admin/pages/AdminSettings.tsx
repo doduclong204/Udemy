@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -28,9 +28,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import axiosInstance from "@/config/api";
+import uploadService from "@/services/uploadService";
 
-// ── Schema ────────────────────────────────────────────────
 const schema = z.object({
   siteName: z.string().min(1, "Tên website không được để trống").max(100),
   siteDescription: z.string().max(500, "Mô tả tối đa 500 ký tự").optional(),
@@ -68,7 +67,6 @@ const toRequest = (d: FormData): SettingRequest => ({
   footerText: d.footerText,
 });
 
-// ── Component ─────────────────────────────────────────────
 export default function AdminSettings() {
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -87,7 +85,6 @@ export default function AdminSettings() {
     },
   });
 
-  // ── load settings on mount ──
   useEffect(() => {
     (async () => {
       try {
@@ -126,28 +123,14 @@ export default function AdminSettings() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await axiosInstance.post("/upload/image", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      const relativePath =
-        res.data?.data?.data?.url ?? res.data?.data?.url ?? res.data?.url;
-      if (relativePath) {
-        const baseURL =
-          axiosInstance.defaults.baseURL ?? "http://localhost:8080/api/v1";
-        const fullUrl = relativePath.startsWith("http")
-          ? relativePath
-          : `${baseURL}${relativePath}`;
-        form.setValue("logo", fullUrl);
-        toast.success("Upload logo thành công!");
-      }
+      const fullUrl = await uploadService.uploadImage(file);
+      form.setValue("logo", fullUrl);
+      toast.success("Upload logo thành công!");
     } catch {
       toast.error("Upload logo thất bại!");
     }
   };
+
   const isLoading = form.formState.isSubmitting;
 
   return (
@@ -163,7 +146,7 @@ export default function AdminSettings() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* ── Site Identity ── */}
+          {/* Site Identity */}
           <Section
             icon={<Globe className="w-5 h-5" />}
             title="Thông tin website"
@@ -295,7 +278,7 @@ export default function AdminSettings() {
             />
           </Section>
 
-          {/* ── Contact ── */}
+          {/* Contact */}
           <Section
             icon={<Mail className="w-5 h-5" />}
             title="Thông tin liên hệ"
@@ -366,7 +349,7 @@ export default function AdminSettings() {
             />
           </Section>
 
-          {/* ── Social ── */}
+          {/* Social */}
           <Section title="Mạng xã hội">
             <FormField
               control={form.control}
@@ -411,7 +394,7 @@ export default function AdminSettings() {
             />
           </Section>
 
-          {/* ── Footer ── */}
+          {/* Footer */}
           <Section title="Cài đặt Footer">
             <FormField
               control={form.control}
@@ -434,7 +417,7 @@ export default function AdminSettings() {
             />
           </Section>
 
-          {/* ── Save ── */}
+          {/* Save */}
           <div className="flex justify-end">
             <Button
               type="submit"
@@ -460,7 +443,6 @@ export default function AdminSettings() {
   );
 }
 
-// ── Helpers ───────────────────────────────────────────────
 const INPUT =
   "bg-admin-accent border-admin-border text-admin-foreground placeholder:text-admin-muted-foreground";
 const Req = () => <span className="text-red-400 ml-0.5">*</span>;

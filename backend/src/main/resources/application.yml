@@ -50,6 +50,11 @@ upload:
     image-uri: ${UPLOAD_IMAGE_URI:file:///E:/Udemy/upload/images/}
     video-uri: ${UPLOAD_VIDEO_URI:file:///E:/Udemy/upload/videos/}
 
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
+
 resend:
   api-key: ${RESEND_API_KEY}
   from-email: onboarding@resend.dev

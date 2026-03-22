@@ -33,8 +33,7 @@ public class SecurityConfiguration {
                 "/auth/facebook",
                 "/auth/stats",
                 "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
-                "/storage/**", "/files/**", "/images/**", "/videos/**",
-                "/upload/**"
+                "/storage/**", "/files/**", "/images/**", "/videos/**"
         };
         http
                 .csrf(c -> c.disable())

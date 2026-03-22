@@ -29,6 +29,11 @@ upload:
     image-uri: file:///tmp/upload/images/
     video-uri: file:///tmp/upload/videos/
 
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:dummy-cloud}
+  api-key: ${CLOUDINARY_API_KEY:dummy-key}
+  api-secret: ${CLOUDINARY_API_SECRET:dummy-secret}
+
 auth:
   jwt:
     base64-secret-access: ${JWT_SECRET_ACCESS}
