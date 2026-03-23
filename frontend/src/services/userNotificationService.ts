@@ -6,7 +6,7 @@ const USER_NOTIF_BASE = '/user-notifications';
 const userNotificationService = {
   getMyNotifications: async (params?: GetNotificationsParams): Promise<ApiPagination<UserNotificationResponse>> => {
     const page = params?.page || 1;
-    const pageSize = params?.pageSize || 20;
+    const pageSize = params?.pageSize || 10;
 
     const filters: string[] = [];
     if (params?.isRead !== undefined) filters.push(`isRead:${params.isRead}`);
@@ -16,7 +16,7 @@ const userNotificationService = {
       USER_NOTIF_BASE,
       {
         params: {
-          page: Math.max(0, page - 1),
+          page: page,
           size: pageSize,
           filter: filters.length > 0 ? filters.join(' and ') : undefined,
         },

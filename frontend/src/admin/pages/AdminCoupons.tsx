@@ -396,7 +396,7 @@ export default function AdminCoupons() {
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
+              disabled={currentPage === totalPages || totalPages === 0}
               className="border-admin-border text-admin-foreground hover:bg-admin-accent"
             >
               Sau

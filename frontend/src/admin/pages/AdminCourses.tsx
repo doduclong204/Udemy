@@ -117,7 +117,7 @@ export default function AdminCourses() {
           toast.error('Không có token xác thực. Vui lòng đăng nhập lại.');
           return;
         }
-        const res = await categoryService.getCategories({ page: 1, pageSize: 100 });
+        const res = await categoryService.getCategories({ page: 1, pageSize: 10 });
         setCategories(res.result);
       } catch (err: any) {
         console.error('Failed to load categories', err);
@@ -149,8 +149,8 @@ export default function AdminCourses() {
 
   const totalItems = pagination.totalItems;
   const totalPages = pagination.totalPages;
-  const showCountStart = totalItems === 0 ? 0 : (pagination.page - 1) * pagination.pageSize + 1;
-  const showCountEnd = Math.min(pagination.page * pagination.pageSize, totalItems);
+const showCountStart = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+const showCountEnd = Math.min(currentPage * itemsPerPage, totalItems);
 
   const handleViewCourse = async (course: any) => {
     setIsViewDialogOpen(true);

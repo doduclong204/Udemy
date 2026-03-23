@@ -32,7 +32,7 @@ const notificationService = {
       ApiResponse<ApiPagination<NotificationResponse>>
     >(API_ENDPOINTS.NOTIFICATIONS.BASE, {
       params: {
-        page: Math.max(0, page - 1),
+        page: page,
         size: pageSize,
         filter: filters.length > 0 ? filters.join(" and ") : undefined,
       },

@@ -113,7 +113,15 @@ public class NotificationService {
 
     public ApiPagination<NotificationResponse> getAll(Specification<Notification> spec, Pageable pageable) {
         log.info("Get all notifications for admin");
-        Page<Notification> pageNotification = this.notificationRepository.findAll(spec, pageable);
+
+        // Luôn exclude COURSE_ANSWER ở tầng service — frontend không cần biết
+        Specification<Notification> excludeAnswers = (root, query, cb) -> cb.or(
+                cb.isNull(root.get("relatedType")),
+                cb.notEqual(root.get("relatedType"), "COURSE_ANSWER")
+        );
+
+        Page<Notification> pageNotification = this.notificationRepository
+                .findAll(spec == null ? excludeAnswers : spec.and(excludeAnswers), pageable);
 
         List<NotificationResponse> listNotification = pageNotification.getContent().stream()
                 .map(noti -> {

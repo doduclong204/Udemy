@@ -20,7 +20,7 @@ const couponService = {
     const response = await axiosInstance.get<ApiResponse<ApiPagination<Coupon>>>(API_ENDPOINTS.COUPONS?.BASE || '/coupons', {
       params: {
         // Spring Boot page tính từ 0
-        page: Math.max(0, page - 1),
+        page: page,
         size: pageSize,
         // Cú pháp spring-filter: code ~ '*từ_khóa*'
         filter: params?.search ? `code~'*${params.search}*'` : undefined,

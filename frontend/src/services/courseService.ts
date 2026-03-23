@@ -26,7 +26,7 @@ const courseService = {
       API_ENDPOINTS.COURSES.BASE,
       {
         params: {
-          page: Math.max(0, page - 1),
+          page: page,
           size: pageSize,
           filter: filters.length > 0 ? filters.join(' and ') : undefined,
           sort: params?.sort,
@@ -85,7 +85,7 @@ const courseService = {
       API_ENDPOINTS.COURSES.BASE,
       {
         params: {
-          page: Math.max(0, page - 1),
+          page: page,
           size: pageSize,
           filter: filters.length > 0 ? filters.join(' and ') : undefined,
           sort: params?.sort,

@@ -124,7 +124,7 @@ export default function AdminCourseForm() {
       try {
         const res = await categoryService.getCategories({
           page: 1,
-          pageSize: 100,
+          pageSize: 10,
         });
         setCategories(res.result);
       } catch (err: any) {

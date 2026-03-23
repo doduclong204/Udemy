@@ -558,8 +558,8 @@ export default function AdminOrders() {
     setLoadingLookup(true);
     try {
       const [stuRes, crsRes] = await Promise.all([
-        userService.getStudents({ page: 1, pageSize: 100 }),
-        courseService.getAdminCourses({ page: 1, pageSize: 100 }),
+        userService.getStudents({ page: 1, pageSize: 10 }),
+        courseService.getAdminCourses({ page: 1, pageSize: 10 }),
       ]);
       setStudents(stuRes.result);
       setCourses(crsRes.result);

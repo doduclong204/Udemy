@@ -29,7 +29,7 @@ const orderService = {
       ApiResponse<ApiPagination<OrderResponse>>
     >(`${API_ENDPOINTS.ORDERS.BASE}/my-orders`, {
       params: {
-        page: Math.max(0, page - 1),
+        page: page,
         size: pageSize,
         filter: params?.status ? `paymentStatus:'${params.status}'` : undefined,
       },
@@ -43,7 +43,7 @@ const orderService = {
     params?: GetOrdersParams & { search?: string },
   ): Promise<ApiPagination<OrderResponse>> => {
     const page = params?.page || 1;
-    const pageSize = params?.pageSize || 15;
+    const pageSize = params?.pageSize || 10;
 
     const filters: string[] = [];
     if (params?.search) filters.push(`orderCode~'*${params.search}*'`);
@@ -55,7 +55,7 @@ const orderService = {
       ApiResponse<ApiPagination<OrderResponse>>
     >(API_ENDPOINTS.ORDERS.BASE, {
       params: {
-        page: Math.max(0, page - 1),
+        page: page,
         size: pageSize,
         filter: filters.length > 0 ? filters.join(" and ") : undefined,
       },

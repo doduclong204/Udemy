@@ -122,7 +122,7 @@ const userService = {
         ApiResponse<RawPaginatedResponse>
       >(`${API_ENDPOINTS.USERS.BASE}`, {
         params: {
-          page: Math.max(0, page - 1),
+          page: page,
           size: pageSize,
           filter: buildFilter(params?.search, params?.status),
         },

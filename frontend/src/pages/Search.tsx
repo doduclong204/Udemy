@@ -39,7 +39,7 @@ export default function Search() {
   const [courses,    setCourses]    = useState<CourseSummaryResponse[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [total,      setTotal]      = useState(0);
-  const [page,       setPage]       = useState(0);
+  const [page,       setPage]       = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading,    setLoading]    = useState(false);
 
@@ -47,7 +47,7 @@ export default function Search() {
 
   // ── Load categories once ──────────────────────────────────────────────────
   useEffect(() => {
-    categoryService.getCategories({ pageSize: 100 })
+    categoryService.getCategories({ pageSize: 20 })
       .then((res) => setCategories(res.result))
       .catch(() => {});
   }, []);
@@ -60,8 +60,8 @@ export default function Search() {
   // ── Fetch courses ─────────────────────────────────────────────────────────
   const fetchCourses = useCallback(async (resetPage = false) => {
     setLoading(true);
-    const currentPage = resetPage ? 0 : page;
-    if (resetPage) setPage(0);
+    const currentPage = resetPage ? 1 : page;
+    if (resetPage) setPage(1);
 
     try {
       // Dùng category đầu tiên nếu có (spring-filter không hỗ trợ OR dễ dàng)
@@ -348,13 +348,13 @@ export default function Search() {
                   <div className="flex justify-center items-center gap-2 mt-10">
                     <Button
                       variant="outline" size="sm"
-                      disabled={page === 0}
+                      disabled={page === 1}
                       onClick={() => setPage((p) => p - 1)}
                     >
                       Trước
                     </Button>
 
-                    {Array.from({ length: totalPages }, (_, i) => i).map((i) => (
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((i) => (
                       <button
                         key={i}
                         onClick={() => setPage(i)}
@@ -364,13 +364,13 @@ export default function Search() {
                             : 'border border-border hover:bg-secondary'
                         }`}
                       >
-                        {i + 1}
+                        {i}
                       </button>
                     ))}
 
                     <Button
                       variant="outline" size="sm"
-                      disabled={page >= totalPages - 1}
+                      disabled={page >= totalPages}
                       onClick={() => setPage((p) => p + 1)}
                     >
                       Sau

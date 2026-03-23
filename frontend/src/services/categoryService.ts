@@ -20,7 +20,7 @@ const categoryService = {
     const response = await axiosInstance.get<ApiResponse<ApiPagination<Category>>>(API_ENDPOINTS.CATEGORIES.BASE, {
       params: {
         // Spring Boot page tính từ 0
-        page: Math.max(0, page - 1),
+        page: page,
         size: pageSize,
         // Cú pháp spring-filter: name ~ '*từ_khóa*'
         filter: params?.search ? `name~'*${params.search}*'` : undefined,

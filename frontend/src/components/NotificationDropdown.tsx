@@ -46,7 +46,7 @@ export function NotificationDropdown() {
     if (!isOpen) return;
     setLoading(true);
     userNotificationService
-      .getMyNotifications({ pageSize: 7 })
+      .getMyNotifications({ pageSize: 10 })
       .then((res) => {
         setNotifications(res.result);
         dispatch(fetchUnreadCount());

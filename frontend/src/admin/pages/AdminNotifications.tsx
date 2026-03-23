@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import notificationService from "@/services/notificationService";
+import qaService from "@/services/qaService";
 import {
   NotificationResponse,
   NotificationStatus,
@@ -53,8 +54,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
-// ==================== Helpers ====================
-
 const formatDateTime = (dateString: string | null | undefined) => {
   if (!dateString) return "Chưa gửi";
   return new Date(dateString).toLocaleString("vi-VN");
@@ -71,11 +70,8 @@ const ITEM_BASE =
 const ITEM_DEFAULT = "text-slate-300 hover:bg-[hsl(220,20%,25%)]";
 const ITEM_SEL = "bg-admin-primary/20 text-white";
 
-// Thông báo là câu hỏi từ học viên
 const isQuestionNotif = (n: NotificationResponse) =>
   n.relatedType === "QUESTION" || n.relatedType === "COURSE_QUESTION";
-
-// ==================== Label maps ====================
 
 const TYPE_LABELS: Record<NotificationType, string> = {
   PROMOTION: "Khuyến mãi",
@@ -106,10 +102,7 @@ const STATUS_LABELS: Record<NotificationStatus, string> = {
   DRAFT: "Bản nháp",
 };
 
-// ==================== Target Icon ====================
-
 function TargetCell({ n }: { n: NotificationResponse }) {
-  // Câu hỏi từ học viên — icon riêng + label riêng
   if (isQuestionNotif(n)) {
     return (
       <div className="flex items-center gap-2">
@@ -120,8 +113,6 @@ function TargetCell({ n }: { n: NotificationResponse }) {
       </div>
     );
   }
-
-  // Gửi đến user cụ thể
   if (n.targetType === "SPECIFIC_USERS") {
     return (
       <div className="flex items-center gap-2">
@@ -132,8 +123,6 @@ function TargetCell({ n }: { n: NotificationResponse }) {
       </div>
     );
   }
-
-  // Các loại còn lại
   return (
     <div className="flex items-center gap-2">
       <Users className="w-4 h-4 text-admin-muted-foreground shrink-0" />
@@ -144,15 +133,10 @@ function TargetCell({ n }: { n: NotificationResponse }) {
   );
 }
 
-// ==================== Stats Cell ====================
-
 function StatsCell({ n }: { n: NotificationResponse }) {
-  // Câu hỏi học viên → không hiện thống kê
   if (isQuestionNotif(n)) {
     return <span className="text-sm text-admin-muted-foreground">-</span>;
   }
-
-  // Các loại khác (kể cả SPECIFIC_USERS) → hiện thống kê bình thường
   if (n.status === "SENT" && n.totalSent > 0) {
     return (
       <div className="text-sm">
@@ -165,11 +149,8 @@ function StatsCell({ n }: { n: NotificationResponse }) {
       </div>
     );
   }
-
   return <span className="text-sm text-admin-muted-foreground">-</span>;
 }
-
-// ==================== Custom Select ====================
 
 function CustomSelect<T extends string>({
   value,
@@ -226,8 +207,6 @@ function CustomSelect<T extends string>({
     </div>
   );
 }
-
-// ==================== Form Dialog ====================
 
 const TYPE_OPTIONS: { value: NotificationType; label: string }[] = [
   { value: "PROMOTION", label: "Khuyến mãi" },
@@ -290,12 +269,7 @@ function NotificationFormDialog({
     setForm((prev) => ({ ...prev, [k]: v }));
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(v) => {
-        if (!v) onClose();
-      }}
-    >
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="admin-dialog sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-white">
@@ -353,12 +327,7 @@ function NotificationFormDialog({
         </div>
 
         <DialogFooter className="gap-2">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className={BTN_CANCEL}
-            disabled={isLoading}
-          >
+          <Button variant="outline" onClick={onClose} className={BTN_CANCEL} disabled={isLoading}>
             Hủy
           </Button>
           {!isEdit && (
@@ -377,15 +346,8 @@ function NotificationFormDialog({
             className="bg-blue-600 hover:bg-blue-500 text-white font-medium"
             disabled={isLoading}
           >
-            {isLoading ? (
-              "Đang xử lý..."
-            ) : isEdit ? (
-              "Lưu thay đổi"
-            ) : (
-              <>
-                <Send className="w-4 h-4 mr-2" />
-                Gửi ngay
-              </>
+            {isLoading ? "Đang xử lý..." : isEdit ? "Lưu thay đổi" : (
+              <><Send className="w-4 h-4 mr-2" />Gửi ngay</>
             )}
           </Button>
         </DialogFooter>
@@ -394,22 +356,15 @@ function NotificationFormDialog({
   );
 }
 
-// ==================== Main Component ====================
-
 export default function AdminNotifications() {
   const navigate = useNavigate();
 
-  const [notifications, setNotifications] = useState<NotificationResponse[]>(
-    [],
-  );
+  const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const isMounted = useRef(false);
-  const [answeredIds, setAnsweredIds] = useState<Set<string>>(new Set());
+  const [answeredMap, setAnsweredMap] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<NotificationStatus | "all">(
-    "all",
-  );
+  const [statusFilter, setStatusFilter] = useState<NotificationStatus | "all">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -421,10 +376,13 @@ export default function AdminNotifications() {
   const [selected, setSelected] = useState<NotificationResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const searchRef = useRef(searchQuery);
+  searchRef.current = searchQuery;
+
   const fetchNotifications = async (
-    page = currentPage,
-    search = searchQuery,
-    status = statusFilter
+    page: number,
+    search: string,
+    status: NotificationStatus | "all",
   ) => {
     setIsLoading(true);
     try {
@@ -434,24 +392,24 @@ export default function AdminNotifications() {
         search: search || undefined,
         status: status !== "all" ? status : undefined,
       });
-      const filtered = res.result.filter((n) => n.relatedType !== "COURSE_ANSWER");
-setNotifications(filtered);
-setTotalItems(res.meta.total - (res.result.length - filtered.length));
 
-      // Lấy danh sách questionId đã được trả lời qua COURSE_ANSWER notification
-      try {
-        const allRes = await notificationService.getAdminNotifications({
-          page: 1,
-          pageSize: 200,
-        });
-        const answered = new Set(
-          allRes.result
-            .filter((n) => n.relatedType === "COURSE_ANSWER" && n.relatedId)
-            .map((n) => n.relatedId as string)
+      setNotifications(res.result);
+      setTotalItems(res.meta.total);
+
+      // Fetch answered status cho các notification loại QUESTION
+      const questionNotifs = res.result.filter(
+        (n) => isQuestionNotif(n) && n.relatedId
+      );
+      if (questionNotifs.length > 0) {
+        const entries = await Promise.all(
+          questionNotifs.map(async (n) => {
+            const q = await qaService.getQuestionById(n.relatedId!);
+            return [n.relatedId!, q?.answered ?? false] as [string, boolean];
+          })
         );
-        setAnsweredIds(answered);
-      } catch {
-        // ignore
+        setAnsweredMap(Object.fromEntries(entries));
+      } else {
+        setAnsweredMap({});
       }
     } catch {
       toast.error("Không thể tải danh sách thông báo");
@@ -461,16 +419,12 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
   };
 
   useEffect(() => {
-    fetchNotifications(currentPage, searchQuery, statusFilter);
-  }, [currentPage]); // eslint-disable-line
-  useEffect(() => {
-    if (!isMounted.current) { isMounted.current = true; return; }
-    const t = setTimeout(() => {
-      setCurrentPage(1);
-      fetchNotifications(1, searchQuery, statusFilter);
-    }, 350);
+    const t = setTimeout(
+      () => fetchNotifications(currentPage, searchRef.current, statusFilter),
+      currentPage === 1 ? 350 : 0,
+    );
     return () => clearTimeout(t);
-  }, [searchQuery, statusFilter]); // eslint-disable-line
+  }, [currentPage, searchQuery, statusFilter]); // eslint-disable-line
 
   const sentCount = notifications.filter((n) => n.status === "SENT").length;
   const draftCount = notifications.filter((n) => n.status === "DRAFT").length;
@@ -543,7 +497,14 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
       toast.success("Đã xóa thông báo!");
       setIsDeleteOpen(false);
       setSelected(null);
-      fetchNotifications(currentPage, searchQuery, statusFilter);
+      // Nếu đang ở trang cuối và chỉ còn 1 item thì về trang trước
+      const newTotal = totalItems - 1;
+      const newTotalPages = Math.ceil(newTotal / itemsPerPage);
+      const targetPage = currentPage > newTotalPages && newTotalPages > 0
+        ? newTotalPages
+        : currentPage;
+      setCurrentPage(targetPage);
+      fetchNotifications(targetPage, searchQuery, statusFilter);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Xóa thất bại");
     }
@@ -551,38 +512,24 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
 
   const handleReplyQuestion = (n: NotificationResponse) => {
     if (n.relatedCourseId) {
-      navigate(`/course/${n.relatedCourseId}/learn`, { state: { defaultTab: "qa" } });
+      navigate(`/course/${n.relatedCourseId}/learn`, {
+        state: { defaultTab: "qa" },
+      });
     }
   };
 
-  const openView = (n: NotificationResponse) => {
-    setSelected(n);
-    setIsViewOpen(true);
-  };
-  const openEdit = (n: NotificationResponse) => {
-    setSelected(n);
-    setIsEditOpen(true);
-  };
-  const openDelete = (n: NotificationResponse) => {
-    setSelected(n);
-    setIsDeleteOpen(true);
-  };
+  const openView = (n: NotificationResponse) => { setSelected(n); setIsViewOpen(true); };
+  const openEdit = (n: NotificationResponse) => { setSelected(n); setIsEditOpen(true); };
+  const openDelete = (n: NotificationResponse) => { setSelected(n); setIsDeleteOpen(true); };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-admin-foreground">
-            Quản lý Thông báo
-          </h1>
-          <p className="text-admin-muted-foreground">
-            Tổng cộng {totalItems} thông báo
-          </p>
+          <h1 className="text-2xl font-bold text-admin-foreground">Quản lý Thông báo</h1>
+          <p className="text-admin-muted-foreground">Tổng cộng {totalItems} thông báo</p>
         </div>
-        <Button
-          onClick={() => setIsAddOpen(true)}
-          className="bg-admin-primary hover:bg-admin-primary/90"
-        >
+        <Button onClick={() => setIsAddOpen(true)} className="bg-admin-primary hover:bg-admin-primary/90">
           <Plus className="w-4 h-4 mr-2" />
           Tạo thông báo mới
         </Button>
@@ -590,23 +537,12 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          {
-            label: "Tổng thông báo",
-            value: totalItems,
-            color: "text-admin-foreground",
-          },
+          { label: "Tổng thông báo", value: totalItems, color: "text-admin-foreground" },
           { label: "Đã gửi", value: sentCount, color: "text-green-500" },
           { label: "Bản nháp", value: draftCount, color: "text-gray-400" },
-          {
-            label: "Lượt đọc",
-            value: totalRead.toLocaleString(),
-            color: "text-admin-foreground",
-          },
+          { label: "Lượt đọc", value: totalRead.toLocaleString(), color: "text-admin-foreground" },
         ].map((s) => (
-          <div
-            key={s.label}
-            className="bg-admin-card border border-admin-border rounded-xl p-4"
-          >
+          <div key={s.label} className="bg-admin-card border border-admin-border rounded-xl p-4">
             <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
             <p className="text-sm text-admin-muted-foreground">{s.label}</p>
           </div>
@@ -620,20 +556,14 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
             <Input
               placeholder="Tìm thông báo..."
               value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
+              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
               className="pl-10 bg-admin-accent border-admin-border text-admin-foreground"
             />
           </div>
           <div className="relative w-full sm:w-44">
             <CustomSelect<NotificationStatus | "all">
               value={statusFilter}
-              onChange={(v) => {
-                setStatusFilter(v);
-                setCurrentPage(1);
-              }}
+              onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
               options={[
                 { value: "all", label: "Tất cả" },
                 { value: "SENT", label: "Đã gửi" },
@@ -648,9 +578,7 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
         <div className="bg-admin-card border border-admin-border rounded-xl p-12 text-center">
           <Bell className="w-16 h-16 text-admin-muted-foreground mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-admin-foreground mb-2">
-            {searchQuery || statusFilter !== "all"
-              ? "Không tìm thấy thông báo"
-              : "Chưa có thông báo nào"}
+            {searchQuery || statusFilter !== "all" ? "Không tìm thấy thông báo" : "Chưa có thông báo nào"}
           </h2>
           <p className="text-admin-muted-foreground">
             {searchQuery || statusFilter !== "all"
@@ -664,22 +592,15 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
             <table className="w-full">
               <thead className="bg-admin-accent">
                 <tr>
-                  {[
-                    "Thông báo",
-                    "Loại",
-                    "Đối tượng",
-                    "Trạng thái",
-                    "Thống kê",
-                    "Hành động",
-                  ].map((h, i) => (
+                  {["Thông báo", "Loại", "Đối tượng", "Trạng thái", "Thống kê", "Hành động"].map((h, i) => (
                     <th
                       key={h}
                       className={`py-4 px-4 text-sm font-medium text-admin-muted-foreground
-                      ${i === 5 ? "text-right" : "text-left"}
-                      ${i === 1 ? "hidden md:table-cell" : ""}
-                      ${i === 2 ? "hidden lg:table-cell" : ""}
-                      ${i === 3 ? "hidden sm:table-cell" : ""}
-                      ${i === 4 ? "hidden lg:table-cell" : ""}`}
+                        ${i === 5 ? "text-right" : "text-left"}
+                        ${i === 1 ? "hidden md:table-cell" : ""}
+                        ${i === 2 ? "hidden lg:table-cell" : ""}
+                        ${i === 3 ? "hidden sm:table-cell" : ""}
+                        ${i === 4 ? "hidden lg:table-cell" : ""}`}
                     >
                       {h}
                     </th>
@@ -689,36 +610,22 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td
-                      colSpan={6}
-                      className="py-12 text-center text-admin-muted-foreground"
-                    >
+                    <td colSpan={6} className="py-12 text-center text-admin-muted-foreground">
                       Đang tải...
                     </td>
                   </tr>
                 ) : (
                   notifications.map((n) => (
-                    <tr
-                      key={n._id}
-                      className="border-t border-admin-border hover:bg-admin-accent/50"
-                    >
+                    <tr key={n._id} className="border-t border-admin-border hover:bg-admin-accent/50">
                       <td className="py-4 px-4">
                         <div className="max-w-xs">
-                          <p className="font-medium text-admin-foreground truncate">
-                            {n.title}
-                          </p>
-                          <p className="text-sm text-admin-muted-foreground truncate">
-                            {n.message}
-                          </p>
-                          <p className="text-xs text-admin-muted-foreground mt-1">
-                            {formatDateTime(n.createdAt)}
-                          </p>
+                          <p className="font-medium text-admin-foreground truncate">{n.title}</p>
+                          <p className="text-sm text-admin-muted-foreground truncate">{n.message}</p>
+                          <p className="text-xs text-admin-muted-foreground mt-1">{formatDateTime(n.createdAt)}</p>
                         </div>
                       </td>
                       <td className="py-4 px-4 hidden md:table-cell">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${TYPE_COLORS[n.type]}`}
-                        >
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${TYPE_COLORS[n.type]}`}>
                           {TYPE_LABELS[n.type]}
                         </span>
                       </td>
@@ -727,19 +634,17 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
                       </td>
                       <td className="py-4 px-4 hidden sm:table-cell">
                         {isQuestionNotif(n) ? (
-                          answeredIds.has(n.relatedId ?? '') ? (
+                          answeredMap[n.relatedId ?? ""] ? (
                             <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-500/10 text-green-400">
                               Đã trả lời
                             </span>
                           ) : (
                             <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-amber-500/10 text-amber-400">
-                              Chờ trả lời
+                              Chưa trả lời
                             </span>
                           )
                         ) : (
-                          <span
-                            className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${STATUS_COLORS[n.status]}`}
-                          >
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${STATUS_COLORS[n.status]}`}>
                             {STATUS_LABELS[n.status]}
                           </span>
                         )}
@@ -751,11 +656,7 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
                         <div className="flex justify-end">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                              >
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                                 <MoreVertical className="w-4 h-4 text-admin-muted-foreground" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -764,7 +665,6 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
                                 <Eye className="w-4 h-4 mr-2" />
                                 Xem chi tiết
                               </DropdownMenuItem>
-
                               {isQuestionNotif(n) && n.relatedCourseId && (
                                 <DropdownMenuItem
                                   onClick={() => handleReplyQuestion(n)}
@@ -774,7 +674,6 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
                                   Phản hồi câu hỏi
                                 </DropdownMenuItem>
                               )}
-
                               {n.status === "DRAFT" && (
                                 <>
                                   <DropdownMenuItem onClick={() => openEdit(n)}>
@@ -810,14 +709,12 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
 
           <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-admin-border gap-4">
             <p className="text-sm text-admin-muted-foreground">
-              Hiển thị{" "}
-              {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)} -{" "}
+              Hiển thị {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)} –{" "}
               {Math.min(currentPage * itemsPerPage, totalItems)} / {totalItems}
             </p>
             <div className="flex gap-2">
               <Button
-                variant="outline"
-                size="sm"
+                variant="outline" size="sm"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
                 className="border-admin-border text-admin-foreground hover:bg-admin-accent"
@@ -825,11 +722,8 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
                 Trước
               </Button>
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
+                variant="outline" size="sm"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages || totalPages === 0}
                 className="border-admin-border text-admin-foreground hover:bg-admin-accent"
               >
@@ -849,21 +743,14 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
 
       <NotificationFormDialog
         open={isEditOpen}
-        onClose={() => {
-          setIsEditOpen(false);
-          setSelected(null);
-        }}
+        onClose={() => { setIsEditOpen(false); setSelected(null); }}
         onSubmit={handleEditSubmit}
-        initialData={
-          selected
-            ? {
-                title: selected.title,
-                message: selected.message,
-                type: selected.type,
-                targetType: selected.targetType,
-              }
-            : undefined
-        }
+        initialData={selected ? {
+          title: selected.title,
+          message: selected.message,
+          type: selected.type,
+          targetType: selected.targetType,
+        } : undefined}
         isEdit
         isLoading={isSubmitting}
       />
@@ -877,9 +764,7 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
             <div className="space-y-4 py-4">
               <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
                 <p className="text-xs text-slate-400 mb-1">Tiêu đề</p>
-                <p className="text-white text-lg font-semibold">
-                  {selected.title}
-                </p>
+                <p className="text-white text-lg font-semibold">{selected.title}</p>
               </div>
               <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
                 <p className="text-xs text-slate-400 mb-1">Nội dung</p>
@@ -893,62 +778,45 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
                     value: isQuestionNotif(selected)
                       ? "Câu hỏi học viên"
                       : selected.targetType
-                        ? (TARGET_LABELS[selected.targetType] ??
-                          selected.targetType)
+                        ? (TARGET_LABELS[selected.targetType] ?? selected.targetType)
                         : "-",
                   },
                   {
                     label: "Trạng thái",
                     value: isQuestionNotif(selected)
-                      ? answeredIds.has(selected.relatedId ?? '')
-                        ? "Đã trả lời"
-                        : "Chờ trả lời"
+                      ? answeredMap[selected.relatedId ?? ""] ? "Đã trả lời" : "Chưa trả lời"
                       : STATUS_LABELS[selected.status],
                   },
-                  {
-                    label: "Ngày tạo",
-                    value: formatDateTime(selected.createdAt),
-                  },
+                  { label: "Ngày tạo", value: formatDateTime(selected.createdAt) },
                 ].map((f) => (
-                  <div
-                    key={f.label}
-                    className="bg-slate-700/50 border border-slate-600/50 p-3 rounded-lg"
-                  >
+                  <div key={f.label} className="bg-slate-700/50 border border-slate-600/50 p-3 rounded-lg">
                     <p className="text-xs text-slate-400 mb-1">{f.label}</p>
                     <p className="text-sm text-white font-medium">{f.value}</p>
                   </div>
                 ))}
               </div>
 
-              {!isQuestionNotif(selected) &&
-                selected.status === "SENT" &&
-                selected.totalSent > 0 && (
-                  <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
-                    <p className="text-xs text-slate-400 mb-2">Thống kê</p>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-slate-400 text-sm">Đã đọc</span>
-                      <span className="text-white font-semibold text-sm">
-                        {(selected.totalRead ?? 0).toLocaleString()} /{" "}
-                        {selected.totalSent.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="w-full bg-slate-600/50 rounded-full h-2">
-                      <div
-                        className="bg-admin-primary h-2 rounded-full"
-                        style={{
-                          width: `${((selected.totalRead ?? 0) / selected.totalSent) * 100}%`,
-                        }}
-                      />
-                    </div>
+              {!isQuestionNotif(selected) && selected.status === "SENT" && selected.totalSent > 0 && (
+                <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
+                  <p className="text-xs text-slate-400 mb-2">Thống kê</p>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-slate-400 text-sm">Đã đọc</span>
+                    <span className="text-white font-semibold text-sm">
+                      {(selected.totalRead ?? 0).toLocaleString()} / {selected.totalSent.toLocaleString()}
+                    </span>
                   </div>
-                )}
+                  <div className="w-full bg-slate-600/50 rounded-full h-2">
+                    <div
+                      className="bg-admin-primary h-2 rounded-full"
+                      style={{ width: `${((selected.totalRead ?? 0) / selected.totalSent) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
 
               {isQuestionNotif(selected) && selected.relatedCourseId && (
                 <Button
-                  onClick={() => {
-                    handleReplyQuestion(selected);
-                    setIsViewOpen(false);
-                  }}
+                  onClick={() => { handleReplyQuestion(selected); setIsViewOpen(false); }}
                   className="w-full bg-amber-500 hover:bg-amber-400 text-white"
                 >
                   <MessageSquare className="w-4 h-4 mr-2" />
@@ -958,11 +826,7 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
             </div>
           )}
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsViewOpen(false)}
-              className={BTN_CANCEL}
-            >
+            <Button variant="outline" onClick={() => setIsViewOpen(false)} className={BTN_CANCEL}>
               Đóng
             </Button>
           </DialogFooter>
@@ -972,20 +836,14 @@ setTotalItems(res.meta.total - (res.result.length - filtered.length));
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent className="admin-dialog">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">
-              Xác nhận xóa thông báo
-            </AlertDialogTitle>
+            <AlertDialogTitle className="text-white">Xác nhận xóa thông báo</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-400">
-              Bạn có chắc chắn muốn xóa thông báo "{selected?.title}"? Hành động
-              này không thể hoàn tác.
+              Bạn có chắc chắn muốn xóa thông báo "{selected?.title}"? Hành động này không thể hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className={BTN_CANCEL}>Hủy</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700 text-white">
               Xóa
             </AlertDialogAction>
           </AlertDialogFooter>

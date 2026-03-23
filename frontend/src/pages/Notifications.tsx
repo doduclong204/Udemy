@@ -52,7 +52,7 @@ export default function Notifications() {
   useEffect(() => {
     if (!isAuthenticated) return;
     userNotificationService
-      .getMyNotifications({ pageSize: 50 })
+      .getMyNotifications({ pageSize: 10 })
       .then((res) => {
         setNotifications(res.result);
         const realUnread = res.result.filter((n: UserNotificationResponse) => !n.isRead).length;

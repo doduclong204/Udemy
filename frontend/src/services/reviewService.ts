@@ -26,7 +26,7 @@ const reviewService = {
       ApiResponse<ApiPagination<ReviewResponse>>
     >(API_ENDPOINTS.REVIEWS.BASE, {
       params: {
-        page: Math.max(0, page - 1),
+        page: page,
         size: pageSize,
         filter: `course.id:'${courseId}'`,
       },
@@ -86,7 +86,7 @@ const reviewService = {
       ApiResponse<ApiPagination<ReviewResponse>>
     >(API_ENDPOINTS.REVIEWS.BASE, {
       params: {
-        page: Math.max(0, page - 1),
+        page: page,
         size: pageSize,
         filter: filters.length > 0 ? filters.join(" and ") : undefined,
       },

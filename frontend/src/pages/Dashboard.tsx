@@ -89,7 +89,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     enrollmentService
-      .getMyEnrollments({ pageSize: 20 })
+      .getMyEnrollments({ pageSize: 10 })
       .then((res) => setEnrollments(res.result))
       .catch(() => {})
       .finally(() => setLoadingEnrollments(false));
@@ -103,7 +103,7 @@ export default function Dashboard() {
     if (!isNotifications) return;
     setLoadingNotifs(true);
     userNotificationService
-      .getMyNotifications({ pageSize: 50 })
+      .getMyNotifications({ pageSize: 10 })
       .then((res) => setUserNotifs(res.result))
       .catch(() => sonnerToast.error("Không thể tải thông báo"))
       .finally(() => setLoadingNotifs(false));

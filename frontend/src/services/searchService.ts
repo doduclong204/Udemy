@@ -15,7 +15,7 @@ export interface SearchCoursesParams {
 
 const searchService = {
   searchCourses: async (params: SearchCoursesParams): Promise<ApiPagination<CourseSummaryResponse>> => {
-    const page     = params.page     ?? 0;
+    const page     = params.page     ?? 1;
     const pageSize = params.pageSize ?? 12;
 
     // ── Build spring-filter string ──────────────────────────────────────────
@@ -32,7 +32,7 @@ const searchService = {
       API_ENDPOINTS.COURSES.BASE,
       {
         params: {
-          page,
+          page: page,
           size:   pageSize,
           filter: filters.length > 0 ? filters.join(' and ') : undefined,
           sort:   params.sort ?? 'createdAt,desc',
