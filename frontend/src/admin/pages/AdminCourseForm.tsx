@@ -225,7 +225,10 @@ export default function AdminCourseForm() {
       return;
     }
 
-    toast.loading("Đang upload ảnh...", { id: "upload" });
+    const hasNewImages = thumbnailFile || bannerFile;
+    if (hasNewImages) {
+      toast.loading("Đang upload ảnh...", { id: "upload" });
+    }
 
     let thumbnailUrl = thumbnailPreview;
     let bannerUrl = bannerPreview;
@@ -233,8 +236,10 @@ export default function AdminCourseForm() {
     try {
       if (thumbnailFile) thumbnailUrl = await uploadImage(thumbnailFile);
       if (bannerFile) bannerUrl = await uploadImage(bannerFile);
+      if (hasNewImages) toast.dismiss("upload");
+
     } catch (err) {
-      toast.dismiss("upload");
+      if (hasNewImages) toast.dismiss("upload");
       toast.error("Upload ảnh thất bại, vui lòng thử lại");
       return;
     }
@@ -285,8 +290,10 @@ export default function AdminCourseForm() {
             outstanding: formData.isFeatured,
             learningOutcomes: learningOutcomesJson,
             sections: sectionsWithVideoUrl.map((s) => ({
+              id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s.id) ? s.id : undefined,
               title: s.title,
               lectures: s.lectures.map((l) => ({
+                id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(l.id) ? l.id : undefined,
                 title: l.title,
                 type: l.type,
                 videoUrl: l.videoUrl || l.videoFileName,

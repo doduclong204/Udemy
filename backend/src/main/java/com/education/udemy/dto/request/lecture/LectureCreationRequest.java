@@ -1,7 +1,6 @@
 package com.education.udemy.dto.request.lecture;
 
 import com.education.udemy.enums.LectureType;
-import com.education.udemy.enums.Level;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
@@ -11,15 +10,15 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
-import java.math.BigDecimal;
-import java.util.List;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class LectureCreationRequest {
+
+    String id;
+
     @NotBlank(message = "Tiêu đề bài học không được để trống")
     String title;
 

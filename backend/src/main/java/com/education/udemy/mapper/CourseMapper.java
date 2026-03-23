@@ -10,7 +10,6 @@ import org.mapstruct.*;
 @Mapper(componentModel = "spring", uses = {SectionMapper.class})
 public interface CourseMapper {
 
-
     @Mapping(target = "category", ignore = true)
     Course toCourse(CreateCourseRequest request);
 
@@ -24,6 +23,7 @@ public interface CourseMapper {
     CourseDetailResponse toDetailResponse(Course course);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    @Mapping(target = "category", ignore = true) // Xử lý set Category riêng trong Service
+    @Mapping(target = "category", ignore = true)
+    @Mapping(target = "sections", ignore = true)
     void updateCourse(@MappingTarget Course course, UpdateCourseRequest request);
 }
