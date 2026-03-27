@@ -50,3 +50,12 @@ oauth2:
     client-id: dummy-client-id
   facebook:
     app-id: dummy-app-id
+vnpay:
+  tmn-code: DUMMY_TMN_CODE
+  hash-secret: DUMMY_HASH_SECRET
+  url: https://dummy/vpcpay.html
+  return-url: http://dummy/vnpay-return
+  frontend-url: http://dummy
+
+gemini:
+  api-key: DUMMY_GEMINI_API_KEY

@@ -22,7 +22,10 @@ import Dashboard from "./pages/Dashboard";
 import Cart from "./pages/Cart";
 import OrderCheckout from "./pages/OrderCheckout";
 import OrderPayment from "./pages/OrderPayment";
+import PaymentResult from "./pages/PaymentResult";
 import NotFound from "./pages/NotFound";
+import AIChatBox from '@/components/AIChatBox';
+
 
 import { AdminLayout } from "./admin/layouts/AdminLayout";
 import AdminDashboard from "./admin/pages/AdminDashboard";
@@ -84,6 +87,7 @@ const App = () => (
                         element={<OrderCheckout />}
                       />
                       <Route path="/order/payment" element={<OrderPayment />} />
+                      <Route path="/payment/result" element={<PaymentResult />} />
 
                       {/* Admin Routes */}
                       <Route path="/admin" element={<AdminLayout />}>
@@ -114,6 +118,7 @@ const App = () => (
 
                       <Route path="*" element={<NotFound />} />
                     </Routes>
+                    <AIChatBox />
                   </BrowserRouter>
                 </TooltipProvider>
               </SettingsProvider>
