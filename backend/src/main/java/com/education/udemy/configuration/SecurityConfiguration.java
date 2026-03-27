@@ -32,6 +32,7 @@ public class SecurityConfiguration {
                 "/auth/google",
                 "/auth/facebook",
                 "/auth/stats",
+                "/orders/vnpay/return",
                 "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
                 "/storage/**", "/files/**", "/images/**", "/videos/**"
         };

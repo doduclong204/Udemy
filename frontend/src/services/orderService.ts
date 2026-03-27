@@ -20,6 +20,13 @@ const orderService = {
     return response.data.data;
   },
 
+  createVnpayUrl: async (orderId: string): Promise<string> => {
+    const response = await axiosInstance.post<ApiResponse<{ message: string }>>(
+      `${API_ENDPOINTS.ORDERS.BASE}/${orderId}/vnpay`,
+    );
+    return response.data.data.message;
+  },
+
   getMyOrders: async (
     params?: GetOrdersParams,
   ): Promise<ApiPagination<OrderResponse>> => {

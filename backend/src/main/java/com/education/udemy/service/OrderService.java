@@ -1,5 +1,6 @@
 package com.education.udemy.service;
 
+import com.education.udemy.configuration.VNPayConfig;
 import com.education.udemy.dto.request.order.AdminOrderCreationRequest;
 import com.education.udemy.dto.request.order.OrderCreationRequest;
 import com.education.udemy.dto.request.order.OrderUpdateRequest;
@@ -7,6 +8,7 @@ import com.education.udemy.dto.response.api.ApiPagination;
 import com.education.udemy.dto.response.order.OrderResponse;
 import com.education.udemy.entity.*;
 import com.education.udemy.enums.OrderStatus;
+import com.education.udemy.enums.PaymentMethod;
 import com.education.udemy.exception.AppException;
 import com.education.udemy.exception.ErrorCode;
 import com.education.udemy.mapper.OrderMapper;
@@ -32,6 +34,7 @@ import java.io.OutputStreamWriter;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -47,6 +50,8 @@ public class OrderService {
     CouponRepository couponRepository;
     EnrollmentService enrollmentService;
     EnrollmentRepository enrollmentRepository;
+    VNPayService vnPayService;
+    VNPayConfig vnPayConfig;
 
     private BigDecimal getEffectivePrice(Course course) {
         return course.getDiscountPrice() != null ? course.getDiscountPrice() : course.getPrice();
@@ -179,6 +184,43 @@ public class OrderService {
         }
 
         return orderMapper.toOrderResponse(savedOrder);
+    }
+
+    public String createVnpayPaymentUrl(String orderId, String ipAddr) throws Exception {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+        long amount = order.getFinalAmount().longValue();
+        return vnPayService.createPaymentUrl(order.getOrderCode(), amount, ipAddr);
+    }
+
+    @Transactional
+    public boolean handleVnpayReturn(Map<String, String> params) throws Exception {
+        if (!vnPayService.verifyReturn(params)) {
+            throw new AppException(ErrorCode.INVALID_SIGNATURE);
+        }
+
+        String orderCode = params.get("vnp_TxnRef");
+        String responseCode = params.get("vnp_ResponseCode");
+
+        Order order = orderRepository.findByOrderCode(orderCode)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        if ("00".equals(responseCode)) {
+            order.setPaymentStatus(OrderStatus.COMPLETED);
+            order.setPaymentMethod(PaymentMethod.VNPAY);
+            orderRepository.save(order);
+
+            if (order.getOrderItems() != null) {
+                order.getOrderItems().forEach(item ->
+                        enrollmentService.internalEnroll(order.getUser(), item.getCourse().getId())
+                );
+            }
+            return true;
+        } else {
+            order.setPaymentStatus(OrderStatus.CANCELLED);
+            orderRepository.save(order);
+            return false;
+        }
     }
 
     public OrderResponse getDetail(String id) {

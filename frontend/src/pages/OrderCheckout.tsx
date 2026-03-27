@@ -113,7 +113,6 @@ export default function OrderCheckout() {
         paymentMethod: selected,
         couponCode,
       });
-      await clearCart();
       navigate('/order/payment', { state: { order, paymentMethod: selected } });
     } catch (error: any) {
       toast({
@@ -222,7 +221,7 @@ export default function OrderCheckout() {
                 </div>
                 {totalDiscount > 0 && (
                   <div className="flex justify-between text-green-600">
-                    <span className="flex items-center gap-1"><Tag size={12} /> Giảm giá ({discountPercentage}%)</span>
+                    <span className="flex items-center gap-1"><Tag size={12} /> Giảm giá ({discountPercentage})</span>
                     <span>- {formatCurrency(totalDiscount)}</span>
                   </div>
                 )}

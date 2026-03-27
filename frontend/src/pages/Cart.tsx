@@ -79,7 +79,7 @@ export default function Cart() {
                       <p className="text-sm text-muted-foreground line-through mt-1">{formatCurrency(totalOriginalPrice)}</p>
                       <p className="text-sm text-green-600 font-medium flex items-center gap-1 mt-1">
                         <Tag className="w-4 h-4" />
-                        Tiết kiệm {formatCurrency(totalDiscount)} ({discountPercentage}% giảm)
+                        Tiết kiệm {formatCurrency(totalDiscount)} ({discountPercentage} giảm)
                       </p>
                     </>
                   )}

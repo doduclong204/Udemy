@@ -1,5 +1,6 @@
 package com.education.udemy.controller;
 
+import com.education.udemy.configuration.VNPayConfig;
 import com.education.udemy.dto.request.order.AdminOrderCreationRequest;
 import com.education.udemy.dto.request.order.OrderCreationRequest;
 import com.education.udemy.dto.request.order.OrderUpdateRequest;
@@ -11,6 +12,8 @@ import com.education.udemy.enums.OrderStatus;
 import com.education.udemy.service.OrderService;
 import com.education.udemy.util.annotation.ApiMessage;
 import com.turkraft.springfilter.boot.Filter;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +28,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/orders")
 @RequiredArgsConstructor
@@ -33,6 +38,7 @@ import org.springframework.web.bind.annotation.*;
 public class OrderController {
 
     OrderService orderService;
+    VNPayConfig vnPayConfig;
 
     @PostMapping("/admin")
     @ApiMessage("Admin create order success")
@@ -45,6 +51,26 @@ public class OrderController {
     @ApiMessage("Create order success")
     public ResponseEntity<OrderResponse> create(@RequestBody @Valid OrderCreationRequest request) {
         return ResponseEntity.ok(orderService.create(request));
+    }
+
+    @PostMapping("/{id}/vnpay")
+    @ApiMessage("Create VNPay payment URL success")
+    public ResponseEntity<ApiString> createVnpayUrl(
+            @PathVariable String id,
+            HttpServletRequest request) throws Exception {
+        String url = orderService.createVnpayPaymentUrl(id, request.getRemoteAddr());
+        return ResponseEntity.ok(ApiString.builder().message(url).build());
+    }
+
+    @GetMapping("/vnpay/return")
+    public void vnpayReturn(
+            @RequestParam Map<String, String> params,
+            HttpServletResponse response) throws Exception {
+        boolean success = orderService.handleVnpayReturn(params);
+        String orderCode = params.get("vnp_TxnRef");
+        response.sendRedirect(vnPayConfig.getFrontendUrl() + "/payment/result"
+                + "?success=" + success
+                + "&orderCode=" + orderCode);
     }
 
     @GetMapping

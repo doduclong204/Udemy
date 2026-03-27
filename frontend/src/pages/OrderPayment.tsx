@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -11,9 +12,11 @@ import {
   Clock,
   BookOpen,
   ArrowRight,
+  Loader2,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import type { PaymentMethod, OrderResponse } from '@/types';
+import orderService from '@/services/orderService';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
@@ -25,9 +28,17 @@ interface LocationState {
 
 // ─── VNPAY ────────────────────────────────────────────────────────────────────
 function VNPayPanel({ order }: { order: OrderResponse }) {
-  const handleRedirect = () => {
-    // TODO: window.location.href = order.paymentUrl;
-    toast({ title: 'Chức năng đang phát triển', description: 'Backend chưa tích hợp VNPAY gateway.' });
+  const [loading, setLoading] = useState(false);
+
+  const handleRedirect = async () => {
+    setLoading(true);
+    try {
+      const url = await orderService.createVnpayUrl(order._id);
+      window.location.href = url;
+    } catch {
+      toast({ title: 'Lỗi', description: 'Không thể tạo liên kết thanh toán. Vui lòng thử lại.', variant: 'destructive' });
+      setLoading(false);
+    }
   };
 
   return (
@@ -58,8 +69,10 @@ function VNPayPanel({ order }: { order: OrderResponse }) {
         className="w-full h-12 text-base font-semibold flex items-center justify-center gap-2"
         style={{ background: '#534AB7' }}
         onClick={handleRedirect}
+        disabled={loading}
       >
-        Chuyển đến cổng VNPAY <ExternalLink size={16} />
+        {loading ? <Loader2 size={16} className="animate-spin" /> : <ExternalLink size={16} />}
+        {loading ? 'Đang xử lý...' : 'Chuyển đến cổng VNPAY'}
       </Button>
 
       <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1.5">
@@ -72,7 +85,6 @@ function VNPayPanel({ order }: { order: OrderResponse }) {
 // ─── MOMO ─────────────────────────────────────────────────────────────────────
 function MoMoPanel({ order }: { order: OrderResponse }) {
   const handleRedirect = () => {
-    // TODO: window.location.href = order.paymentUrl;
     toast({ title: 'Chức năng đang phát triển', description: 'Backend chưa tích hợp MoMo gateway.' });
   };
 
@@ -88,7 +100,6 @@ function MoMoPanel({ order }: { order: OrderResponse }) {
         </div>
       </div>
 
-      {/* QR placeholder */}
       <div className="flex flex-col items-center gap-3">
         <div
           className="w-48 h-48 rounded-2xl flex items-center justify-center"
@@ -130,7 +141,6 @@ function BankTransferPanel({ order }: { order: OrderResponse }) {
     toast({ title: `Đã sao chép ${label}` });
   };
 
-  // TODO: Thay bằng thông tin ngân hàng thật từ Settings
   const bank = {
     name: 'Vietcombank',
     accountNumber: '1234567890',
@@ -194,7 +204,6 @@ function BankTransferPanel({ order }: { order: OrderResponse }) {
 // ─── PAYPAL ───────────────────────────────────────────────────────────────────
 function PayPalPanel({ order }: { order: OrderResponse }) {
   const handleRedirect = () => {
-    // TODO: window.location.href = order.paymentUrl;
     toast({ title: 'Chức năng đang phát triển', description: 'Backend chưa tích hợp PayPal gateway.' });
   };
 
@@ -221,7 +230,6 @@ function PayPalPanel({ order }: { order: OrderResponse }) {
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Tương đương (USD)</span>
-          {/* TODO: Lấy tỉ giá thật từ API */}
           <span className="font-semibold text-muted-foreground">~ ${(order.finalAmount / 25000).toFixed(2)}</span>
         </div>
       </div>
@@ -270,7 +278,6 @@ export default function OrderPayment() {
       <Header />
 
       <div className="container mx-auto px-4 py-8 max-w-2xl">
-        {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm mb-8 text-muted-foreground">
           <Link to="/cart" className="hover:text-primary flex items-center gap-1 transition-colors">
             <ShoppingCart size={14} /> Giỏ hàng
@@ -281,7 +288,6 @@ export default function OrderPayment() {
           <span className="font-semibold text-foreground">Hoàn tất</span>
         </div>
 
-        {/* Order created banner */}
         <div
           className="flex items-start gap-3 rounded-xl p-4 mb-6"
           style={{ background: '#EAF3DE', border: '1.5px solid #97C459' }}
@@ -296,12 +302,10 @@ export default function OrderPayment() {
           </div>
         </div>
 
-        {/* Payment panel */}
         <div className="border border-border rounded-2xl bg-card p-6 mb-6">
           {PANEL_MAP[paymentMethod](order)}
         </div>
 
-        {/* After payment */}
         <div className="border border-border rounded-2xl bg-card p-5 space-y-3">
           <p className="font-semibold text-sm">Sau khi thanh toán</p>
           <div className="flex items-start gap-3">
