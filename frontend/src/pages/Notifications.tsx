@@ -11,9 +11,16 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import userNotificationService from '@/services/userNotificationService';
-import { decrementUnread, clearUnread, selectUnreadCount, fetchUnreadCount } from '@/redux/slices/notificationSlice';
+import {
+  fetchNotifications,
+  markOneAsRead,
+  markAllAsRead,
+  removeOne,
+  selectUnreadCount,
+  selectNotifications,
+} from '@/redux/slices/notificationSlice';
 import type { AppDispatch } from '@/redux/store';
-import { UserNotificationResponse, NotificationType } from '@/types';
+import type { NotificationType } from '@/types';
 
 const getIconStyle = (type: NotificationType) => {
   switch (type) {
@@ -44,23 +51,15 @@ const navItems = [
 
 export default function Notifications() {
   const { user, isAuthenticated } = useAuth();
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch    = useDispatch<AppDispatch>();
   const unreadCount = useSelector(selectUnreadCount);
-  const [notifications, setNotifications] = useState<UserNotificationResponse[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const notifications = useSelector(selectNotifications); // lấy từ Redux
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    userNotificationService
-      .getMyNotifications({ pageSize: 10 })
-      .then((res) => {
-        setNotifications(res.result);
-        const realUnread = res.result.filter((n: UserNotificationResponse) => !n.isRead).length;
-        if (realUnread === 0) dispatch(clearUnread());
-        else dispatch(fetchUnreadCount());
-      })
-      .catch(() => toast.error('Không thể tải thông báo'))
-      .finally(() => setIsLoading(false));
+    setIsLoading(true);
+    dispatch(fetchNotifications()).finally(() => setIsLoading(false));
   }, [isAuthenticated, dispatch]);
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -68,37 +67,36 @@ export default function Notifications() {
   const handleMarkAsRead = async (id: string) => {
     const target = notifications.find((n) => n._id === id);
     if (!target || target.isRead) return;
+    dispatch(markOneAsRead(id)); // cập nhật Redux ngay → badge header giảm ngay
     try {
       await userNotificationService.markAsRead(id);
-      setNotifications((prev) => prev.map((n) => n._id === id ? { ...n, isRead: true } : n));
-      dispatch(decrementUnread());
       toast.success('Đã đánh dấu là đã đọc');
     } catch {
+      dispatch(fetchNotifications()); // rollback
       toast.error('Có lỗi xảy ra');
     }
   };
 
   const handleMarkAllAsRead = async () => {
-    const unreadItems = notifications.filter((n) => !n.isRead);
-    if (unreadItems.length === 0) return;
+    const hasUnread = notifications.some((n) => !n.isRead);
+    if (!hasUnread) return;
+    dispatch(markAllAsRead()); // cập nhật Redux ngay
     try {
       await userNotificationService.markAllAsRead();
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      dispatch(clearUnread());
       toast.success('Đã đánh dấu tất cả là đã đọc');
     } catch {
+      dispatch(fetchNotifications()); // rollback
       toast.error('Có lỗi xảy ra');
     }
   };
 
   const handleRemove = async (id: string) => {
-    const target = notifications.find((n) => n._id === id);
+    dispatch(removeOne(id)); // cập nhật Redux ngay
     try {
       await userNotificationService.deleteNotification(id);
-      setNotifications((prev) => prev.filter((n) => n._id !== id));
-      if (target && !target.isRead) dispatch(decrementUnread());
       toast.success('Đã xóa thông báo');
     } catch {
+      dispatch(fetchNotifications()); // rollback
       toast.error('Có lỗi xảy ra');
     }
   };

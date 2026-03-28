@@ -5,11 +5,15 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, XCircle, BookOpen, ArrowRight, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
+import { useDispatch } from 'react-redux';
+import type { AppDispatch } from '@/redux/store';
+import { fetchEnrolledCount } from '@/redux/slices/enrollmentSlice';
 
 export default function PaymentResult() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { clearCart } = useCart();
+  const dispatch = useDispatch<AppDispatch>();
 
   const success = searchParams.get('success') === 'true';
   const orderCode = searchParams.get('orderCode');
@@ -17,6 +21,7 @@ export default function PaymentResult() {
   useEffect(() => {
     if (success) {
       clearCart();
+      dispatch(fetchEnrolledCount()); // cập nhật badge khóa học ngay lập tức
       setTimeout(() => navigate('/dashboard'), 5000);
     }
   }, [success]);

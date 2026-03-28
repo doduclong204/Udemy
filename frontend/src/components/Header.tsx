@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Search,
   ShoppingCart,
@@ -7,6 +7,7 @@ import {
   X,
   ChevronDown,
   Heart,
+  BookOpen,
   LayoutDashboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { logoutAsync } from "@/redux/slices/authSlice";
 import type { RootState, AppDispatch } from "@/redux/store";
 import { useCart } from "@/contexts/CartContext";
+import { useWishlist } from "@/contexts/WishlistContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 import {
@@ -24,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import categoryService from "@/services/categoryService";
 import type { Category } from "@/types";
+import { fetchEnrolledCount, selectEnrolledCount } from "@/redux/slices/enrollmentSlice";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -32,6 +35,7 @@ export function Header() {
 
   const dispatch = useDispatch<AppDispatch>();
   const { settings } = useSettings();
+  const location = useLocation();
 
   const { user, isAuthenticated } = useSelector(
     (state: RootState) => state.auth,
@@ -40,6 +44,13 @@ export function Header() {
     (state: RootState) =>
       !!state.auth.user?.role && state.auth.user.role.toUpperCase() === "ADMIN",
   );
+
+  // Wishlist count từ WishlistContext (đã có sẵn)
+  const { wishlist } = useWishlist();
+  const wishlistCount = wishlist.length;
+
+  // Enrollment count từ Redux slice mới
+  const enrolledCount = useSelector(selectEnrolledCount);
 
   const { items } = useCart();
   const navigate = useNavigate();
@@ -51,6 +62,13 @@ export function Header() {
       .catch(() => {});
   }, []);
 
+  // Fetch enrolled count khi login hoặc đổi trang
+  useEffect(() => {
+    if (isAuthenticated) {
+      dispatch(fetchEnrolledCount());
+    }
+  }, [isAuthenticated, location.pathname, dispatch]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -61,6 +79,14 @@ export function Header() {
   const handleLogout = () => {
     dispatch(logoutAsync());
   };
+
+  // Badge dùng chung — giống style notification (đỏ)
+  const Badge = ({ count }: { count: number }) =>
+    count > 0 ? (
+      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center leading-none">
+        {count > 99 ? "99+" : count}
+      </span>
+    ) : null;
 
   return (
     <header className="sticky top-0 z-50 bg-background border-b border-border shadow-sm">
@@ -140,20 +166,27 @@ export function Header() {
 
             {isAuthenticated && (
               <>
-                <Link to="/dashboard/wishlist" className="nav-link">
-                  <Heart className="w-5 h-5" />
+                {/* Khóa học của tôi + badge */}
+                <Link to="/dashboard" className="relative nav-link p-2">
+                  <BookOpen className="w-5 h-5" />
+                  <Badge count={enrolledCount} />
                 </Link>
+
+                {/* Wishlist + badge */}
+                <Link to="/dashboard/wishlist" className="relative nav-link p-2">
+                  <Heart className="w-5 h-5" />
+                  <Badge count={wishlistCount} />
+                </Link>
+
+                {/* Notification (giữ nguyên) */}
                 <NotificationDropdown />
               </>
             )}
 
-            <Link to="/cart" className="relative nav-link">
+            {/* Giỏ hàng + badge */}
+            <Link to="/cart" className="relative nav-link p-2">
               <ShoppingCart className="w-5 h-5" />
-              {items.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                  {items.length}
-                </span>
-              )}
+              <Badge count={items.length} />
             </Link>
 
             {isAuthenticated ? (
@@ -255,37 +288,64 @@ export function Header() {
                 </Link>
               )}
 
+              {/* Giỏ hàng mobile */}
               <Link
                 to="/cart"
                 className="flex items-center gap-2 px-4 py-2 hover:bg-secondary rounded-lg"
+                onClick={() => setIsMenuOpen(false)}
               >
                 <ShoppingCart className="w-5 h-5" />
-                Giỏ hàng ({items.length})
+                <span>Giỏ hàng</span>
+                {items.length > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {items.length}
+                  </span>
+                )}
               </Link>
 
               {isAuthenticated ? (
                 <>
+                  {/* Khóa học mobile */}
                   <Link
                     to="/dashboard"
-                    className="px-4 py-2 hover:bg-secondary rounded-lg"
+                    className="flex items-center gap-2 px-4 py-2 hover:bg-secondary rounded-lg"
+                    onClick={() => setIsMenuOpen(false)}
                   >
-                    Khóa học của tôi
+                    <BookOpen className="w-5 h-5" />
+                    <span>Khóa học của tôi</span>
+                    {enrolledCount > 0 && (
+                      <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                        {enrolledCount > 99 ? "99+" : enrolledCount}
+                      </span>
+                    )}
                   </Link>
+
+                  {/* Wishlist mobile */}
                   <Link
                     to="/dashboard/wishlist"
-                    className="px-4 py-2 hover:bg-secondary rounded-lg"
+                    className="flex items-center gap-2 px-4 py-2 hover:bg-secondary rounded-lg"
+                    onClick={() => setIsMenuOpen(false)}
                   >
-                    Danh sách yêu thích
+                    <Heart className="w-5 h-5" />
+                    <span>Danh sách yêu thích</span>
+                    {wishlistCount > 0 && (
+                      <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                        {wishlistCount > 99 ? "99+" : wishlistCount}
+                      </span>
+                    )}
                   </Link>
+
                   <Link
                     to="/dashboard/notifications"
                     className="px-4 py-2 hover:bg-secondary rounded-lg"
+                    onClick={() => setIsMenuOpen(false)}
                   >
                     Thông báo
                   </Link>
                   <Link
                     to="/dashboard/settings"
                     className="px-4 py-2 hover:bg-secondary rounded-lg"
+                    onClick={() => setIsMenuOpen(false)}
                   >
                     Cài đặt tài khoản
                   </Link>

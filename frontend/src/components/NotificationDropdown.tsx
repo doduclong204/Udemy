@@ -4,9 +4,15 @@ import { Bell, BookOpen, Info, CheckCircle, Loader2 } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import userNotificationService from '@/services/userNotificationService';
-import { fetchUnreadCount, selectUnreadCount } from '@/redux/slices/notificationSlice';
+import {
+  fetchNotifications,
+  markOneAsRead,
+  selectUnreadCount,
+  selectNotifications,
+  selectNotiLoaded,
+} from '@/redux/slices/notificationSlice';
 import type { AppDispatch } from '@/redux/store';
-import type { UserNotificationResponse, NotificationType } from '@/types';
+import type { NotificationType } from '@/types';
 
 const getIconStyle = (type: NotificationType) => {
   switch (type) {
@@ -29,31 +35,42 @@ const formatTime = (iso: string) => {
 };
 
 export function NotificationDropdown() {
-  const dispatch                          = useDispatch<AppDispatch>();
-  const unreadCount                       = useSelector(selectUnreadCount);
-  const location                          = useLocation();
-  const [isOpen, setIsOpen]               = useState(false);
-  const [notifications, setNotifications] = useState<UserNotificationResponse[]>([]);
-  const [loading, setLoading]             = useState(false);
+  const dispatch      = useDispatch<AppDispatch>();
+  const location      = useLocation();
+  const unreadCount   = useSelector(selectUnreadCount);
+  const notifications = useSelector(selectNotifications);
+  const loaded        = useSelector(selectNotiLoaded);
+  const [isOpen, setIsOpen]   = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // Fetch lại mỗi khi user navigate sang trang khác
+  // Fetch lần đầu nếu chưa có data
   useEffect(() => {
-    dispatch(fetchUnreadCount());
+    if (!loaded) dispatch(fetchNotifications());
+  }, [dispatch, loaded]);
+
+  // Fetch lại mỗi khi đổi route
+  useEffect(() => {
+    dispatch(fetchNotifications());
   }, [dispatch, location.pathname]);
 
-  // Fetch danh sách khi mở dropdown
+  // Fetch lại khi mở dropdown
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
-    userNotificationService
-      .getMyNotifications({ pageSize: 10 })
-      .then((res) => {
-        setNotifications(res.result);
-        dispatch(fetchUnreadCount());
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    dispatch(fetchNotifications()).finally(() => setLoading(false));
   }, [isOpen, dispatch]);
+
+  // Click thông báo → mark as read optimistic (giống wishlist toggle)
+  const handleRead = async (id: string) => {
+    const notif = notifications.find((n) => n._id === id);
+    if (!notif || notif.isRead) return;
+    dispatch(markOneAsRead(id)); // cập nhật Redux ngay → badge giảm ngay, không cần load lại
+    try {
+      await userNotificationService.markAsRead(id);
+    } catch {
+      dispatch(fetchNotifications()); // rollback nếu API lỗi
+    }
+  };
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -62,7 +79,7 @@ export function NotificationDropdown() {
           <Bell className="w-5 h-5" />
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-              {unreadCount}
+              {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
         </button>
@@ -91,7 +108,8 @@ export function NotificationDropdown() {
               return (
                 <div
                   key={n._id}
-                  className={`p-3 border-b border-border last:border-b-0 hover:bg-secondary/50 transition-colors ${
+                  onClick={() => handleRead(n._id)}
+                  className={`p-3 border-b border-border last:border-b-0 hover:bg-secondary/50 transition-colors cursor-pointer ${
                     !n.isRead ? 'bg-primary/5' : ''
                   }`}
                 >

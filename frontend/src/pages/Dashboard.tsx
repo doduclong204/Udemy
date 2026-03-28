@@ -5,19 +5,28 @@ import { Footer } from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useAppDispatch } from "@/redux/hooks";
+import { useSelector } from "react-redux";
 import { setUser } from "@/redux/slices/authSlice";
+import {
+  fetchNotifications,
+  markOneAsRead,
+  markAllAsRead,
+  removeOne,
+  selectUnreadCount,
+  selectNotifications,
+} from "@/redux/slices/notificationSlice";
+import {
+  fetchEnrolledCount,
+  selectEnrolledCount,
+} from "@/redux/slices/enrollmentSlice";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import enrollmentService from "@/services/enrollmentService";
+import userNotificationService from "@/services/userNotificationService";
 import userService from "@/services/userService";
 import uploadService from "@/services/uploadService";
-import userNotificationService from "@/services/userNotificationService";
-import type {
-  EnrollmentResponse,
-  UserNotificationResponse,
-  NotificationType,
-} from "@/types";
+import type { EnrollmentResponse, NotificationType } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
   BookOpen,
@@ -83,68 +92,73 @@ export default function Dashboard() {
   const isNotifications = currentPath === "/dashboard/notifications";
   const isSettings = currentPath === "/dashboard/settings";
 
-  // ── Enrollments ──────────────────────────────────────────────────────────────
+  // ── Notifications từ Redux (reactive, đồng bộ với Header) ──────────────────
+  const userNotifs = useSelector(selectNotifications);
+  const unreadCount = useSelector(selectUnreadCount);
+  const enrolledCount = useSelector(selectEnrolledCount);
+  const [loadingNotifs, setLoadingNotifs] = useState(false);
+
+  // Fetch notifications khi vào tab thông báo
+  useEffect(() => {
+    if (!isNotifications) return;
+    setLoadingNotifs(true);
+    dispatch(fetchNotifications()).finally(() => setLoadingNotifs(false));
+  }, [isNotifications, dispatch]);
+
+  // ── Enrollments (danh sách đầy đủ cho tab khóa học) ───────────────────────
   const [enrollments, setEnrollments] = useState<EnrollmentResponse[]>([]);
   const [loadingEnrollments, setLoadingEnrollments] = useState(true);
 
   useEffect(() => {
     enrollmentService
       .getMyEnrollments({ pageSize: 10 })
-      .then((res) => setEnrollments(res.result))
+      .then((res) => {
+        setEnrollments(res.result);
+        // Đồng bộ count lên Redux luôn
+        dispatch(fetchEnrolledCount());
+      })
       .catch(() => {})
       .finally(() => setLoadingEnrollments(false));
-  }, []);
+  }, [dispatch]);
 
-  // ── Notifications ─────────────────────────────────────────────────────────────
-  const [userNotifs, setUserNotifs] = useState<UserNotificationResponse[]>([]);
-  const [loadingNotifs, setLoadingNotifs] = useState(false);
-
-  useEffect(() => {
-    if (!isNotifications) return;
-    setLoadingNotifs(true);
-    userNotificationService
-      .getMyNotifications({ pageSize: 10 })
-      .then((res) => setUserNotifs(res.result))
-      .catch(() => sonnerToast.error("Không thể tải thông báo"))
-      .finally(() => setLoadingNotifs(false));
-  }, [isNotifications]);
-
+  // ── Notification handlers — optimistic update vào Redux ───────────────────
   const handleMarkAsRead = async (id: string) => {
+    const target = userNotifs.find((n) => n._id === id);
+    if (!target || target.isRead) return;
+    dispatch(markOneAsRead(id)); // badge giảm ngay
     try {
       await userNotificationService.markAsRead(id);
-      setUserNotifs((prev) =>
-        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n)),
-      );
       sonnerToast.success("Đã đánh dấu là đã đọc");
     } catch {
+      dispatch(fetchNotifications()); // rollback
       sonnerToast.error("Có lỗi xảy ra");
     }
   };
 
   const handleMarkAllAsRead = async () => {
     if (!userNotifs.some((n) => !n.isRead)) return;
+    dispatch(markAllAsRead()); // badge về 0 ngay
     try {
       await userNotificationService.markAllAsRead();
-      setUserNotifs((prev) => prev.map((n) => ({ ...n, isRead: true })));
       sonnerToast.success("Đã đánh dấu tất cả là đã đọc");
     } catch {
+      dispatch(fetchNotifications()); // rollback
       sonnerToast.error("Có lỗi xảy ra");
     }
   };
 
   const handleRemoveNotif = async (id: string) => {
+    dispatch(removeOne(id)); // xóa khỏi list ngay
     try {
       await userNotificationService.deleteNotification(id);
-      setUserNotifs((prev) => prev.filter((n) => n._id !== id));
       sonnerToast.success("Đã xóa thông báo");
     } catch {
+      dispatch(fetchNotifications()); // rollback
       sonnerToast.error("Có lỗi xảy ra");
     }
   };
 
-  const unreadCount = userNotifs.filter((n) => !n.isRead).length;
-
-  // ── Avatar upload ─────────────────────────────────────────────────────────────
+  // ── Avatar upload ──────────────────────────────────────────────────────────
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
@@ -153,7 +167,6 @@ export default function Dashboard() {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (file.size > 2 * 1024 * 1024) {
       toast({
         title: "Ảnh quá lớn",
@@ -162,7 +175,6 @@ export default function Dashboard() {
       });
       return;
     }
-
     setUploadingAvatar(true);
     try {
       const avatarUrl = await uploadService.uploadImage(file);
@@ -177,7 +189,7 @@ export default function Dashboard() {
     }
   };
 
-  // ── Settings form ─────────────────────────────────────────────────────────────
+  // ── Settings form ──────────────────────────────────────────────────────────
   const firstNameRef = useRef<HTMLInputElement>(null);
   const lastNameRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
@@ -212,7 +224,6 @@ export default function Dashboard() {
     const name = `${firstName} ${lastName}`.trim();
     const phone = phoneRef.current?.value?.trim() ?? "";
     const bio = bioRef.current?.value?.trim() ?? "";
-
     setSavingProfile(true);
     try {
       const updated = await userService.updateProfile({ name, phone, bio });
@@ -236,7 +247,6 @@ export default function Dashboard() {
     const currentPassword = currentPwRef.current?.value ?? "";
     const newPassword = newPwRef.current?.value ?? "";
     const confirmPassword = confirmPwRef.current?.value ?? "";
-
     if (!currentPassword || !newPassword || !confirmPassword) {
       toast({ title: "Vui lòng điền đầy đủ", variant: "destructive" });
       return;
@@ -252,7 +262,6 @@ export default function Dashboard() {
       });
       return;
     }
-
     setSavingPw(true);
     try {
       await userService.changePassword({
@@ -271,7 +280,7 @@ export default function Dashboard() {
     }
   };
 
-  // ── Khóa tài khoản ───────────────────────────────────────────────────────────
+  // ── Khóa tài khoản ────────────────────────────────────────────────────────
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [lockingAccount, setLockingAccount] = useState(false);
 
@@ -294,7 +303,7 @@ export default function Dashboard() {
     }
   };
 
-  // ── Guards ────────────────────────────────────────────────────────────────────
+  // ── Guards ────────────────────────────────────────────────────────────────
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   const handleRemoveFromWishlist = async (
@@ -319,11 +328,32 @@ export default function Dashboard() {
   const lastName = nameParts.at(-1) ?? "";
   const firstName = nameParts.slice(0, -1).join(" ");
 
+  // navItems có badge count reactive từ Redux/Context
   const navItems = [
-    { label: "Khóa học của tôi", path: "/dashboard", icon: BookOpen },
-    { label: "Danh sách yêu thích", path: "/dashboard/wishlist", icon: Heart },
-    { label: "Thông báo", path: "/dashboard/notifications", icon: Bell },
-    { label: "Cài đặt tài khoản", path: "/dashboard/settings", icon: Settings },
+    {
+      label: "Khóa học của tôi",
+      path: "/dashboard",
+      icon: BookOpen,
+      count: enrolledCount,
+    },
+    {
+      label: "Danh sách yêu thích",
+      path: "/dashboard/wishlist",
+      icon: Heart,
+      count: wishlist.length,
+    },
+    {
+      label: "Thông báo",
+      path: "/dashboard/notifications",
+      icon: Bell,
+      count: unreadCount,
+    },
+    {
+      label: "Cài đặt tài khoản",
+      path: "/dashboard/settings",
+      icon: Settings,
+      count: 0,
+    },
   ];
 
   const notifPrefItems: { key: NotifPrefKey; label: string }[] = [
@@ -371,12 +401,11 @@ export default function Dashboard() {
                 >
                   <item.icon className="w-5 h-5" />
                   {item.label}
-                  {item.path === "/dashboard/notifications" &&
-                    unreadCount > 0 && (
-                      <span className="ml-auto bg-primary text-primary-foreground text-xs font-bold px-1.5 py-0.5 rounded-full">
-                        {unreadCount}
-                      </span>
-                    )}
+                  {item.count > 0 && (
+                    <span className="ml-auto bg-primary text-primary-foreground text-xs font-bold px-1.5 py-0.5 rounded-full">
+                      {item.count > 99 ? "99+" : item.count}
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>
@@ -398,12 +427,11 @@ export default function Dashboard() {
                 >
                   <item.icon className="w-4 h-4" />
                   {item.label}
-                  {item.path === "/dashboard/notifications" &&
-                    unreadCount > 0 && (
-                      <span className="bg-white text-primary text-xs font-bold px-1.5 py-0.5 rounded-full">
-                        {unreadCount}
-                      </span>
-                    )}
+                  {item.count > 0 && (
+                    <span className="bg-white text-primary text-xs font-bold px-1.5 py-0.5 rounded-full">
+                      {item.count > 99 ? "99+" : item.count}
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>
@@ -799,7 +827,7 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Bảo mật — ẩn nếu là social account */}
+                  {/* Bảo mật */}
                   {user?.provider?.toUpperCase() === "LOCAL" ||
                   !user?.provider ? (
                     <div className="bg-card border border-border rounded-lg p-6">
@@ -918,8 +946,6 @@ export default function Dashboard() {
                       })}
                     </div>
                   </div>
-
-                  
 
                   {/* Khóa tài khoản */}
                   <div className="bg-card border border-destructive rounded-lg p-6">
