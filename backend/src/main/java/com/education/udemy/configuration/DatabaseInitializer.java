@@ -46,20 +46,20 @@ public class DatabaseInitializer implements CommandLineRunner {
             this.userRepository.save(adminUser);
         }
 
-        long countSettings = this.settingRepository.count(); // 3. Kiểm tra setting
+        long countSettings = this.settingRepository.count();
         if (countSettings == 0) {
             Setting defaultSetting = Setting.builder()
                     .siteName("Education Udemy")
                     .siteDescription("Hệ thống quản lý khóa học chuyên nghiệp")
-                    .logo("https://example.com/logo.png")
+                    .logo("https://res.cloudinary.com/dbn11jpxd/image/upload/v1774169087/udemy/images/jy3getyvrhhgvqizbzju.png")
                     .favicon("https://example.com/favicon.ico")
-                    .primaryColor("#2563eb")
+                    .primaryColor("#981b34")
                     .contactEmail("admin@education.com")
                     .contactPhone("0969654190")
                     .contactAddress("Hà Nội, Việt Nam")
-                    .facebookLink("#")
-                    .youtubeLink("#")
-                    .footerText("© 2024 Education Udemy. All rights reserved.")
+                    .facebookLink("https://www.facebook.com/ouclong.837080")
+                    .youtubeLink("https://www.youtube.com/@ouclong5364")
+                    .footerText("Bản quyền thuộc về Learnhub")
                     .build();
             this.settingRepository.save(defaultSetting);
         }
