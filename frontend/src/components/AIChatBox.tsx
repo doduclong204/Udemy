@@ -2,14 +2,23 @@ import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { selectIsAuthenticated, selectUser } from '@/redux/slices/authSlice';
-import { MessageCircle, X, Send, Trash2, Bot, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, Trash2, Bot, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import axiosInstance from '@/config/api';
+
+interface CourseCard {
+  id: string;
+  title: string;
+  thumbnail: string;
+  price: number;
+  discountPrice?: number;
+}
 
 interface Message {
   role: 'user' | 'model';
   text: string;
   ts: number;
+  courseCards?: CourseCard[];
 }
 
 const SYSTEM_PROMPT = `Bạn là trợ lý tư vấn AI của nền tảng học trực tuyến LearnHub (tương tự Udemy).
@@ -24,7 +33,10 @@ Quy tắc:
 - Chỉ gợi ý đúng các khóa học có trong danh sách được cung cấp, không bịa đặt
 - Nền tảng KHÔNG cấp chứng chỉ, không đề cập hoặc hứa hẹn về chứng chỉ
 - Không tư vấn các chủ đề ngoài phạm vi học tập và nền tảng
-- Nếu vấn đề phức tạp, hướng dẫn liên hệ support@learnhub.vn`;
+- Nếu vấn đề phức tạp, hướng dẫn liên hệ support@learnhub.vn
+- Khi gợi ý khóa học: chọn TỐI ĐA 3 khóa nổi bật nhất (ưu tiên khóa có outstanding=true) phù hợp với yêu cầu. Thêm JSON ở CUỐI response, KHÔNG thêm ký tự nào khác xung quanh:
+  COURSE_CARDS:[{"id":"...","title":"...","thumbnail":"...","price":123456,"discountPrice":99000}]
+  (bỏ discountPrice nếu không có giảm giá)`;
 
 const QUICK_PROMPTS = [
   'Làm thế nào để mua khóa học?',
@@ -32,22 +44,42 @@ const QUICK_PROMPTS = [
   'Có những khóa học nào đang giảm giá?',
 ];
 
-async function callAI(history: Message[], userText: string): Promise<string> {
+async function callAI(
+  history: Message[],
+  userText: string
+): Promise<{ text: string; courseCards?: CourseCard[] }> {
   const contents = [
-    { role: 'user',  parts: [{ text: SYSTEM_PROMPT }] },
-    { role: 'model', parts: [{ text: 'Xin chào! Tôi là trợ lý AI của LearnHub. Tôi có thể giúp gì cho bạn?' }] },
+    { role: 'user', parts: [{ text: SYSTEM_PROMPT }] },
+    {
+      role: 'model',
+      parts: [{ text: 'Xin chào! Tôi là trợ lý AI của LearnHub. Tôi có thể giúp gì cho bạn?' }],
+    },
     ...history.map((m) => ({ role: m.role, parts: [{ text: m.text }] })),
-    { role: 'user',  parts: [{ text: userText }] },
+    { role: 'user', parts: [{ text: userText }] },
   ];
 
   const res = await axiosInstance.post('/ai/chat', {
     contents,
-    generationConfig: { temperature: 0.7, maxOutputTokens: 512 },
+    generationConfig: { temperature: 0.7, maxOutputTokens: 600 },
   });
 
   const result = res.data.data;
   if (result.error) throw new Error(result.error);
-  return result.text ?? 'Xin lỗi, tôi không hiểu câu hỏi này.';
+
+  const raw: string = result.text ?? 'Xin lỗi, tôi không hiểu câu hỏi này.';
+
+  const match = raw.match(/COURSE_CARDS:(\[[\s\S]*?\])/);
+  let courseCards: CourseCard[] | undefined;
+  if (match) {
+    try {
+      courseCards = JSON.parse(match[1]);
+    } catch {
+      courseCards = undefined;
+    }
+  }
+
+  const text = raw.replace(/COURSE_CARDS:\[[\s\S]*?\]/, '').trim();
+  return { text, courseCards };
 }
 
 function storageKey(userId: string) {
@@ -67,6 +99,75 @@ function saveHistory(userId: string, messages: Message[]) {
   localStorage.setItem(storageKey(userId), JSON.stringify(messages.slice(-100)));
 }
 
+function CourseCardList({ cards }: { cards: CourseCard[] }) {
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  return (
+    <div className="flex flex-col gap-2 mt-1 w-full">
+      {cards.map((c) => {
+        const isHovered = hoveredId === c.id;
+        return (
+          <a
+            key={c.id}
+            href={`/course/${c.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onMouseEnter={() => setHoveredId(c.id)}
+            onMouseLeave={() => setHoveredId(null)}
+            className="group flex gap-3 rounded-xl border border-border bg-background p-2 no-underline transition-all duration-200"
+            style={{
+              boxShadow: isHovered
+                ? '0 4px 16px rgba(0,0,0,0.10)'
+                : '0 1px 3px rgba(0,0,0,0.04)',
+              transform: isHovered ? 'translateY(-1px)' : 'translateY(0)',
+              borderColor: isHovered ? 'hsl(var(--primary) / 0.4)' : undefined,
+            }}
+          >
+            {/* Thumbnail */}
+            <div className="relative shrink-0 w-16 h-12 rounded-lg overflow-hidden bg-muted">
+              <img
+                src={c.thumbnail}
+                alt={c.title}
+                className="w-full h-full object-cover transition-transform duration-200"
+                style={{ transform: isHovered ? 'scale(1.05)' : 'scale(1)' }}
+              />
+            </div>
+
+            {/* Info */}
+            <div className="flex flex-col justify-between min-w-0 flex-1 py-0.5">
+              <p
+                className="text-xs font-semibold leading-tight line-clamp-2 text-foreground transition-colors duration-200"
+                style={{ color: isHovered ? 'hsl(var(--primary))' : undefined }}
+              >
+                {c.title}
+              </p>
+              <div className="flex items-center justify-between mt-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-primary">
+                    {c.discountPrice != null
+                      ? `${Number(c.discountPrice).toLocaleString('vi-VN')}đ`
+                      : `${Number(c.price).toLocaleString('vi-VN')}đ`}
+                  </span>
+                  {c.discountPrice != null && (
+                    <span className="text-[10px] line-through text-muted-foreground font-normal">
+                      {Number(c.price).toLocaleString('vi-VN')}đ
+                    </span>
+                  )}
+                </div>
+                <ExternalLink
+                  size={11}
+                  className="shrink-0 text-muted-foreground transition-colors duration-200"
+                  style={{ color: isHovered ? 'hsl(var(--primary))' : undefined }}
+                />
+              </div>
+            </div>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
 function Bubble({ msg }: { msg: Message }) {
   const isUser = msg.role === 'user';
   return (
@@ -76,12 +177,19 @@ function Bubble({ msg }: { msg: Message }) {
           <Bot size={14} className="text-primary-foreground" />
         </div>
       )}
-      <div className={`max-w-[78%] px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
-        isUser
-          ? 'bg-primary text-primary-foreground rounded-br-sm'
-          : 'bg-muted text-foreground rounded-bl-sm'
-      }`}>
-        {msg.text}
+      <div className={`flex flex-col max-w-[78%] gap-1.5 ${isUser ? 'items-end' : 'items-start'}`}>
+        <div
+          className={`px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
+            isUser
+              ? 'bg-primary text-primary-foreground rounded-br-sm'
+              : 'bg-muted text-foreground rounded-bl-sm'
+          }`}
+        >
+          {msg.text}
+        </div>
+        {!isUser && msg.courseCards && msg.courseCards.length > 0 && (
+          <CourseCardList cards={msg.courseCards} />
+        )}
       </div>
     </div>
   );
@@ -169,8 +277,8 @@ export default function AIChatBox() {
     setLoading(true);
 
     try {
-      const reply = await callAI(messages, text);
-      const botMsg: Message = { role: 'model', text: reply, ts: Date.now() };
+      const { text: replyText, courseCards } = await callAI(messages, text);
+      const botMsg: Message = { role: 'model', text: replyText, courseCards, ts: Date.now() };
       const finalHistory = [...newHistory, botMsg];
       setMessages(finalHistory);
       saveHistory(userId, finalHistory);
@@ -196,7 +304,6 @@ export default function AIChatBox() {
 
   return (
     <>
-      {/* Floating button */}
       {!open && (
         <button
           style={posStyle}
@@ -209,7 +316,6 @@ export default function AIChatBox() {
         </button>
       )}
 
-      {/* Chat panel */}
       {open && (
         <div
           style={{ ...posStyle, width: PANEL_W, height: PANEL_H }}
@@ -230,7 +336,6 @@ export default function AIChatBox() {
                 <p className="text-xs opacity-75">Nền tảng học tập trực tuyến</p>
               </div>
             </div>
-            {/* Chỉ 1 nút xóa + 1 nút đóng */}
             <div className="flex items-center gap-1">
               <button
                 onMouseDown={(e) => e.stopPropagation()}
@@ -260,14 +365,13 @@ export default function AIChatBox() {
                 <p className="text-xs opacity-70">
                   Tôi có thể tư vấn về khóa học,<br />lộ trình học và hỗ trợ kỹ thuật.
                 </p>
-                {/* Quick prompts — nằm trong scroll area, không bị cắt */}
                 <div className="flex flex-col gap-2 mt-2">
                   {QUICK_PROMPTS.map((q) => (
                     <button
                       key={q}
                       onMouseDown={(e) => e.stopPropagation()}
                       onClick={() => { setInput(q); inputRef.current?.focus(); }}
-                      className="chat-quick-btn text-xs px-3 py-2 rounded-xl border border-border bg-muted hover:bg-accent transition-colors text-left w-full"
+                      className="text-xs px-3 py-2 rounded-xl border border-border bg-muted hover:bg-accent transition-colors text-left w-full"
                     >
                       {q}
                     </button>
