@@ -27,6 +27,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -114,7 +116,6 @@ public class NotificationService {
     public ApiPagination<NotificationResponse> getAll(Specification<Notification> spec, Pageable pageable) {
         log.info("Get all notifications for admin");
 
-        // Luôn exclude COURSE_ANSWER ở tầng service — frontend không cần biết
         Specification<Notification> excludeAnswers = (root, query, cb) -> cb.or(
                 cb.isNull(root.get("relatedType")),
                 cb.notEqual(root.get("relatedType"), "COURSE_ANSWER")
@@ -123,11 +124,20 @@ public class NotificationService {
         Page<Notification> pageNotification = this.notificationRepository
                 .findAll(spec == null ? excludeAnswers : spec.and(excludeAnswers), pageable);
 
+        List<String> ids = pageNotification.getContent().stream()
+                .map(Notification::getId)
+                .toList();
+
+        Map<String, Long> totalSentMap = toMap(
+                userNotificationRepository.countGroupByNotificationIdIn(ids));
+        Map<String, Long> totalReadMap = toMap(
+                userNotificationRepository.countReadGroupByNotificationIdIn(ids));
+
         List<NotificationResponse> listNotification = pageNotification.getContent().stream()
                 .map(noti -> {
                     NotificationResponse res = notificationMapper.toNotificationResponse(noti);
-                    res.setTotalSent(userNotificationRepository.countByNotificationId(noti.getId()));
-                    res.setTotalRead(userNotificationRepository.countByNotificationIdAndReadTrue(noti.getId()));
+                    res.setTotalSent(totalSentMap.getOrDefault(noti.getId(), 0L));
+                    res.setTotalRead(totalReadMap.getOrDefault(noti.getId(), 0L));
                     return res;
                 })
                 .toList();
@@ -221,5 +231,12 @@ public class NotificationService {
                         .build())
                 .toList();
         userNotificationRepository.saveAll(userNotifications);
+    }
+
+    private Map<String, Long> toMap(List<Object[]> rows) {
+        return rows.stream().collect(Collectors.toMap(
+                r -> (String) r[0],
+                r -> (Long) r[1]
+        ));
     }
 }
