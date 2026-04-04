@@ -133,4 +133,7 @@ export const API_ENDPOINTS = {
   PROCESS: {
     BASE: "/enrollments",
   },
+  DASHBOARD: {
+    STATS: '/dashboard/stats',
+  },
 } as const;

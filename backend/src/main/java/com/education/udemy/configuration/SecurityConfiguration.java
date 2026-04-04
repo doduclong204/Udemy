@@ -42,6 +42,7 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(
                         authz -> authz
                                 .requestMatchers("/admin/**").hasAuthority("ADMIN")
+                                .requestMatchers("/dashboard/**").hasAuthority("ADMIN")
 
                                 .requestMatchers(HttpMethod.GET, "/products/**")
                                 .permitAll()

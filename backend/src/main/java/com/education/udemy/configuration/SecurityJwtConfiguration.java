@@ -7,13 +7,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 
 import com.education.udemy.exception.AppException;
 import com.education.udemy.exception.ErrorCode;
@@ -21,6 +21,9 @@ import com.education.udemy.repository.UserRepository;
 import com.education.udemy.service.InvalidatedTokenService;
 import com.education.udemy.util.SecurityUtil;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
+
+import java.util.List;
+import java.util.Map;
 
 @Configuration
 public class SecurityJwtConfiguration {
@@ -87,11 +90,20 @@ public class SecurityJwtConfiguration {
 
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        grantedAuthoritiesConverter.setAuthorityPrefix("");
-        grantedAuthoritiesConverter.setAuthoritiesClaimName("permission");
-        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
-        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
-        return jwtAuthenticationConverter;
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            try {
+                // Token structure: { "user": { "id": "...", "username": "...", "role": "ADMIN" } }
+                Object userClaim = jwt.getClaims().get("user");
+                if (userClaim instanceof Map<?, ?> userMap) {
+                    Object role = userMap.get("role");
+                    if (role != null) {
+                        return List.of(new SimpleGrantedAuthority(role.toString()));
+                    }
+                }
+            } catch (Exception ignored) {}
+            return List.of();
+        });
+        return converter;
     }
 }

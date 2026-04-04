@@ -704,3 +704,54 @@ export interface RevenueChartData {
   revenue: number;
   orders: number;
 }
+
+// ==================== Dashboard Types ====================
+
+export interface DashboardPeriodStats {
+  revenue:        number;
+  orderCount:     number;
+  completedCount: number;
+  pendingCount:   number;
+}
+
+export interface DashboardChartPoint {
+  label:   string;
+  revenue: number;
+  orders:  number;
+}
+
+export interface DashboardTopCourse {
+  id:        string;
+  title:     string;
+  thumbnail: string | null;
+  students:  number;
+  revenue:   number;
+}
+
+export interface DashboardRecentOrder {
+  id:            string;
+  orderCode:     string;
+  createdBy:     string;
+  finalAmount:   number;
+  paymentStatus: string;
+  createdAt:     string;
+}
+
+export interface DashboardStatsResponse {
+  current:      DashboardPeriodStats;
+  compare:      DashboardPeriodStats | null;
+  totalStudents: number;
+  totalCourses:  number;
+  avgRating:     number;
+  chartData:     DashboardChartPoint[];
+  topCourses:    DashboardTopCourse[];
+  recentOrders:  DashboardRecentOrder[];
+}
+
+export interface GetDashboardStatsParams {
+  from:          string;
+  to:            string;
+  compareFrom?:  string;
+  compareTo?:    string;
+  rangeMode?:    string;
+}
