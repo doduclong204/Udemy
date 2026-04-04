@@ -371,7 +371,7 @@ export default function AIChatBox() {
                       key={q}
                       onMouseDown={(e) => e.stopPropagation()}
                       onClick={() => { setInput(q); inputRef.current?.focus(); }}
-                      className="text-xs px-3 py-2 rounded-xl border border-border bg-muted hover:bg-accent transition-colors text-left w-full"
+                      className="text-xs px-3 py-2 rounded-xl border border-border bg-muted hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-colors text-left w-full"
                     >
                       {q}
                     </button>
