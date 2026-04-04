@@ -94,6 +94,13 @@ public class CouponService {
                 .orElseThrow(() -> new AppException(ErrorCode.COUPON_NOT_FOUND));
 
         couponMapper.updateCoupon(coupon, request);
+
+        if (coupon.getExpiresAt() != null && coupon.getExpiresAt().isAfter(Instant.now())) {
+            if (coupon.getCouponStatus() == CouponStatus.EXPIRED) {
+                coupon.setCouponStatus(CouponStatus.ACTIVE);
+            }
+        }
+
         return couponMapper.toCouponResponse(couponRepository.save(coupon));
     }
 

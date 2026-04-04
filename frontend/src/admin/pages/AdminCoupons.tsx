@@ -1,10 +1,18 @@
-import { useEffect, useState } from 'react';
-import { Plus, Search, Edit, Trash2, MoreVertical, Copy, Eye } from 'lucide-react';
-import couponService from '@/services/couponService';
-import { Coupon, CouponStatus } from '@/types';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { useEffect, useState } from "react";
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  MoreVertical,
+  Copy,
+  Eye,
+} from "lucide-react";
+import couponService from "@/services/couponService";
+import { Coupon, CouponStatus } from "@/types";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +20,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,42 +30,42 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { toast } from 'sonner';
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('vi-VN', { 
-    style: 'currency', 
-    currency: 'VND',
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
     maximumFractionDigits: 0,
   }).format(value);
 };
 
 const getStatusDisplay = (status: CouponStatus): string => {
   const statusMap: Record<CouponStatus, string> = {
-    [CouponStatus.ACTIVE]: 'Hoạt động',
-    [CouponStatus.EXPIRED]: 'Hết hạn',
-    [CouponStatus.EXHAUSTED]: 'Đã dùng hết',
+    [CouponStatus.ACTIVE]: "Hoạt động",
+    [CouponStatus.EXPIRED]: "Hết hạn",
+    [CouponStatus.EXHAUSTED]: "Đã dùng hết",
   };
   return statusMap[status] || status;
 };
 
 export default function AdminCoupons() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -71,14 +79,14 @@ export default function AdminCoupons() {
 
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const paginatedCoupons = coupons;
-  
+
   const [formData, setFormData] = useState({
-    code: '',
-    discountValue: '',
-    discountType: 'percentage',
-    maxUsage: '',
-    minOrderAmount: '',
-    expiresAt: '',
+    code: "",
+    discountValue: "",
+    discountType: "percentage",
+    maxUsage: "",
+    minOrderAmount: "",
+    expiresAt: "",
   });
 
   const fetchCoupons = async () => {
@@ -88,12 +96,12 @@ export default function AdminCoupons() {
         page: currentPage,
         pageSize: itemsPerPage,
         search: searchQuery || undefined,
-        status: statusFilter === 'all' ? undefined : statusFilter,
+        status: statusFilter === "all" ? undefined : statusFilter,
       });
       setCoupons(res.result);
       setTotalItems(res.meta.total);
     } catch (err) {
-      console.error('Fetch coupons error', err);
+      console.error("Fetch coupons error", err);
     } finally {
       setIsLoading(false);
     }
@@ -115,30 +123,30 @@ export default function AdminCoupons() {
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
-    toast.success('Đã sao chép mã giảm giá!');
+    toast.success("Đã sao chép mã giảm giá!");
   };
 
   const resetForm = () => {
     setFormData({
-      code: '',
-      discountValue: '',
-      discountType: 'percentage',
-      maxUsage: '',
-      minOrderAmount: '',
-      expiresAt: '',
+      code: "",
+      discountValue: "",
+      discountType: "percentage",
+      maxUsage: "",
+      minOrderAmount: "",
+      expiresAt: "",
     });
   };
 
   const handleCreateCoupon = () => {
     if (!formData.code || !formData.discountValue) {
-      toast.error('Vui lòng nhập mã và mức giảm giá!');
+      toast.error("Vui lòng nhập mã và mức giảm giá!");
       return;
     }
 
     (async () => {
       try {
         const expiresIso = formData.expiresAt
-          ? new Date(formData.expiresAt).toISOString()
+          ? new Date(formData.expiresAt + "T23:59:59+07:00").toISOString()
           : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
         await couponService.createCoupon({
@@ -152,11 +160,14 @@ export default function AdminCoupons() {
         });
         resetForm();
         setIsAddDialogOpen(false);
-        toast.success('Tạo mã giảm giá thành công!');
+        toast.success("Tạo mã giảm giá thành công!");
         fetchCoupons();
       } catch (err: any) {
-        console.error('Create coupon error', err);
-        const message = err?.message || err?.response?.data?.message || 'Tạo mã giảm giá thất bại';
+        console.error("Create coupon error", err);
+        const message =
+          err?.message ||
+          err?.response?.data?.message ||
+          "Tạo mã giảm giá thất bại";
         toast.error(message);
       }
     })();
@@ -164,7 +175,7 @@ export default function AdminCoupons() {
 
   const handleEditCoupon = () => {
     if (!formData.code || !formData.discountValue) {
-      toast.error('Vui lòng nhập mã và mức giảm giá!');
+      toast.error("Vui lòng nhập mã và mức giảm giá!");
       return;
     }
 
@@ -172,7 +183,7 @@ export default function AdminCoupons() {
       try {
         if (!selectedCoupon) return;
         const expiresIso = formData.expiresAt
-          ? new Date(formData.expiresAt).toISOString()
+          ? new Date(formData.expiresAt + "T23:59:59+07:00").toISOString()
           : undefined;
 
         await couponService.updateCoupon(selectedCoupon._id, {
@@ -184,11 +195,11 @@ export default function AdminCoupons() {
         });
         setIsEditDialogOpen(false);
         setSelectedCoupon(null);
-        toast.success('Cập nhật mã giảm giá thành công!');
+        toast.success("Cập nhật mã giảm giá thành công!");
         fetchCoupons();
       } catch (err) {
         console.error(err);
-        toast.error('Cập nhật thất bại');
+        toast.error("Cập nhật thất bại");
       }
     })();
   };
@@ -198,13 +209,13 @@ export default function AdminCoupons() {
       if (!selectedCoupon) return;
       try {
         await couponService.deleteCoupon(selectedCoupon._id);
-        toast.success('Đã xoá mã giảm giá!');
+        toast.success("Đã xoá mã giảm giá!");
         setIsDeleteDialogOpen(false);
         setSelectedCoupon(null);
         fetchCoupons();
       } catch (err) {
         console.error(err);
-        toast.error('Xóa thất bại');
+        toast.error("Xóa thất bại");
       }
     })();
   };
@@ -222,7 +233,7 @@ export default function AdminCoupons() {
       discountType: coupon.discountType,
       maxUsage: String(coupon.maxUsage),
       minOrderAmount: String(coupon.minOrderAmount),
-      expiresAt: coupon.expiresAt,
+      expiresAt: coupon.expiresAt ? coupon.expiresAt.split("T")[0] : "",
     });
     setIsEditDialogOpen(true);
   };
@@ -236,10 +247,14 @@ export default function AdminCoupons() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-admin-foreground">Quản lý Mã giảm giá</h1>
-          <p className="text-admin-muted-foreground">Tổng cộng {totalItems} mã giảm giá</p>
+          <h1 className="text-2xl font-bold text-admin-foreground">
+            Quản lý Mã giảm giá
+          </h1>
+          <p className="text-admin-muted-foreground">
+            Tổng cộng {totalItems} mã giảm giá
+          </p>
         </div>
-        <Button 
+        <Button
           onClick={() => {
             resetForm();
             setIsAddDialogOpen(true);
@@ -280,20 +295,24 @@ export default function AdminCoupons() {
       {/* Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {paginatedCoupons.map((coupon) => (
-          <div 
-            key={coupon._id} 
+          <div
+            key={coupon._id}
             className="bg-admin-card border border-admin-border rounded-xl p-6 relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-24 h-24 bg-admin-primary/5 rounded-full -translate-y-12 translate-x-12" />
-            
+
             <div className="relative">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    coupon.couponStatus === CouponStatus.ACTIVE ? 'bg-green-500/10 text-green-500' :
-                    coupon.couponStatus === CouponStatus.EXPIRED ? 'bg-red-500/10 text-red-500' :
-                    'bg-gray-500/10 text-gray-400'
-                  }`}>
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      coupon.couponStatus === CouponStatus.ACTIVE
+                        ? "bg-green-500/10 text-green-500"
+                        : coupon.couponStatus === CouponStatus.EXPIRED
+                          ? "bg-red-500/10 text-red-500"
+                          : "bg-gray-500/10 text-gray-400"
+                    }`}
+                  >
                     {getStatusDisplay(coupon.couponStatus)}
                   </span>
                 </div>
@@ -308,7 +327,9 @@ export default function AdminCoupons() {
                       <Eye className="w-4 h-4 mr-2" />
                       Xem chi tiết
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleCopyCode(coupon.code)}>
+                    <DropdownMenuItem
+                      onClick={() => handleCopyCode(coupon.code)}
+                    >
                       <Copy className="w-4 h-4 mr-2" />
                       Sao chép
                     </DropdownMenuItem>
@@ -316,7 +337,7 @@ export default function AdminCoupons() {
                       <Edit className="w-4 h-4 mr-2" />
                       Chỉnh sửa
                     </DropdownMenuItem>
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       onClick={() => openDeleteDialog(coupon)}
                       className="text-red-400 hover:text-red-300"
                     >
@@ -327,7 +348,7 @@ export default function AdminCoupons() {
                 </DropdownMenu>
               </div>
 
-              <div 
+              <div
                 className="bg-admin-accent border-2 border-dashed border-admin-border rounded-lg p-4 mb-4 cursor-pointer hover:border-admin-primary transition-colors"
                 onClick={() => handleCopyCode(coupon.code)}
               >
@@ -338,29 +359,47 @@ export default function AdminCoupons() {
 
               <div className="text-center mb-4">
                 <span className="text-3xl font-bold text-admin-foreground">
-                  {coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : formatCurrency(coupon.discountValue)}
+                  {coupon.discountType === "percentage"
+                    ? `${coupon.discountValue}%`
+                    : formatCurrency(coupon.discountValue)}
                 </span>
                 <p className="text-sm text-admin-muted-foreground">Giảm giá</p>
               </div>
 
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-admin-muted-foreground">Đã sử dụng</span>
-                  <span className="text-admin-foreground font-medium">{coupon.usedCount} / {coupon.maxUsage}</span>
+                  <span className="text-admin-muted-foreground">
+                    Đã sử dụng
+                  </span>
+                  <span className="text-admin-foreground font-medium">
+                    {coupon.usedCount} / {coupon.maxUsage}
+                  </span>
                 </div>
                 <div className="w-full bg-admin-accent rounded-full h-2">
-                  <div 
+                  <div
                     className="bg-admin-primary h-2 rounded-full transition-all"
-                    style={{ width: `${(coupon.usedCount / coupon.maxUsage) * 100}%` }}
+                    style={{
+                      width: `${(coupon.usedCount / coupon.maxUsage) * 100}%`,
+                    }}
                   />
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-admin-muted-foreground">Đơn tối thiểu</span>
-                  <span className="text-admin-foreground">{formatCurrency(coupon.minOrderAmount)}</span>
+                  <span className="text-admin-muted-foreground">
+                    Đơn tối thiểu
+                  </span>
+                  <span className="text-admin-foreground">
+                    {formatCurrency(coupon.minOrderAmount)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-admin-muted-foreground">Hết hạn</span>
-                  <span className="text-admin-foreground">{coupon.expiresAt}</span>
+                  <span className="text-admin-foreground">
+                    {coupon.expiresAt
+                      ? new Date(coupon.expiresAt).toLocaleString("vi-VN", {
+                          timeZone: "Asia/Ho_Chi_Minh",
+                        })
+                      : "—"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -372,13 +411,14 @@ export default function AdminCoupons() {
       {paginatedCoupons.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-admin-card border border-admin-border rounded-xl gap-4">
           <p className="text-sm text-admin-muted-foreground">
-            Hiển thị {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} / {totalItems}
+            Hiển thị {(currentPage - 1) * itemsPerPage + 1} -{" "}
+            {Math.min(currentPage * itemsPerPage, totalItems)} / {totalItems}
           </p>
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
               className="border-admin-border text-admin-foreground hover:bg-admin-accent"
             >
@@ -387,7 +427,7 @@ export default function AdminCoupons() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages || totalPages === 0}
               className="border-admin-border text-admin-foreground hover:bg-admin-accent"
             >
@@ -401,46 +441,72 @@ export default function AdminCoupons() {
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="bg-[hsl(220,25%,14%)] border-[hsl(220,20%,30%)] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white">Chi tiết mã giảm giá</DialogTitle>
+            <DialogTitle className="text-white">
+              Chi tiết mã giảm giá
+            </DialogTitle>
           </DialogHeader>
           {selectedCoupon && (
             <div className="space-y-4 py-4">
               <div className="text-center p-4 bg-slate-700/50 border border-slate-600/50 rounded-lg border-dashed">
-                <p className="text-3xl font-bold text-admin-primary">{selectedCoupon.code}</p>
+                <p className="text-3xl font-bold text-admin-primary">
+                  {selectedCoupon.code}
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
                   <p className="text-xs text-slate-400 mb-1">Mức giảm</p>
                   <p className="text-white text-lg font-semibold">
-                    {selectedCoupon.discountType === 'percentage' ? `${selectedCoupon.discountValue}%` : formatCurrency(selectedCoupon.discountValue)}
+                    {selectedCoupon.discountType === "percentage"
+                      ? `${selectedCoupon.discountValue}%`
+                      : formatCurrency(selectedCoupon.discountValue)}
                   </p>
                 </div>
                 <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
                   <p className="text-xs text-slate-400 mb-1">Loại</p>
-                  <p className="text-white">{selectedCoupon.discountType === 'percentage' ? 'Phần trăm' : 'Số tiền cố định'}</p>
+                  <p className="text-white">
+                    {selectedCoupon.discountType === "percentage"
+                      ? "Phần trăm"
+                      : "Số tiền cố định"}
+                  </p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
                   <p className="text-xs text-slate-400 mb-1">Đã sử dụng</p>
-                  <p className="text-white">{selectedCoupon.usedCount} / {selectedCoupon.maxUsage}</p>
+                  <p className="text-white">
+                    {selectedCoupon.usedCount} / {selectedCoupon.maxUsage}
+                  </p>
                 </div>
                 <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
                   <p className="text-xs text-slate-400 mb-1">Đơn tối thiểu</p>
-                  <p className="text-white">{formatCurrency(selectedCoupon.minOrderAmount)}</p>
+                  <p className="text-white">
+                    {formatCurrency(selectedCoupon.minOrderAmount)}
+                  </p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
                   <p className="text-xs text-slate-400 mb-1">Hết hạn</p>
-                  <p className="text-white">{selectedCoupon.expiresAt}</p>
+                  <p className="text-white">
+                    {selectedCoupon.expiresAt
+                      ? new Date(selectedCoupon.expiresAt).toLocaleString(
+                          "vi-VN",
+                          { timeZone: "Asia/Ho_Chi_Minh" },
+                        )
+                      : "—"}
+                  </p>
                 </div>
                 <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
                   <p className="text-xs text-slate-400 mb-1">Trạng thái</p>
-                  <p className={`font-medium ${
-                    selectedCoupon.couponStatus === CouponStatus.ACTIVE ? 'text-green-400' :
-                    selectedCoupon.couponStatus === CouponStatus.EXPIRED ? 'text-red-400' : 'text-slate-400'
-                  }`}>
+                  <p
+                    className={`font-medium ${
+                      selectedCoupon.couponStatus === CouponStatus.ACTIVE
+                        ? "text-green-400"
+                        : selectedCoupon.couponStatus === CouponStatus.EXPIRED
+                          ? "text-red-400"
+                          : "text-slate-400"
+                    }`}
+                  >
                     {getStatusDisplay(selectedCoupon.couponStatus)}
                   </p>
                 </div>
@@ -471,7 +537,9 @@ export default function AdminCoupons() {
               <Label>Mã giảm giá *</Label>
               <Input
                 value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, code: e.target.value })
+                }
                 placeholder="VD: SUMMER25"
                 className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white uppercase"
               />
@@ -482,7 +550,9 @@ export default function AdminCoupons() {
                 <Input
                   type="number"
                   value={formData.discountValue}
-                  onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, discountValue: e.target.value })
+                  }
                   placeholder="VD: 25"
                   className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
                 />
@@ -491,7 +561,9 @@ export default function AdminCoupons() {
                 <Label>Loại</Label>
                 <Select
                   value={formData.discountType}
-                  onValueChange={(value) => setFormData({ ...formData, discountType: value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, discountType: value })
+                  }
                 >
                   <SelectTrigger className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white">
                     <SelectValue />
@@ -509,7 +581,9 @@ export default function AdminCoupons() {
                 <Input
                   type="number"
                   value={formData.maxUsage}
-                  onChange={(e) => setFormData({ ...formData, maxUsage: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, maxUsage: e.target.value })
+                  }
                   placeholder="VD: 100"
                   className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
                 />
@@ -519,7 +593,9 @@ export default function AdminCoupons() {
                 <Input
                   type="number"
                   value={formData.minOrderAmount}
-                  onChange={(e) => setFormData({ ...formData, minOrderAmount: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, minOrderAmount: e.target.value })
+                  }
                   placeholder="VD: 500000"
                   className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
                 />
@@ -530,7 +606,9 @@ export default function AdminCoupons() {
               <Input
                 type="date"
                 value={formData.expiresAt}
-                onChange={(e) => setFormData({ ...formData, expiresAt: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, expiresAt: e.target.value })
+                }
                 className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
               />
             </div>
@@ -558,14 +636,18 @@ export default function AdminCoupons() {
         <DialogContent className="admin-dialog sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Chỉnh sửa mã giảm giá</DialogTitle>
-            <DialogDescription>Cập nhật thông tin mã giảm giá</DialogDescription>
+            <DialogDescription>
+              Cập nhật thông tin mã giảm giá
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
               <Label>Mã giảm giá *</Label>
               <Input
                 value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, code: e.target.value })
+                }
                 placeholder="VD: SUMMER25"
                 className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white uppercase"
                 readOnly
@@ -578,7 +660,9 @@ export default function AdminCoupons() {
                 <Input
                   type="number"
                   value={formData.discountValue}
-                  onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, discountValue: e.target.value })
+                  }
                   placeholder="VD: 25"
                   className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
                 />
@@ -587,7 +671,9 @@ export default function AdminCoupons() {
                 <Label>Loại</Label>
                 <Select
                   value={formData.discountType}
-                  onValueChange={(value) => setFormData({ ...formData, discountType: value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, discountType: value })
+                  }
                 >
                   <SelectTrigger className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white">
                     <SelectValue />
@@ -605,7 +691,9 @@ export default function AdminCoupons() {
                 <Input
                   type="number"
                   value={formData.maxUsage}
-                  onChange={(e) => setFormData({ ...formData, maxUsage: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, maxUsage: e.target.value })
+                  }
                   placeholder="VD: 100"
                   className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
                 />
@@ -615,7 +703,9 @@ export default function AdminCoupons() {
                 <Input
                   type="number"
                   value={formData.minOrderAmount}
-                  onChange={(e) => setFormData({ ...formData, minOrderAmount: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, minOrderAmount: e.target.value })
+                  }
                   placeholder="VD: 500000"
                   className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
                 />
@@ -626,7 +716,9 @@ export default function AdminCoupons() {
               <Input
                 type="date"
                 value={formData.expiresAt}
-                onChange={(e) => setFormData({ ...formData, expiresAt: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, expiresAt: e.target.value })
+                }
                 className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
               />
             </div>
@@ -650,12 +742,15 @@ export default function AdminCoupons() {
       </Dialog>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent className="admin-dialog">
           <AlertDialogHeader>
             <AlertDialogTitle>Xác nhận xóa mã giảm giá</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa mã giảm giá "{selectedCoupon?.code}"? 
+              Bạn có chắc chắn muốn xóa mã giảm giá "{selectedCoupon?.code}"?
               Hành động này không thể hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
