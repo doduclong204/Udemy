@@ -1,8 +1,14 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}"
+  ],
   prefix: "",
   theme: {
     container: {
@@ -69,6 +75,14 @@ export default {
           green: "hsl(var(--udemy-green))",
           navy: "hsl(var(--udemy-navy))",
         },
+        admin: {
+          primary: "hsl(var(--admin-primary))",
+          foreground: "hsl(var(--admin-foreground))",
+          "muted-foreground": "hsl(var(--admin-muted-foreground))",
+          card: "hsl(var(--admin-card))",
+          accent: "hsl(var(--admin-accent))",
+          border: "hsl(var(--admin-border))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -115,5 +129,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 } satisfies Config;

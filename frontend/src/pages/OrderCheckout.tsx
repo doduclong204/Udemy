@@ -26,7 +26,8 @@ interface LocationState {
   totalSalePrice: number;
   totalOriginalPrice: number;
   totalDiscount: number;
-  discountPercentage: number;
+  discountPercentage: string;
+  couponDiscount?: number;
 }
 
 const PAYMENT_METHODS: {
@@ -51,7 +52,7 @@ const PAYMENT_METHODS: {
   },
   {
     value: 'MOMO',
-    label: 'Ví MoMo',
+    label: 'Ví MoMo (Hiện tại chưa có sẵn)',
     desc: 'Quét QR hoặc chuyển đến ứng dụng MoMo',
     color: '#993556',
     border: '#ED93B1',
@@ -61,7 +62,7 @@ const PAYMENT_METHODS: {
   },
   {
     value: 'BANK_TRANSFER',
-    label: 'Chuyển khoản ngân hàng',
+    label: 'Chuyển khoản ngân hàng (Hiện tại chưa có sẵn)',
     desc: 'Chuyển khoản thủ công — xác nhận trong 1–2 giờ làm việc',
     color: '#185FA5',
     border: '#85B7EB',
@@ -71,7 +72,7 @@ const PAYMENT_METHODS: {
   },
   {
     value: 'PAYPAL',
-    label: 'PayPal',
+    label: 'PayPal (Hiện tại chưa có sẵn)',
     desc: 'Thanh toán quốc tế an toàn qua PayPal',
     color: '#0C447C',
     border: '#85B7EB',
@@ -102,7 +103,16 @@ export default function OrderCheckout() {
     );
   }
 
-  const { items, couponCode, totalSalePrice, totalOriginalPrice, totalDiscount, discountPercentage } = state;
+  const {
+    items,
+    couponCode,
+    totalSalePrice,
+    totalOriginalPrice,
+    totalDiscount,
+    discountPercentage,
+    couponDiscount = 0,
+  } = state;
+
   const activeMeta = PAYMENT_METHODS.find((m) => m.value === selected)!;
 
   const handleConfirm = async () => {
@@ -158,23 +168,18 @@ export default function OrderCheckout() {
                     background: isSelected ? method.bgLight : 'var(--card)',
                   }}
                 >
-                  {/* Icon box */}
                   <div
                     className="rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
                     style={{ width: 44, height: 44, background: method.bg }}
                   >
                     {method.icon}
                   </div>
-
-                  {/* Text */}
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm" style={{ color: isSelected ? method.color : undefined }}>
                       {method.label}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{method.desc}</p>
                   </div>
-
-                  {/* Radio */}
                   <div
                     className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
                     style={{ borderColor: isSelected ? method.color : 'hsl(var(--border))' }}
@@ -187,7 +192,6 @@ export default function OrderCheckout() {
               );
             })}
 
-            {/* Security note */}
             <div className="flex items-start gap-3 p-4 rounded-xl border border-border bg-secondary/40 mt-2">
               <CheckCircle2 size={16} className="text-green-600 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground leading-relaxed">
@@ -198,65 +202,83 @@ export default function OrderCheckout() {
 
           {/* Order summary — right 2 cols */}
           <div className="lg:col-span-2">
-            <div className="sticky top-20 bg-card border border-border rounded-xl p-5 space-y-4">
-              <h2 className="font-bold text-base">Tóm tắt đơn hàng</h2>
+            <div className="sticky top-20 bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+              <div className="p-5 space-y-4">
+                <h2 className="font-bold text-base">Tóm tắt đơn hàng</h2>
 
-              {/* Course list */}
-              <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
-                {items.map((item) => (
-                  <div key={item._id} className="flex gap-3">
-                    <img src={item.courseImage} alt={item.courseName} className="w-14 h-10 object-cover rounded flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium line-clamp-2 leading-relaxed">{item.courseName}</p>
-                      <p className="text-xs text-primary font-semibold mt-0.5">{formatCurrency(item.salePrice)}</p>
+                {/* Course list */}
+                <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
+                  {items.map((item) => (
+                    <div key={item._id} className="flex gap-3">
+                      <img src={item.courseImage} alt={item.courseName} className="w-14 h-10 object-cover rounded flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium line-clamp-2 leading-relaxed">{item.courseName}</p>
+                        <p className="text-xs text-primary font-semibold mt-0.5">{formatCurrency(item.salePrice)}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
 
-              <div className="border-t border-border pt-3 space-y-2 text-sm">
+              {/* Price breakdown */}
+              <div className="px-5 pb-4 space-y-2 text-sm border-t border-border pt-4">
                 <div className="flex justify-between text-muted-foreground">
                   <span>Tạm tính</span>
                   <span>{formatCurrency(totalOriginalPrice)}</span>
                 </div>
+
                 {totalDiscount > 0 && (
                   <div className="flex justify-between text-green-600">
-                    <span className="flex items-center gap-1"><Tag size={12} /> Giảm giá ({discountPercentage})</span>
-                    <span>- {formatCurrency(totalDiscount)}</span>
+                    <span className="flex items-center gap-1">
+                      <Tag size={12} /> Giảm giá khóa học ({discountPercentage})
+                    </span>
+                    <span>-{formatCurrency(totalDiscount)}</span>
                   </div>
                 )}
-                {couponCode && (
+
+                {couponDiscount > 0 && couponCode && (
                   <div className="flex justify-between text-green-600">
-                    <span>Mã: {couponCode}</span>
-                    <span>Đang áp dụng</span>
+                    <span className="flex items-center gap-1.5">
+                      <Tag size={12} />
+                      Mã: <span className="font-semibold">{couponCode}</span>
+                    </span>
+                    <span>-{formatCurrency(couponDiscount)}</span>
                   </div>
                 )}
               </div>
 
-              <div className="border-t border-border pt-3 flex justify-between items-center">
+              {/* Total */}
+              <div className="px-5 py-4 border-t border-border flex justify-between items-center">
                 <span className="font-bold">Tổng cộng</span>
-                <span className="text-xl font-bold text-primary">{formatCurrency(totalSalePrice)}</span>
+                <div className="text-right">
+                  <p className="text-xl font-bold text-primary">{formatCurrency(totalSalePrice)}</p>
+                  {totalDiscount + couponDiscount > 0 && (
+                    <p className="text-xs text-green-600">
+                      Tiết kiệm {formatCurrency(totalDiscount + couponDiscount)}
+                    </p>
+                  )}
+                </div>
               </div>
 
-              {/* Selected method badge */}
-              <div
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium"
-                style={{ background: activeMeta.bg, color: activeMeta.color }}
-              >
-                {activeMeta.icon && (
+              {/* Payment badge + CTA */}
+              <div className="px-5 pb-5 space-y-3">
+                <div
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium"
+                  style={{ background: activeMeta.bg, color: activeMeta.color }}
+                >
                   <span style={{ transform: 'scale(0.7)', display: 'flex' }}>{activeMeta.icon}</span>
-                )}
-                {activeMeta.label}
+                  {activeMeta.label}
+                </div>
+
+                <Button variant="cart" className="w-full h-11 text-base font-semibold" onClick={handleConfirm} disabled={isLoading}>
+                  {isLoading ? 'Đang xử lý...' : 'Xác nhận thanh toán'}
+                </Button>
+
+                <p className="text-xs text-muted-foreground text-center">
+                  Bằng cách xác nhận, bạn đồng ý với{' '}
+                  <Link to="/terms" className="text-primary hover:underline">Điều khoản dịch vụ</Link>
+                </p>
               </div>
-
-              <Button variant="cart" className="w-full" onClick={handleConfirm} disabled={isLoading}>
-                {isLoading ? 'Đang xử lý...' : 'Xác nhận thanh toán'}
-              </Button>
-
-              <p className="text-xs text-muted-foreground text-center">
-                Bằng cách xác nhận, bạn đồng ý với{' '}
-                <Link to="/terms" className="text-primary hover:underline">Điều khoản dịch vụ</Link>
-              </p>
             </div>
           </div>
         </div>

@@ -41,8 +41,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
@@ -57,8 +55,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
-// ==================== Helpers ====================
-
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("vi-VN", {
     style: "currency",
@@ -72,14 +68,20 @@ const formatDateTime = (dateString: string) =>
 const STATUS_MAP: Record<OrderStatus, { label: string; className: string }> = {
   COMPLETED: {
     label: "Hoàn thành",
-    className: "bg-green-500/10 text-green-500",
+    className: "bg-green-500/10 text-green-400 border border-green-500/20",
   },
   PENDING: {
     label: "Đang xử lý",
-    className: "bg-yellow-500/10 text-yellow-500",
+    className: "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
   },
-  REFUNDED: { label: "Hoàn tiền", className: "bg-blue-500/10 text-blue-500" },
-  CANCELLED: { label: "Đã hủy", className: "bg-red-500/10 text-red-500" },
+  REFUNDED: {
+    label: "Hoàn tiền",
+    className: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+  },
+  CANCELLED: {
+    label: "Đã hủy",
+    className: "bg-red-500/10 text-red-400 border border-red-500/20",
+  },
 };
 
 const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
@@ -90,17 +92,32 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 };
 
 const INPUT_CLASS =
-  "bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white placeholder:text-slate-500";
-const BTN_CANCEL =
-  "border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]";
+  "bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white placeholder:text-slate-500 focus:border-[#6366f1] transition-colors";
 const DROPDOWN_BG =
-  "bg-[hsl(220,25%,12%)] border border-[hsl(220,20%,28%)] rounded-lg shadow-xl z-[200]";
+  "bg-[hsl(220,25%,10%)] border border-[hsl(220,20%,22%)] rounded-xl shadow-2xl";
 const ITEM_BASE =
-  "w-full text-left px-3 py-2 text-sm transition-colors cursor-pointer";
-const ITEM_DEFAULT = "text-slate-300 hover:bg-[hsl(220,20%,25%)]";
-const ITEM_SELECTED = "bg-admin-primary/20 text-white";
+  "w-full text-left px-3 py-2.5 text-sm transition-colors cursor-pointer rounded-lg";
+const ITEM_DEFAULT =
+  "text-slate-300 hover:bg-[hsl(220,20%,20%)] hover:text-white";
+const ITEM_SELECTED = "bg-[#6366f1]/20 text-white font-medium";
 
-// ==================== Combobox: Student ====================
+const DETAIL_BLOCK_STYLE = {
+  background: "#161b27",
+  border: "1px solid #1e2a3a",
+};
+const STAT_CARD_STYLE = {
+  background: "linear-gradient(135deg,#161b27 0%,#1a2035 100%)",
+  border: "1px solid #252d42",
+};
+
+const dialogBtnSecondary: React.CSSProperties = {
+  background: "#1e2230",
+  border: "1px solid #2d3550",
+  color: "#94a3b8",
+};
+const dialogBtnPrimary: React.CSSProperties = {
+  background: "#6366f1",
+};
 
 interface StudentComboboxProps {
   students: Student[];
@@ -114,10 +131,7 @@ function StudentCombobox({ students, value, onChange }: StudentComboboxProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   const selected = students.find((s) => s.id === value);
-
-  // Chỉ hiện dropdown khi có query gõ vào
   const showDropdown = open && query.trim().length > 0;
-
   const filtered = showDropdown
     ? students
         .filter(
@@ -125,7 +139,7 @@ function StudentCombobox({ students, value, onChange }: StudentComboboxProps) {
             s.name.toLowerCase().includes(query.toLowerCase()) ||
             s.email.toLowerCase().includes(query.toLowerCase()),
         )
-        .slice(0, 3) // tối đa 3 kết quả
+        .slice(0, 3)
     : [];
 
   useEffect(() => {
@@ -145,16 +159,10 @@ function StudentCombobox({ students, value, onChange }: StudentComboboxProps) {
     setOpen(false);
   };
 
-  const handleFocus = () => {
-    setOpen(true);
-    // Nếu đã có giá trị, xóa để gõ lại
-    if (value) setQuery("");
-  };
-
   return (
     <div ref={ref} className="relative">
       <div
-        className={`flex items-center gap-2 rounded-md border px-3 py-2 cursor-text ${INPUT_CLASS}`}
+        className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 cursor-text ${INPUT_CLASS}`}
       >
         <Search className="w-3.5 h-3.5 text-slate-500 shrink-0" />
         <input
@@ -167,14 +175,16 @@ function StudentCombobox({ students, value, onChange }: StudentComboboxProps) {
             setQuery(e.target.value);
             setOpen(true);
           }}
-          onFocus={handleFocus}
+          onFocus={() => {
+            setOpen(true);
+            if (value) setQuery("");
+          }}
         />
       </div>
-
       {showDropdown && (
         <div
-          className={`absolute top-full mt-1 w-full overflow-y-auto ${DROPDOWN_BG}`}
-          style={{ maxHeight: "9.5rem" }}
+          className={`absolute top-full mt-1.5 w-full overflow-y-auto p-1 ${DROPDOWN_BG}`}
+          style={{ maxHeight: "10rem", zIndex: 9999 }}
         >
           {filtered.length === 0 ? (
             <p className="px-3 py-4 text-sm text-slate-500 text-center">
@@ -194,9 +204,7 @@ function StudentCombobox({ students, value, onChange }: StudentComboboxProps) {
                     <p className="text-xs text-slate-400 truncate">{s.email}</p>
                   </div>
                   {value === s.id && (
-                    <span className="text-admin-primary text-xs shrink-0">
-                      ✓
-                    </span>
+                    <span className="text-[#6366f1] text-xs shrink-0">✓</span>
                   )}
                 </button>
               ))}
@@ -205,7 +213,7 @@ function StudentCombobox({ students, value, onChange }: StudentComboboxProps) {
                   s.name.toLowerCase().includes(query.toLowerCase()) ||
                   s.email.toLowerCase().includes(query.toLowerCase()),
               ).length > 3 && (
-                <p className="px-3 py-2 text-xs text-slate-500 text-center border-t border-[hsl(220,20%,28%)]">
+                <p className="px-3 py-2 text-xs text-slate-500 text-center border-t border-[hsl(220,20%,22%)] mt-1 pt-2">
                   Nhập cụ thể hơn để thu hẹp kết quả
                 </p>
               )}
@@ -216,8 +224,6 @@ function StudentCombobox({ students, value, onChange }: StudentComboboxProps) {
     </div>
   );
 }
-
-// ==================== Combobox: Course (multi-select) ====================
 
 interface CourseComboboxProps {
   courses: AdminCourse[];
@@ -235,7 +241,6 @@ function CourseCombobox({
   const ref = useRef<HTMLDivElement>(null);
 
   const showDropdown = open && query.trim().length > 0;
-
   const allFiltered = courses.filter((c) =>
     c.title?.toLowerCase().includes(query.toLowerCase()),
   );
@@ -254,9 +259,8 @@ function CourseCombobox({
 
   return (
     <div ref={ref} className="relative space-y-2">
-      {/* Input search */}
       <div
-        className={`flex items-center gap-2 rounded-md border px-3 py-2 cursor-text ${INPUT_CLASS}`}
+        className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 cursor-text ${INPUT_CLASS}`}
         onClick={() => setOpen(true)}
       >
         <Search className="w-3.5 h-3.5 text-slate-500 shrink-0" />
@@ -275,11 +279,10 @@ function CourseCombobox({
         />
       </div>
 
-      {/* Dropdown - chỉ hiện khi có query */}
       {showDropdown && (
         <div
-          className={`absolute top-full mt-1 w-full overflow-y-auto ${DROPDOWN_BG}`}
-          style={{ maxHeight: "9.5rem" }}
+          className={`absolute top-[calc(100%-0.5rem)] mt-1.5 w-full overflow-y-auto p-1 ${DROPDOWN_BG}`}
+          style={{ maxHeight: "10rem", zIndex: 9999 }}
         >
           {filtered.length === 0 ? (
             <p className="px-3 py-4 text-sm text-slate-500 text-center">
@@ -298,8 +301,8 @@ function CourseCombobox({
                     className={`${ITEM_BASE} flex items-center gap-3 ${isSelected ? ITEM_SELECTED : ITEM_DEFAULT}`}
                   >
                     <span
-                      className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center text-[10px]
-                      ${isSelected ? "bg-admin-primary border-admin-primary text-white" : "border-slate-500"}`}
+                      className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center text-[10px] transition-colors
+                        ${isSelected ? "bg-[#6366f1] border-[#6366f1] text-white" : "border-slate-500"}`}
                     >
                       {isSelected && "✓"}
                     </span>
@@ -311,7 +314,7 @@ function CourseCombobox({
                 );
               })}
               {allFiltered.length > 3 && (
-                <p className="px-3 py-2 text-xs text-slate-500 text-center border-t border-[hsl(220,20%,28%)]">
+                <p className="px-3 py-2 text-xs text-slate-500 text-center border-t border-[hsl(220,20%,22%)] mt-1 pt-2">
                   Nhập cụ thể hơn để thu hẹp kết quả
                 </p>
               )}
@@ -320,16 +323,19 @@ function CourseCombobox({
         </div>
       )}
 
-      {/* Selected tags - chỉ hiện khi dropdown đóng */}
-      {!open && selectedIds.length > 0 && (
+      {selectedIds.length > 0 && (
         <div className="flex flex-wrap gap-2 pt-1">
           {selectedIds.map((id) => {
             const c = courses.find((x) => ((x as any)._id ?? x.id) === id);
             return c ? (
               <span
                 key={id}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium
-                bg-admin-primary/20 text-admin-primary border border-admin-primary/30 whitespace-normal break-words max-w-full"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
+                style={{
+                  background: "rgba(99,102,241,0.15)",
+                  border: "1px solid rgba(99,102,241,0.35)",
+                  color: "#818cf8",
+                }}
               >
                 <span>{c.title}</span>
                 <button
@@ -347,8 +353,6 @@ function CourseCombobox({
     </div>
   );
 }
-
-// ==================== Custom Select: Order Status ====================
 
 const STATUS_OPTIONS: { value: OrderStatus; label: string }[] = [
   { value: "COMPLETED", label: "Hoàn thành" },
@@ -383,7 +387,7 @@ function StatusSelect({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`w-full flex items-center justify-between rounded-md border px-3 py-2 text-sm ${INPUT_CLASS}`}
+        className={`w-full flex items-center justify-between rounded-lg border px-3 py-2.5 text-sm ${INPUT_CLASS}`}
       >
         <span>{selected?.label}</span>
         <ChevronDown
@@ -391,7 +395,10 @@ function StatusSelect({
         />
       </button>
       {open && (
-        <div className={`absolute top-full mt-1 w-full ${DROPDOWN_BG}`}>
+        <div
+          className={`absolute top-full mt-1.5 w-full p-1 ${DROPDOWN_BG}`}
+          style={{ zIndex: 9999 }}
+        >
           {STATUS_OPTIONS.map((opt) => (
             <button
               key={opt.value}
@@ -410,8 +417,6 @@ function StatusSelect({
     </div>
   );
 }
-
-// ==================== Custom Select: Payment Method ====================
 
 const PAYMENT_OPTIONS: { value: PaymentMethod; label: string }[] = [
   { value: "VNPAY", label: "VNPay" },
@@ -446,16 +451,18 @@ function PaymentSelect({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`w-full flex items-center justify-between rounded-md border px-3 py-2 text-sm ${INPUT_CLASS}`}
+        className={`w-full flex items-center justify-between rounded-lg border px-3 py-2.5 text-sm ${INPUT_CLASS}`}
       >
         <span>{selected?.label}</span>
         <ChevronDown
           className={`w-3.5 h-3.5 text-slate-500 transition-transform ${open ? "rotate-180" : ""}`}
         />
       </button>
-
       {open && (
-        <div className={`absolute top-full mt-1 w-full ${DROPDOWN_BG}`}>
+        <div
+          className={`absolute top-full mt-1.5 w-full p-1 ${DROPDOWN_BG}`}
+          style={{ zIndex: 9999 }}
+        >
           {PAYMENT_OPTIONS.map((opt) => (
             <button
               key={opt.value}
@@ -475,8 +482,6 @@ function PaymentSelect({
   );
 }
 
-// ==================== Main Component ====================
-
 export default function AdminOrders() {
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [totalItems, setTotalItems] = useState(0);
@@ -485,7 +490,7 @@ export default function AdminOrders() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 15;
+  const itemsPerPage = 10;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -512,12 +517,10 @@ export default function AdminOrders() {
     paymentMethod: PaymentMethod;
   }>({ paymentStatus: "PENDING", paymentMethod: "VNPAY" });
 
-  // ── Fetch orders ────────────────────────────────────────────
-
   const fetchOrders = async (
     page = currentPage,
     search = searchQuery,
-    status = statusFilter
+    status = statusFilter,
   ) => {
     setIsLoading(true);
     try {
@@ -542,15 +545,16 @@ export default function AdminOrders() {
   }, [currentPage]); // eslint-disable-line
 
   useEffect(() => {
-    if (!isMounted.current) { isMounted.current = true; return; }
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
     const t = setTimeout(() => {
       setCurrentPage(1);
       fetchOrders(1, searchQuery, statusFilter);
     }, 350);
     return () => clearTimeout(t);
   }, [searchQuery, statusFilter]); // eslint-disable-line
-
-  // ── Fetch lookup ─────────────────────────────────────────────
 
   const openAddDialog = async () => {
     setIsAddDialogOpen(true);
@@ -578,8 +582,6 @@ export default function AdminOrders() {
       paymentMethod: "VNPAY",
     });
 
-  // ── Stats ──────────────────────────────────────────────────
-
   const totalRevenue = orders
     .filter((o) => o.paymentStatus === "COMPLETED")
     .reduce((s, o) => s + o.finalAmount, 0);
@@ -592,8 +594,6 @@ export default function AdminOrders() {
   const refundedCount = orders.filter(
     (o) => o.paymentStatus === "REFUNDED",
   ).length;
-
-  // ── Handlers ─────────────────────────────────────────────
 
   const handleAddOrder = async () => {
     if (!newOrder.studentId) {
@@ -715,11 +715,8 @@ export default function AdminOrders() {
     toast.success("Xuất CSV thành công!");
   };
 
-  // ── Render ──────────────────────────────────────────────
-
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-admin-foreground">
@@ -748,39 +745,61 @@ export default function AdminOrders() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           {
             label: "Tổng doanh thu",
             value: formatCurrency(totalRevenue),
-            color: "text-green-500",
+            color: "text-green-400",
+            icon: "💰",
+            iconBg: "rgba(34,197,94,0.1)",
           },
           {
             label: "Đơn hoàn thành",
             value: completedCount,
             color: "text-admin-foreground",
+            icon: "✅",
+            iconBg: "rgba(99,102,241,0.1)",
           },
           {
             label: "Đang xử lý",
             value: pendingCount,
-            color: "text-yellow-500",
+            color: "text-yellow-400",
+            icon: "⏳",
+            iconBg: "rgba(234,179,8,0.1)",
           },
-          { label: "Hoàn tiền", value: refundedCount, color: "text-blue-500" },
+          {
+            label: "Hoàn tiền",
+            value: refundedCount,
+            color: "text-blue-400",
+            icon: "↩️",
+            iconBg: "rgba(59,130,246,0.1)",
+          },
         ].map((s) => (
           <div
             key={s.label}
-            className="bg-admin-card border border-admin-border rounded-xl p-4"
+            className="bg-admin-card border border-admin-border rounded-xl p-4 flex items-center gap-3"
           >
-            <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-            <p className="text-sm text-admin-muted-foreground">{s.label}</p>
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+              style={{ background: s.iconBg }}
+            >
+              {s.icon}
+            </div>
+            <div>
+              <p className={`text-xl font-bold leading-tight ${s.color}`}>
+                {s.value}
+              </p>
+              <p className="text-xs text-admin-muted-foreground mt-0.5">
+                {s.label}
+              </p>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Filters */}
       <div className="bg-admin-card border border-admin-border rounded-xl p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted-foreground" />
             <Input
@@ -808,7 +827,6 @@ export default function AdminOrders() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="bg-admin-card border border-admin-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -826,11 +844,11 @@ export default function AdminOrders() {
                 ].map((h, i) => (
                   <th
                     key={h}
-                    className={`py-4 px-4 text-sm font-medium text-admin-muted-foreground
-                    ${i === 7 ? "text-right" : "text-left"}
-                    ${i === 2 ? "hidden lg:table-cell" : ""}
-                    ${i === 4 ? "hidden md:table-cell" : ""}
-                    ${i === 6 ? "hidden sm:table-cell" : ""}`}
+                    className={`py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-admin-muted-foreground
+                      ${i === 7 ? "text-right" : "text-left"}
+                      ${i === 2 ? "hidden lg:table-cell" : ""}
+                      ${i === 4 ? "hidden md:table-cell" : ""}
+                      ${i === 6 ? "hidden sm:table-cell" : ""}`}
                   >
                     {h}
                   </th>
@@ -842,8 +860,27 @@ export default function AdminOrders() {
                 <tr>
                   <td
                     colSpan={8}
-                    className="py-12 text-center text-admin-muted-foreground"
+                    className="py-16 text-center text-admin-muted-foreground"
                   >
+                    <svg
+                      className="animate-spin w-5 h-5 mx-auto mb-2"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v8z"
+                      />
+                    </svg>
                     Đang tải...
                   </td>
                 </tr>
@@ -851,7 +888,7 @@ export default function AdminOrders() {
                 <tr>
                   <td
                     colSpan={8}
-                    className="py-12 text-center text-admin-muted-foreground"
+                    className="py-16 text-center text-admin-muted-foreground"
                   >
                     Không có đơn hàng nào
                   </td>
@@ -862,15 +899,18 @@ export default function AdminOrders() {
                   return (
                     <tr
                       key={order._id}
-                      className="border-t border-admin-border hover:bg-admin-accent/50"
+                      className="border-t border-admin-border hover:bg-admin-accent/50 transition-colors"
                     >
                       <td className="py-4 px-4">
-                        <span className="text-sm font-mono text-admin-primary">
+                        <span
+                          className="text-sm font-mono font-medium"
+                          style={{ color: "#818cf8" }}
+                        >
                           {order.orderCode}
                         </span>
                       </td>
                       <td className="py-4 px-4">
-                        <p className="text-sm font-medium text-admin-foreground truncate max-w-[120px]">
+                        <p className="text-sm font-medium text-admin-foreground truncate max-w-[130px]">
                           {order.createdBy}
                         </p>
                       </td>
@@ -879,7 +919,7 @@ export default function AdminOrders() {
                           {order.orderItems.map((item) => (
                             <p
                               key={item._id}
-                              className="text-sm text-admin-muted-foreground truncate"
+                              className="text-xs text-admin-muted-foreground truncate"
                             >
                               {item.courseName}
                             </p>
@@ -887,27 +927,29 @@ export default function AdminOrders() {
                         </div>
                       </td>
                       <td className="py-4 px-4">
-                        <p className="text-sm font-medium text-admin-foreground">
+                        <p className="text-sm font-semibold text-admin-foreground">
                           {formatCurrency(order.finalAmount)}
                         </p>
                         {order.discountAmount > 0 && (
-                          <p className="text-xs text-green-500">
+                          <p className="text-xs text-green-400 mt-0.5">
                             -{formatCurrency(order.discountAmount)}
                           </p>
                         )}
                       </td>
-                      <td className="py-4 px-4 text-sm text-admin-muted-foreground hidden md:table-cell">
-                        {PAYMENT_METHOD_LABELS[order.paymentMethod] ??
-                          order.paymentMethod}
+                      <td className="py-4 px-4 hidden md:table-cell">
+                        <span className="text-xs px-2.5 py-1 rounded-full bg-admin-accent text-admin-muted-foreground border border-admin-border">
+                          {PAYMENT_METHOD_LABELS[order.paymentMethod] ??
+                            order.paymentMethod}
+                        </span>
                       </td>
                       <td className="py-4 px-4">
                         <span
-                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${status?.className}`}
+                          className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${status?.className}`}
                         >
                           {status?.label ?? order.paymentStatus}
                         </span>
                       </td>
-                      <td className="py-4 px-4 text-sm text-admin-muted-foreground hidden sm:table-cell whitespace-nowrap">
+                      <td className="py-4 px-4 text-xs text-admin-muted-foreground hidden sm:table-cell whitespace-nowrap">
                         {formatDateTime(order.createdAt)}
                       </td>
                       <td className="py-4 px-4">
@@ -917,7 +959,7 @@ export default function AdminOrders() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 p-0"
+                                className="h-8 w-8 p-0 hover:bg-admin-accent"
                               >
                                 <MoreVertical className="w-4 h-4 text-admin-muted-foreground" />
                               </Button>
@@ -946,7 +988,7 @@ export default function AdminOrders() {
                               )}
                               <DropdownMenuItem
                                 onClick={() => handleDeleteClick(order)}
-                                className="text-red-400 hover:text-red-300"
+                                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
                               >
                                 <Trash2 className="w-4 h-4 mr-2" />
                                 Xóa
@@ -963,11 +1005,10 @@ export default function AdminOrders() {
           </table>
         </div>
 
-        {/* Pagination */}
         <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-admin-border gap-4">
           <p className="text-sm text-admin-muted-foreground">
             Hiển thị{" "}
-            {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)} -{" "}
+            {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)} –{" "}
             {Math.min(currentPage * itemsPerPage, totalItems)} / {totalItems}
           </p>
           <div className="flex gap-2">
@@ -993,7 +1034,6 @@ export default function AdminOrders() {
         </div>
       </div>
 
-      {/* ===== Add Dialog ===== */}
       <Dialog
         open={isAddDialogOpen}
         onOpenChange={(open) => {
@@ -1001,23 +1041,62 @@ export default function AdminOrders() {
           if (!open) resetAddForm();
         }}
       >
-        <DialogContent className="admin-dialog sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-white">Thêm đơn hàng mới</DialogTitle>
-            <DialogDescription className="text-slate-400">
-              Tạo đơn hàng thủ công cho học viên
+        <DialogContent
+          className="sm:max-w-lg p-0 gap-0"
+          style={{
+            background: "#0f1117",
+            border: "1px solid #1e2230",
+            overflow: "visible",
+          }}
+        >
+          <div className="px-6 pt-6 pb-4 border-b border-[#1e2230]">
+            <p
+              className="text-[11px] font-semibold uppercase tracking-widest mb-1"
+              style={{ color: "#6366f1" }}
+            >
+              Đơn hàng mới
+            </p>
+            <DialogTitle className="text-xl font-bold text-white">
+              Thêm đơn hàng thủ công
+            </DialogTitle>
+            <DialogDescription
+              className="text-sm mt-1"
+              style={{ color: "#94a3b8" }}
+            >
+              Tạo đơn hàng cho học viên không qua cổng thanh toán
             </DialogDescription>
-          </DialogHeader>
+          </div>
 
           {loadingLookup ? (
-            <div className="py-10 text-center text-slate-400">
+            <div
+              className="flex items-center justify-center py-16"
+              style={{ color: "#475569" }}
+            >
+              <svg
+                className="animate-spin w-5 h-5 mr-2"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8z"
+                />
+              </svg>
               Đang tải dữ liệu...
             </div>
           ) : (
-            <div className="space-y-5 py-4">
-              {/* Học viên combobox */}
+            <div className="px-6 py-5 space-y-5">
               <div className="space-y-2">
-                <Label className="text-white">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                   Học viên <span className="text-red-400">*</span>
                 </Label>
                 <StudentCombobox
@@ -1026,10 +1105,8 @@ export default function AdminOrders() {
                   onChange={(id) => setNewOrder({ ...newOrder, studentId: id })}
                 />
               </div>
-
-              {/* Khóa học combobox multi */}
               <div className="space-y-2">
-                <Label className="text-white">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                   Khóa học <span className="text-red-400">*</span>
                 </Label>
                 <CourseCombobox
@@ -1038,216 +1115,324 @@ export default function AdminOrders() {
                   onToggle={toggleCourse}
                 />
               </div>
-
-              {/* Mã giảm giá */}
-              <div className="space-y-2">
-                <Label className="text-white">Mã giảm giá (tùy chọn)</Label>
-                <Input
-                  placeholder="VD: SALE50"
-                  value={newOrder.couponCode}
-                  onChange={(e) =>
-                    setNewOrder({ ...newOrder, couponCode: e.target.value })
-                  }
-                  className={INPUT_CLASS}
-                />
-              </div>
-
-              {/* Phương thức */}
-              <div className="space-y-2">
-                <Label className="text-white">Phương thức thanh toán</Label>
-                <PaymentSelect
-                  value={newOrder.paymentMethod}
-                  onChange={(v) =>
-                    setNewOrder({ ...newOrder, paymentMethod: v })
-                  }
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Mã giảm giá
+                  </Label>
+                  <input
+                    placeholder="VD: SALE50"
+                    value={newOrder.couponCode}
+                    onChange={(e) =>
+                      setNewOrder({ ...newOrder, couponCode: e.target.value })
+                    }
+                    className={`w-full rounded-lg border px-3 py-2.5 text-sm outline-none ${INPUT_CLASS}`}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Phương thức
+                  </Label>
+                  <PaymentSelect
+                    value={newOrder.paymentMethod}
+                    onChange={(v) =>
+                      setNewOrder({ ...newOrder, paymentMethod: v })
+                    }
+                  />
+                </div>
               </div>
             </div>
           )}
 
-          <DialogFooter>
-            <Button
-              variant="outline"
+          <div className="px-6 pb-6 flex justify-end gap-3">
+            <button
               onClick={() => {
                 setIsAddDialogOpen(false);
                 resetAddForm();
               }}
-              className={BTN_CANCEL}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:brightness-125"
+              style={dialogBtnSecondary}
             >
               Hủy
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={handleAddOrder}
               disabled={isAdding || loadingLookup}
-              className="bg-admin-primary hover:bg-admin-primary/90"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-all hover:opacity-90 disabled:opacity-50"
+              style={dialogBtnPrimary}
             >
               {isAdding ? "Đang tạo..." : "Tạo đơn hàng"}
-            </Button>
-          </DialogFooter>
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* ===== View Dialog ===== */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="admin-dialog sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-white">Chi tiết đơn hàng</DialogTitle>
-          </DialogHeader>
+        <DialogContent
+          className="sm:max-w-lg p-0 gap-0 overflow-hidden"
+          style={{ background: "#0f1117", border: "1px solid #1e2230" }}
+        >
           {selectedOrder && (
-            <div className="space-y-4 py-4">
-              <div className="flex items-center justify-between">
-                <span className="text-lg font-mono text-admin-primary">
-                  {selectedOrder.orderCode}
-                </span>
-                <span
-                  className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${STATUS_MAP[selectedOrder.paymentStatus]?.className}`}
+            <>
+              <div className="px-6 pt-6 pb-4 border-b border-[#1e2230]">
+                <p
+                  className="text-[11px] font-semibold uppercase tracking-widest mb-2"
+                  style={{ color: "#6366f1" }}
                 >
-                  {STATUS_MAP[selectedOrder.paymentStatus]?.label}
-                </span>
-              </div>
-              <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg space-y-2">
-                <p className="text-xs text-slate-400 mb-2">Khóa học</p>
-                {selectedOrder.orderItems.map((item) => (
-                  <div
-                    key={item._id}
-                    className="flex items-center justify-between"
-                  >
-                    <p className="text-sm text-white">{item.courseName}</p>
-                    <p className="text-sm font-medium text-green-400">
-                      {formatCurrency(item.finalPrice)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  {
-                    label: "Tổng tiền",
-                    value: formatCurrency(selectedOrder.totalAmount),
-                    color: "text-white",
-                  },
-                  {
-                    label: "Giảm giá",
-                    value: `-${formatCurrency(selectedOrder.discountAmount)}`,
-                    color: "text-green-400",
-                  },
-                  {
-                    label: "Thực trả",
-                    value: formatCurrency(selectedOrder.finalAmount),
-                    color: "text-white",
-                  },
-                ].map((f) => (
-                  <div
-                    key={f.label}
-                    className="bg-slate-700/50 border border-slate-600/50 p-3 rounded-lg"
-                  >
-                    <p className="text-xs text-slate-400 mb-1">{f.label}</p>
-                    <p className={`text-sm font-semibold ${f.color}`}>
-                      {f.value}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-slate-700/50 border border-slate-600/50 p-3 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">Phương thức</p>
-                  <p className="text-sm font-medium text-white">
-                    {PAYMENT_METHOD_LABELS[selectedOrder.paymentMethod] ??
-                      selectedOrder.paymentMethod}
-                  </p>
-                </div>
-                <div className="bg-slate-700/50 border border-slate-600/50 p-3 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">Ngày tạo</p>
-                  <p className="text-sm font-medium text-white">
-                    {formatDateTime(selectedOrder.createdAt)}
-                  </p>
-                </div>
-              </div>
-              <div className="bg-slate-700/50 border border-slate-600/50 p-3 rounded-lg">
-                <p className="text-xs text-slate-400 mb-1">Người tạo</p>
-                <p className="text-sm font-medium text-white">
-                  {selectedOrder.createdBy}
+                  Chi tiết đơn hàng
                 </p>
+                <div className="flex items-center justify-between">
+                  <span
+                    className="text-xl font-bold font-mono"
+                    style={{ color: "#818cf8" }}
+                  >
+                    {selectedOrder.orderCode}
+                  </span>
+                  <span
+                    className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${STATUS_MAP[selectedOrder.paymentStatus]?.className}`}
+                  >
+                    {STATUS_MAP[selectedOrder.paymentStatus]?.label}
+                  </span>
+                </div>
               </div>
-            </div>
+
+              <div className="px-6 py-5 space-y-4">
+                <div
+                  className="rounded-xl p-4 space-y-2"
+                  style={DETAIL_BLOCK_STYLE}
+                >
+                  <p
+                    className="text-[11px] uppercase tracking-wider font-semibold mb-3"
+                    style={{ color: "#475569" }}
+                  >
+                    🎬 Khóa học
+                  </p>
+                  {selectedOrder.orderItems.map((item) => (
+                    <div
+                      key={item._id}
+                      className="flex items-center justify-between"
+                    >
+                      <p className="text-sm text-slate-300">
+                        {item.courseName}
+                      </p>
+                      <p className="text-sm font-semibold text-green-400">
+                        {formatCurrency(item.finalPrice)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    {
+                      label: "Tổng tiền",
+                      value: formatCurrency(selectedOrder.totalAmount),
+                      icon: "💰",
+                      color: "#e2e8f0",
+                    },
+                    {
+                      label: "Giảm giá",
+                      value: `-${formatCurrency(selectedOrder.discountAmount)}`,
+                      icon: "🏷️",
+                      color: "#4ade80",
+                    },
+                    {
+                      label: "Thực trả",
+                      value: formatCurrency(selectedOrder.finalAmount),
+                      icon: "💸",
+                      color: "#818cf8",
+                    },
+                  ].map((f) => (
+                    <div
+                      key={f.label}
+                      className="rounded-xl p-3.5 text-center"
+                      style={STAT_CARD_STYLE}
+                    >
+                      <p className="text-lg mb-1">{f.icon}</p>
+                      <p
+                        className="text-[11px] uppercase tracking-wider font-semibold mb-1"
+                        style={{ color: "#475569" }}
+                      >
+                        {f.label}
+                      </p>
+                      <p
+                        className="text-sm font-bold"
+                        style={{ color: f.color }}
+                      >
+                        {f.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    {
+                      label: "Phương thức",
+                      value:
+                        PAYMENT_METHOD_LABELS[selectedOrder.paymentMethod] ??
+                        selectedOrder.paymentMethod,
+                      icon: "💳",
+                    },
+                    {
+                      label: "Ngày tạo",
+                      value: formatDateTime(selectedOrder.createdAt),
+                      icon: "📅",
+                    },
+                  ].map((f) => (
+                    <div
+                      key={f.label}
+                      className="rounded-xl p-3.5"
+                      style={STAT_CARD_STYLE}
+                    >
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-sm">{f.icon}</span>
+                        <p
+                          className="text-[11px] uppercase tracking-wider font-semibold"
+                          style={{ color: "#475569" }}
+                        >
+                          {f.label}
+                        </p>
+                      </div>
+                      <p className="text-sm font-medium text-slate-200">
+                        {f.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-xl p-3.5" style={STAT_CARD_STYLE}>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-sm">👤</span>
+                    <p
+                      className="text-[11px] uppercase tracking-wider font-semibold"
+                      style={{ color: "#475569" }}
+                    >
+                      Người tạo
+                    </p>
+                  </div>
+                  <p className="text-sm font-medium text-slate-200">
+                    {selectedOrder.createdBy}
+                  </p>
+                </div>
+              </div>
+
+              <div className="px-6 pb-6 flex justify-end">
+                <button
+                  onClick={() => setIsViewDialogOpen(false)}
+                  className="px-5 py-2 rounded-lg text-sm font-medium transition-all hover:brightness-125"
+                  style={dialogBtnSecondary}
+                >
+                  Đóng
+                </button>
+              </div>
+            </>
           )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsViewDialogOpen(false)}
-              className={BTN_CANCEL}
-            >
-              Đóng
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ===== Edit Dialog ===== */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="admin-dialog sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-white">Chỉnh sửa đơn hàng</DialogTitle>
-            <DialogDescription className="text-slate-400">
-              Cập nhật thông tin đơn hàng {selectedOrder?.orderCode}
+        <DialogContent
+          className="sm:max-w-md p-0 gap-0"
+          style={{
+            background: "#0f1117",
+            border: "1px solid #1e2230",
+            overflow: "visible",
+          }}
+        >
+          <div className="px-6 pt-6 pb-4 border-b border-[#1e2230]">
+            <p
+              className="text-[11px] font-semibold uppercase tracking-widest mb-1"
+              style={{ color: "#6366f1" }}
+            >
+              Chỉnh sửa
+            </p>
+            <DialogTitle className="text-xl font-bold text-white">
+              Cập nhật đơn hàng
+            </DialogTitle>
+            <DialogDescription
+              className="text-sm mt-1 font-mono"
+              style={{ color: "#818cf8" }}
+            >
+              {selectedOrder?.orderCode}
             </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
+          </div>
+
+          <div className="px-6 py-5 space-y-4">
             <div className="space-y-2">
-              <Label className="text-white">Trạng thái</Label>
+              <Label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                Trạng thái
+              </Label>
               <StatusSelect
                 value={editData.paymentStatus}
                 onChange={(v) => setEditData({ ...editData, paymentStatus: v })}
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-white">Phương thức thanh toán</Label>
+              <Label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                Phương thức thanh toán
+              </Label>
               <PaymentSelect
                 value={editData.paymentMethod}
                 onChange={(v) => setEditData({ ...editData, paymentMethod: v })}
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
+
+          <div className="px-6 pb-6 flex justify-end gap-3">
+            <button
               onClick={() => setIsEditDialogOpen(false)}
-              className={BTN_CANCEL}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:brightness-125"
+              style={dialogBtnSecondary}
             >
               Hủy
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={handleEditSave}
-              className="bg-admin-primary hover:bg-admin-primary/90"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-all hover:opacity-90"
+              style={dialogBtnPrimary}
             >
               Lưu thay đổi
-            </Button>
-          </DialogFooter>
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* ===== Delete Dialog ===== */}
       <AlertDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
       >
-        <AlertDialogContent className="admin-dialog">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">
+        <AlertDialogContent
+          className="p-0 gap-0 overflow-hidden sm:max-w-md"
+          style={{ background: "#0f1117", border: "1px solid #1e2230" }}
+        >
+          <AlertDialogHeader className="px-6 pt-6 pb-4 border-b border-[#1e2230]">
+            <AlertDialogTitle className="text-white text-lg font-bold">
               Xác nhận xóa đơn hàng
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-400">
-              Bạn có chắc chắn muốn xóa đơn hàng "{selectedOrder?.orderCode}"?
-              Hành động này không thể hoàn tác.
+            <AlertDialogDescription style={{ color: "#94a3b8" }}>
+              Bạn có chắc muốn xóa đơn hàng{" "}
+              <span
+                className="font-mono font-semibold"
+                style={{ color: "#818cf8" }}
+              >
+                {selectedOrder?.orderCode}
+              </span>
+              ? Hành động này không thể hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className={BTN_CANCEL}>Hủy</AlertDialogCancel>
+          <AlertDialogFooter className="px-6 py-4 flex justify-end gap-3">
+            <AlertDialogCancel
+              style={dialogBtnSecondary}
+              className="border-0 hover:brightness-125 transition-all"
+            >
+              Hủy
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 hover:bg-red-700 text-white font-medium"
             >
-              Xóa
+              Xóa đơn hàng
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

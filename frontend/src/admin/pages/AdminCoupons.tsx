@@ -69,7 +69,6 @@ export default function AdminCoupons() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
 
-  // Server-side filtered & paginated
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const paginatedCoupons = coupons;
   
@@ -91,8 +90,6 @@ export default function AdminCoupons() {
         search: searchQuery || undefined,
         status: statusFilter === 'all' ? undefined : statusFilter,
       });
-
-      // couponService returns ApiPagination<Coupon>
       setCoupons(res.result);
       setTotalItems(res.meta.total);
     } catch (err) {
@@ -140,7 +137,6 @@ export default function AdminCoupons() {
 
     (async () => {
       try {
-        // make sure we send an ISO timestamp (backend expects Instant)
         const expiresIso = formData.expiresAt
           ? new Date(formData.expiresAt).toISOString()
           : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -248,7 +244,7 @@ export default function AdminCoupons() {
             resetForm();
             setIsAddDialogOpen(true);
           }}
-          className="bg-admin-primary hover:bg-admin-primary/90"
+          className="bg-admin-primary hover:bg-admin-primary/90 text-white"
         >
           <Plus className="w-4 h-4 mr-2" />
           Tạo mã mới
@@ -267,10 +263,7 @@ export default function AdminCoupons() {
               className="pl-10 bg-admin-accent border-admin-border text-admin-foreground"
             />
           </div>
-          <Select 
-            value={statusFilter} 
-            onValueChange={setStatusFilter}
-          >
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-full sm:w-48 bg-admin-accent border-admin-border text-admin-foreground">
               <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
@@ -291,7 +284,6 @@ export default function AdminCoupons() {
             key={coupon._id} 
             className="bg-admin-card border border-admin-border rounded-xl p-6 relative overflow-hidden"
           >
-            {/* Decorative pattern */}
             <div className="absolute top-0 right-0 w-24 h-24 bg-admin-primary/5 rounded-full -translate-y-12 translate-x-12" />
             
             <div className="relative">
@@ -456,7 +448,11 @@ export default function AdminCoupons() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)} className="border-slate-600 text-white hover:bg-slate-700">
+            <Button
+              variant="outline"
+              onClick={() => setIsViewDialogOpen(false)}
+              className="border-slate-600 text-white hover:bg-slate-700"
+            >
               Đóng
             </Button>
           </DialogFooter>
@@ -468,9 +464,7 @@ export default function AdminCoupons() {
         <DialogContent className="admin-dialog sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Tạo mã giảm giá mới</DialogTitle>
-            <DialogDescription>
-              Nhập thông tin mã giảm giá
-            </DialogDescription>
+            <DialogDescription>Nhập thông tin mã giảm giá</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
@@ -495,8 +489,8 @@ export default function AdminCoupons() {
               </div>
               <div>
                 <Label>Loại</Label>
-                <Select 
-                  value={formData.discountType} 
+                <Select
+                  value={formData.discountType}
                   onValueChange={(value) => setFormData({ ...formData, discountType: value })}
                 >
                   <SelectTrigger className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white">
@@ -542,12 +536,16 @@ export default function AdminCoupons() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]">
+            <Button
+              variant="outline"
+              onClick={() => setIsAddDialogOpen(false)}
+              className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]"
+            >
               Hủy
             </Button>
             <Button
               onClick={handleCreateCoupon}
-              className="bg-admin-primary hover:bg-admin-primary/90"
+              className="bg-admin-primary hover:bg-admin-primary/90 text-white"
             >
               Tạo mã giảm giá
             </Button>
@@ -560,9 +558,7 @@ export default function AdminCoupons() {
         <DialogContent className="admin-dialog sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Chỉnh sửa mã giảm giá</DialogTitle>
-            <DialogDescription>
-              Cập nhật thông tin mã giảm giá
-            </DialogDescription>
+            <DialogDescription>Cập nhật thông tin mã giảm giá</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
@@ -589,8 +585,8 @@ export default function AdminCoupons() {
               </div>
               <div>
                 <Label>Loại</Label>
-                <Select 
-                  value={formData.discountType} 
+                <Select
+                  value={formData.discountType}
                   onValueChange={(value) => setFormData({ ...formData, discountType: value })}
                 >
                   <SelectTrigger className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white">
@@ -636,12 +632,16 @@ export default function AdminCoupons() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]">
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+              className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]"
+            >
               Hủy
             </Button>
             <Button
               onClick={handleEditCoupon}
-              className="bg-admin-primary hover:bg-admin-primary/90"
+              className="bg-admin-primary hover:bg-admin-primary/90 text-white"
             >
               Lưu thay đổi
             </Button>
@@ -660,8 +660,13 @@ export default function AdminCoupons() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]">Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteCoupon} className="bg-red-600 hover:bg-red-700 text-white">
+            <AlertDialogCancel className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]">
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCoupon}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
               Xóa
             </AlertDialogAction>
           </AlertDialogFooter>

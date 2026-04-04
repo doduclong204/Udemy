@@ -4,8 +4,10 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { Rating } from '@/components/Rating';
-import { Trash2, Tag, ShoppingBag } from 'lucide-react';
+import { Trash2, Tag, ShoppingBag, X } from 'lucide-react';
 import { useState } from 'react';
+import couponService from '@/services/couponService';
+import { toast } from 'sonner';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
@@ -13,17 +15,70 @@ const formatCurrency = (value: number) =>
 export default function Cart() {
   const navigate = useNavigate();
   const { items, removeFromCart, totalOriginalPrice, totalSalePrice, totalDiscount, discountPercentage, loading } = useCart();
-  const [couponCode, setCouponCode] = useState('');
 
-  const handlePlaceOrder = () => {
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCode, setAppliedCode] = useState('');
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponLoading, setCouponLoading] = useState(false);
+
+  const finalPrice = totalSalePrice - couponDiscount;
+
+  const handleApplyCoupon = async () => {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) return;
+    setCouponLoading(true);
+    try {
+      const discount = await couponService.calculateDiscount(code, totalSalePrice);
+      setCouponDiscount(discount);
+      setAppliedCode(code);
+      toast.success(`Áp dụng mã "${code}" thành công! Giảm ${formatCurrency(discount)}`);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Mã giảm giá không hợp lệ hoặc đã hết hạn';
+      toast.error(msg);
+      setCouponDiscount(0);
+      setAppliedCode('');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCode('');
+    setCouponDiscount(0);
+    setCouponCode('');
+  };
+
+  const handlePlaceOrder = async () => {
+    const code = couponCode.trim().toUpperCase();
+
+    let finalCouponDiscount = couponDiscount;
+    let finalAppliedCode = appliedCode;
+
+    if (code && !appliedCode) {
+      setCouponLoading(true);
+      try {
+        const discount = await couponService.calculateDiscount(code, totalSalePrice);
+        finalCouponDiscount = discount;
+        finalAppliedCode = code;
+        setCouponDiscount(discount);
+        setAppliedCode(code);
+        toast.success(`Đã áp dụng mã "${code}"!`);
+      } catch {
+        toast.error('Mã giảm giá không hợp lệ, tiếp tục đặt hàng không có mã.');
+      } finally {
+        setCouponLoading(false);
+      }
+    }
+
     navigate('/order/checkout', {
       state: {
         items,
-        couponCode: couponCode.trim() || undefined,
-        totalSalePrice,
+        couponCode: finalAppliedCode || undefined,
+        totalSalePrice: totalSalePrice - finalCouponDiscount,
         totalOriginalPrice,
         totalDiscount,
         discountPercentage,
+        couponDiscount: finalCouponDiscount,
       },
     });
   };
@@ -70,42 +125,89 @@ export default function Cart() {
             </div>
 
             <div className="lg:col-span-1">
-              <div className="sticky top-20 bg-card border border-border rounded-lg p-6 space-y-5">
-                <div>
-                  <h2 className="text-lg font-bold mb-2">Tổng cộng</h2>
-                  <p className="text-3xl font-bold">{formatCurrency(totalSalePrice)}</p>
-                  {totalDiscount > 0 && (
-                    <>
-                      <p className="text-sm text-muted-foreground line-through mt-1">{formatCurrency(totalOriginalPrice)}</p>
-                      <p className="text-sm text-green-600 font-medium flex items-center gap-1 mt-1">
-                        <Tag className="w-4 h-4" />
-                        Tiết kiệm {formatCurrency(totalDiscount)} ({discountPercentage} giảm)
-                      </p>
-                    </>
+              <div className="sticky top-20 bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+                {/* Coupon input */}
+                <div className="p-4 border-b border-border bg-muted/30">
+                  <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                    <Tag className="w-4 h-4 text-primary" /> Mã giảm giá
+                  </p>
+                  {appliedCode ? (
+                    <div className="flex items-center justify-between px-3 py-2.5 bg-green-50 border border-green-300 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                        <span className="text-sm font-semibold text-green-700">{appliedCode}</span>
+                        <span className="text-xs text-green-600 bg-green-100 px-1.5 py-0.5 rounded font-medium">
+                          -{formatCurrency(couponDiscount)}
+                        </span>
+                      </div>
+                      <button onClick={handleRemoveCoupon} className="text-slate-400 hover:text-red-500 transition-colors p-0.5 rounded">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Nhập mã giảm giá"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                        className="flex-1 px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary uppercase tracking-wider placeholder:normal-case placeholder:tracking-normal"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleApplyCoupon}
+                        disabled={couponLoading || !couponCode.trim()}
+                        className="shrink-0 border-primary text-primary hover:bg-primary hover:text-white transition-colors"
+                      >
+                        {couponLoading ? '...' : 'Áp dụng'}
+                      </Button>
+                    </div>
                   )}
                 </div>
 
-                <div className="border-t border-border pt-4">
-                  <p className="text-sm font-semibold mb-2">Mã giảm giá</p>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="Nhập mã giảm giá"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value)}
-                      className="flex-1 px-3 py-2 text-sm border border-border rounded bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                    <Button variant="secondary" size="sm">Áp dụng</Button>
+                {/* Price breakdown */}
+                <div className="p-4 space-y-2.5 border-b border-border">
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Tạm tính</span>
+                    <span>{formatCurrency(totalOriginalPrice)}</span>
                   </div>
+                  {totalDiscount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Giảm giá khóa học</span>
+                      <span className="text-green-600 font-medium">-{formatCurrency(totalDiscount)}</span>
+                    </div>
+                  )}
+                  {couponDiscount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Mã <span className="font-semibold text-foreground">{appliedCode}</span></span>
+                      <span className="text-green-600 font-medium">-{formatCurrency(couponDiscount)}</span>
+                    </div>
+                  )}
                 </div>
 
-                <Button variant="cart" className="w-full" onClick={handlePlaceOrder}>
-                  Đặt hàng
-                </Button>
+                {/* Total + CTA */}
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-base">Tổng cộng</span>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-primary">{formatCurrency(finalPrice)}</p>
+                      {totalDiscount + couponDiscount > 0 && (
+                        <p className="text-xs text-green-600 font-medium">
+                          Tiết kiệm {formatCurrency(totalDiscount + couponDiscount)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
 
-                <div className="border-t border-border pt-3 text-center space-y-1">
-                  <p className="text-sm text-muted-foreground">Đảm bảo hoàn tiền trong 30 ngày</p>
-                  <p className="text-xs text-muted-foreground">Truy cập trọn đời</p>
+                  <Button variant="cart" className="w-full h-11 text-base font-semibold" onClick={handlePlaceOrder} disabled={couponLoading}>
+                    {couponLoading ? 'Đang xử lý...' : 'Đặt hàng'}
+                  </Button>
+
+                  <div className="flex items-center justify-center gap-4 pt-1">
+                    <p className="text-xs text-muted-foreground text-center">🔒 Hoàn tiền 30 ngày · Truy cập trọn đời</p>
+                  </div>
                 </div>
               </div>
             </div>

@@ -1,30 +1,38 @@
-import axiosInstance from '@/config/api';
-import { API_ENDPOINTS } from '@/constant/common.constant';
-import { 
-  Coupon, 
-  ApiResponse, 
-  ApiPagination, 
-  CreateCouponRequest, 
+import axiosInstance from "@/config/api";
+import { API_ENDPOINTS } from "@/constant/common.constant";
+import {
+  Coupon,
+  ApiResponse,
+  ApiPagination,
+  CreateCouponRequest,
   UpdateCouponRequest,
-  CouponStatus 
-} from '@/types';
+  CouponStatus,
+} from "@/types";
 
 const couponService = {
   /**
    * Lấy danh sách coupons có phân trang và lọc
    */
-  getCoupons: async (params?: { page?: number; pageSize?: number; search?: string; status?: string }): Promise<ApiPagination<Coupon>> => {
+  getCoupons: async (params?: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    status?: string;
+  }): Promise<ApiPagination<Coupon>> => {
     const page = params?.page || 1;
     const pageSize = params?.pageSize || 10;
 
-    const response = await axiosInstance.get<ApiResponse<ApiPagination<Coupon>>>(API_ENDPOINTS.COUPONS?.BASE || '/coupons', {
+    const response = await axiosInstance.get<
+      ApiResponse<ApiPagination<Coupon>>
+    >(API_ENDPOINTS.COUPONS?.BASE || "/coupons", {
       params: {
         // Spring Boot page tính từ 0
         page: page,
         size: pageSize,
         // Cú pháp spring-filter: code ~ '*từ_khóa*'
         filter: params?.search ? `code~'*${params.search}*'` : undefined,
-        status: params?.status && params.status !== 'all' ? params.status : undefined,
+        status:
+          params?.status && params.status !== "all" ? params.status : undefined,
       },
     });
 
@@ -36,7 +44,9 @@ const couponService = {
    * Lấy chi tiết coupon theo ID
    */
   getCouponById: async (id: string): Promise<Coupon> => {
-    const response = await axiosInstance.get<ApiResponse<Coupon>>(`${API_ENDPOINTS.COUPONS?.BASE || '/coupons'}/${id}`);
+    const response = await axiosInstance.get<ApiResponse<Coupon>>(
+      `${API_ENDPOINTS.COUPONS?.BASE || "/coupons"}/${id}`,
+    );
     return response.data.data;
   },
 
@@ -44,15 +54,24 @@ const couponService = {
    * Tạo coupon mới (Admin)
    */
   createCoupon: async (data: CreateCouponRequest): Promise<Coupon> => {
-    const response = await axiosInstance.post<ApiResponse<Coupon>>(API_ENDPOINTS.COUPONS?.BASE || '/coupons', data);
+    const response = await axiosInstance.post<ApiResponse<Coupon>>(
+      API_ENDPOINTS.COUPONS?.BASE || "/coupons",
+      data,
+    );
     return response.data.data;
   },
 
   /**
    * Cập nhật coupon (Admin)
    */
-  updateCoupon: async (id: string, data: UpdateCouponRequest): Promise<Coupon> => {
-    const response = await axiosInstance.put<ApiResponse<Coupon>>(`${API_ENDPOINTS.COUPONS?.BASE || '/coupons'}/${id}`, data);
+  updateCoupon: async (
+    id: string,
+    data: UpdateCouponRequest,
+  ): Promise<Coupon> => {
+    const response = await axiosInstance.put<ApiResponse<Coupon>>(
+      `${API_ENDPOINTS.COUPONS?.BASE || "/coupons"}/${id}`,
+      data,
+    );
     return response.data.data;
   },
 
@@ -60,7 +79,9 @@ const couponService = {
    * Xóa coupon (Admin)
    */
   deleteCoupon: async (id: string): Promise<void> => {
-    await axiosInstance.delete(`${API_ENDPOINTS.COUPONS?.BASE || '/coupons'}/${id}`);
+    await axiosInstance.delete(
+      `${API_ENDPOINTS.COUPONS?.BASE || "/coupons"}/${id}`,
+    );
   },
 
   /**
@@ -68,8 +89,19 @@ const couponService = {
    */
   verifyCoupon: async (code: string, orderAmount: number): Promise<Coupon> => {
     const response = await axiosInstance.post<ApiResponse<Coupon>>(
-      `${API_ENDPOINTS.COUPONS?.BASE || '/coupons'}/verify`,
-      { code, orderAmount }
+      `${API_ENDPOINTS.COUPONS?.BASE || "/coupons"}/verify`,
+      { code, orderAmount },
+    );
+    return response.data.data;
+  },
+
+  calculateDiscount: async (
+    code: string,
+    orderAmount: number,
+  ): Promise<number> => {
+    const response = await axiosInstance.post<ApiResponse<number>>(
+      `${API_ENDPOINTS.COUPONS?.BASE || "/coupons"}/calculate-discount`,
+      { code, orderAmount },
     );
     return response.data.data;
   },

@@ -237,15 +237,14 @@ export default function AdminCourseForm() {
       if (thumbnailFile) thumbnailUrl = await uploadImage(thumbnailFile);
       if (bannerFile) bannerUrl = await uploadImage(bannerFile);
       if (hasNewImages) toast.dismiss("upload");
-
     } catch (err) {
       if (hasNewImages) toast.dismiss("upload");
       toast.error("Upload ảnh thất bại, vui lòng thử lại");
       return;
     }
 
-    const hasNewVideos = sections.some(s =>
-      s.lectures.some(l => l.type === "VIDEO" && l.videoFile)
+    const hasNewVideos = sections.some((s) =>
+      s.lectures.some((l) => l.type === "VIDEO" && l.videoFile),
     );
     if (hasNewVideos) {
       toast.loading("Đang upload video...", { id: "upload" });
@@ -270,7 +269,7 @@ export default function AdminCourseForm() {
       toast.dismiss("upload");
 
       const learningOutcomesJson = JSON.stringify(
-        learningPoints.filter((p) => p.trim())
+        learningPoints.filter((p) => p.trim()),
       );
 
       const coursePayload = isEditing
@@ -290,10 +289,18 @@ export default function AdminCourseForm() {
             outstanding: formData.isFeatured,
             learningOutcomes: learningOutcomesJson,
             sections: sectionsWithVideoUrl.map((s) => ({
-              id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s.id) ? s.id : undefined,
+              id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+                s.id,
+              )
+                ? s.id
+                : undefined,
               title: s.title,
               lectures: s.lectures.map((l) => ({
-                id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(l.id) ? l.id : undefined,
+                id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+                  l.id,
+                )
+                  ? l.id
+                  : undefined,
                 title: l.title,
                 type: l.type,
                 videoUrl: l.videoUrl || l.videoFileName,
@@ -609,6 +616,7 @@ export default function AdminCourseForm() {
               />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* ✅ FIX: Danh mục dropdown */}
               <div>
                 <Label className="text-admin-foreground">Danh mục</Label>
                 <Select
@@ -620,15 +628,26 @@ export default function AdminCourseForm() {
                   <SelectTrigger className="mt-1.5 bg-admin-accent border-admin-border text-admin-foreground">
                     <SelectValue placeholder="Chọn danh mục" />
                   </SelectTrigger>
-                  <SelectContent className="bg-admin-card border-admin-border z-50">
+                  <SelectContent
+                    position="popper"
+                    sideOffset={4}
+                    className="border-admin-border"
+                    style={{ backgroundColor: "var(--admin-card, #1e2535)", color: "var(--admin-foreground, #f1f5f9)" }}
+                  >
                     {categories.map((cat) => (
-                      <SelectItem key={cat._id} value={cat._id}>
+                      <SelectItem
+                        key={cat._id}
+                        value={cat._id}
+                        className="text-admin-foreground focus:bg-admin-accent focus:text-admin-foreground cursor-pointer"
+                      >
                         {cat.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* ✅ FIX: Trình độ dropdown */}
               <div>
                 <Label className="text-admin-foreground">Trình độ</Label>
                 <Select
@@ -640,10 +659,30 @@ export default function AdminCourseForm() {
                   <SelectTrigger className="mt-1.5 bg-admin-accent border-admin-border text-admin-foreground">
                     <SelectValue placeholder="Chọn trình độ" />
                   </SelectTrigger>
-                  <SelectContent className="bg-admin-card border-admin-border z-50">
-                    <SelectItem value="BASIC">Cơ bản</SelectItem>
-                    <SelectItem value="INTERMEDIATE">Trung cấp</SelectItem>
-                    <SelectItem value="ADVANCED">Nâng cao</SelectItem>
+                  <SelectContent
+                    position="popper"
+                    sideOffset={4}
+                    className="border-admin-border"
+                    style={{ backgroundColor: "var(--admin-card, #1e2535)", color: "var(--admin-foreground, #f1f5f9)" }}
+                  >
+                    <SelectItem
+                      value="BASIC"
+                      className="text-admin-foreground focus:bg-admin-accent focus:text-admin-foreground cursor-pointer"
+                    >
+                      Cơ bản
+                    </SelectItem>
+                    <SelectItem
+                      value="INTERMEDIATE"
+                      className="text-admin-foreground focus:bg-admin-accent focus:text-admin-foreground cursor-pointer"
+                    >
+                      Trung cấp
+                    </SelectItem>
+                    <SelectItem
+                      value="ADVANCED"
+                      className="text-admin-foreground focus:bg-admin-accent focus:text-admin-foreground cursor-pointer"
+                    >
+                      Nâng cao
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
