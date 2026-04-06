@@ -8,25 +8,28 @@ import { useAppDispatch } from "@/redux/hooks";
 import { useSelector } from "react-redux";
 import { setUser } from "@/redux/slices/authSlice";
 import {
-  fetchNotifications,
   markOneAsRead,
   markAllAsRead,
   removeOne,
+  decrementUnread,
+  clearUnread,
   selectUnreadCount,
-  selectNotifications,
 } from "@/redux/slices/notificationSlice";
 import {
   fetchEnrolledCount,
   selectEnrolledCount,
 } from "@/redux/slices/enrollmentSlice";
 import { Progress } from "@/components/ui/progress";
+import { AppPagination } from "@/components/AppPagination";
 import { toast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import enrollmentService from "@/services/enrollmentService";
 import userNotificationService from "@/services/userNotificationService";
 import userService from "@/services/userService";
 import uploadService from "@/services/uploadService";
-import type { EnrollmentResponse, NotificationType } from "@/types";
+import axiosInstance from "@/config/api";
+import { API_ENDPOINTS } from "@/constant/common.constant";
+import type { EnrollmentResponse, NotificationType, UserNotificationResponse, WishlistResponse, ApiResponse, ApiPagination } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
   BookOpen,
@@ -54,6 +57,10 @@ const DEFAULT_NOTIF_PREFS: NotifPrefs = {
   newsletter: false,
 };
 
+const ENROLLMENT_PAGE_SIZE = 6;
+const WISHLIST_PAGE_SIZE = 6;
+const NOTIF_PAGE_SIZE = 10;
+
 const getIconStyle = (type: NotificationType) => {
   switch (type) {
     case "COURSE":
@@ -80,8 +87,7 @@ const formatTime = (iso: string) => {
 
 export default function Dashboard() {
   const { user, isAuthenticated, logout } = useAuth();
-  console.log("provider:", user?.provider);
-  const { wishlist, removeFromWishlist } = useWishlist();
+  const { removeFromWishlist: ctxRemoveFromWishlist, refetch: refetchWishlistBadge } = useWishlist();
   const dispatch = useAppDispatch();
   const location = useLocation();
 
@@ -92,73 +98,145 @@ export default function Dashboard() {
   const isNotifications = currentPath === "/dashboard/notifications";
   const isSettings = currentPath === "/dashboard/settings";
 
-  // ── Notifications từ Redux (reactive, đồng bộ với Header) ──────────────────
-  const userNotifs = useSelector(selectNotifications);
   const unreadCount = useSelector(selectUnreadCount);
   const enrolledCount = useSelector(selectEnrolledCount);
-  const [loadingNotifs, setLoadingNotifs] = useState(false);
 
-  // Fetch notifications khi vào tab thông báo
-  useEffect(() => {
-    if (!isNotifications) return;
-    setLoadingNotifs(true);
-    dispatch(fetchNotifications()).finally(() => setLoadingNotifs(false));
-  }, [isNotifications, dispatch]);
-
-  // ── Enrollments (danh sách đầy đủ cho tab khóa học) ───────────────────────
+  // ── Enrollment (server-side, đã đúng) ──────────────────────────────
   const [enrollments, setEnrollments] = useState<EnrollmentResponse[]>([]);
   const [loadingEnrollments, setLoadingEnrollments] = useState(true);
+  const [enrollmentPage, setEnrollmentPage] = useState(1);
+  const [enrollmentTotalPages, setEnrollmentTotalPages] = useState(1);
 
   useEffect(() => {
+    if (!isMyLearning) return;
+    setLoadingEnrollments(true);
     enrollmentService
-      .getMyEnrollments({ pageSize: 10 })
+      .getMyEnrollments({ page: enrollmentPage, pageSize: ENROLLMENT_PAGE_SIZE })
       .then((res) => {
         setEnrollments(res.result);
-        // Đồng bộ count lên Redux luôn
+        setEnrollmentTotalPages(Math.ceil(res.meta.total / ENROLLMENT_PAGE_SIZE));
         dispatch(fetchEnrolledCount());
       })
       .catch(() => {})
       .finally(() => setLoadingEnrollments(false));
-  }, [dispatch]);
+  }, [enrollmentPage, isMyLearning, dispatch]);
 
-  // ── Notification handlers — optimistic update vào Redux ───────────────────
+  useEffect(() => { setEnrollmentPage(1); }, [isMyLearning]);
+
+  // ── Wishlist (server-side) ──────────────────────────────────────────
+  const [wishlistItems, setWishlistItems] = useState<WishlistResponse[]>([]);
+  const [loadingWishlist, setLoadingWishlist] = useState(false);
+  const [wishlistPage, setWishlistPage] = useState(1);
+  const [wishlistTotalPages, setWishlistTotalPages] = useState(1);
+  const [wishlistTotal, setWishlistTotal] = useState(0);
+
+  // Fetch total riêng để badge sidebar luôn đúng dù chưa vào tab wishlist
+  useEffect(() => {
+    axiosInstance
+      .get<ApiResponse<ApiPagination<WishlistResponse>>>(API_ENDPOINTS.WISHLIST.BASE, {
+        params: { page: 1, size: 1 },
+      })
+      .then((res) => setWishlistTotal(res.data.data.meta.total))
+      .catch(() => {});
+  }, []);
+
+  const fetchWishlistPage = (page: number) => {
+    setLoadingWishlist(true);
+    axiosInstance
+      .get<ApiResponse<ApiPagination<WishlistResponse>>>(API_ENDPOINTS.WISHLIST.BASE, {
+        params: { page, size: WISHLIST_PAGE_SIZE },
+      })
+      .then((res) => {
+        setWishlistItems(res.data.data.result);
+        setWishlistTotal(res.data.data.meta.total);
+        setWishlistTotalPages(Math.ceil(res.data.data.meta.total / WISHLIST_PAGE_SIZE));
+      })
+      .catch(() => {})
+      .finally(() => setLoadingWishlist(false));
+  };
+
+  useEffect(() => {
+    if (!isWishlist) return;
+    fetchWishlistPage(wishlistPage);
+  }, [wishlistPage, isWishlist]);
+
+  useEffect(() => { setWishlistPage(1); }, [isWishlist]);
+
+  // ── Notification (server-side) ──────────────────────────────────────
+  const [notifItems, setNotifItems] = useState<UserNotificationResponse[]>([]);
+  const [loadingNotifs, setLoadingNotifs] = useState(false);
+  const [notifPage, setNotifPage] = useState(1);
+  const [notifTotalPages, setNotifTotalPages] = useState(1);
+  const [notifTotal, setNotifTotal] = useState(0);
+
+  const fetchNotifPage = (page: number) => {
+    setLoadingNotifs(true);
+    userNotificationService
+      .getMyNotifications({ page, pageSize: NOTIF_PAGE_SIZE })
+      .then((res) => {
+        setNotifItems(res.result);
+        setNotifTotal(res.meta.total);
+        setNotifTotalPages(Math.ceil(res.meta.total / NOTIF_PAGE_SIZE));
+      })
+      .catch(() => {})
+      .finally(() => setLoadingNotifs(false));
+  };
+
+  useEffect(() => {
+    if (!isNotifications) return;
+    fetchNotifPage(notifPage);
+  }, [notifPage, isNotifications]);
+
+  useEffect(() => { setNotifPage(1); }, [isNotifications]);
+
   const handleMarkAsRead = async (id: string) => {
-    const target = userNotifs.find((n) => n._id === id);
+    const target = notifItems.find((n) => n._id === id);
     if (!target || target.isRead) return;
-    dispatch(markOneAsRead(id)); // badge giảm ngay
+    setNotifItems((prev) => prev.map((n) => n._id === id ? { ...n, isRead: true } : n));
+    dispatch(decrementUnread());
     try {
       await userNotificationService.markAsRead(id);
       sonnerToast.success("Đã đánh dấu là đã đọc");
     } catch {
-      dispatch(fetchNotifications()); // rollback
+      fetchNotifPage(notifPage);
       sonnerToast.error("Có lỗi xảy ra");
     }
   };
 
   const handleMarkAllAsRead = async () => {
-    if (!userNotifs.some((n) => !n.isRead)) return;
-    dispatch(markAllAsRead()); // badge về 0 ngay
+    if (!notifItems.some((n) => !n.isRead)) return;
+    const unreadOnPage = notifItems.filter((n) => !n.isRead).length;
+    setNotifItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    dispatch(clearUnread());
     try {
       await userNotificationService.markAllAsRead();
       sonnerToast.success("Đã đánh dấu tất cả là đã đọc");
     } catch {
-      dispatch(fetchNotifications()); // rollback
+      fetchNotifPage(notifPage);
       sonnerToast.error("Có lỗi xảy ra");
     }
   };
 
   const handleRemoveNotif = async (id: string) => {
-    dispatch(removeOne(id)); // xóa khỏi list ngay
+    const isUnread = notifItems.find((n) => n._id === id && !n.isRead);
+    setNotifItems((prev) => prev.filter((n) => n._id !== id));
+    setNotifTotal((t) => t - 1);
+    dispatch(removeOne(id));
+    if (isUnread) dispatch(decrementUnread());
     try {
       await userNotificationService.deleteNotification(id);
       sonnerToast.success("Đã xóa thông báo");
+      if (notifItems.length === 1 && notifPage > 1) {
+        setNotifPage((p) => p - 1);
+      } else {
+        fetchNotifPage(notifPage);
+      }
     } catch {
-      dispatch(fetchNotifications()); // rollback
+      fetchNotifPage(notifPage);
       sonnerToast.error("Có lỗi xảy ra");
     }
   };
 
-  // ── Avatar upload ──────────────────────────────────────────────────────────
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
@@ -189,7 +267,6 @@ export default function Dashboard() {
     }
   };
 
-  // ── Settings form ──────────────────────────────────────────────────────────
   const firstNameRef = useRef<HTMLInputElement>(null);
   const lastNameRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
@@ -280,7 +357,6 @@ export default function Dashboard() {
     }
   };
 
-  // ── Khóa tài khoản ────────────────────────────────────────────────────────
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [lockingAccount, setLockingAccount] = useState(false);
 
@@ -303,7 +379,6 @@ export default function Dashboard() {
     }
   };
 
-  // ── Guards ────────────────────────────────────────────────────────────────
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   const handleRemoveFromWishlist = async (
@@ -313,8 +388,18 @@ export default function Dashboard() {
   ) => {
     e.preventDefault();
     e.stopPropagation();
-    await removeFromWishlist(courseId);
+    // optimistic: xóa khỏi danh sách hiện tại
+    setWishlistItems((prev) => prev.filter((c) => c.courseId !== courseId));
+    setWishlistTotal((t) => t - 1);
+    await ctxRemoveFromWishlist(courseId);
+    refetchWishlistBadge();
     toast({ title: "Đã bỏ yêu thích", description: `${title} đã được xóa.` });
+    // nếu xóa hết trang hiện tại thì lùi 1 trang, ngược lại refetch trang này
+    if (wishlistItems.length === 1 && wishlistPage > 1) {
+      setWishlistPage((p) => p - 1);
+    } else {
+      fetchWishlistPage(wishlistPage);
+    }
   };
 
   const formatCurrency = (v: number) =>
@@ -328,7 +413,6 @@ export default function Dashboard() {
   const lastName = nameParts.at(-1) ?? "";
   const firstName = nameParts.slice(0, -1).join(" ");
 
-  // navItems có badge count reactive từ Redux/Context
   const navItems = [
     {
       label: "Khóa học của tôi",
@@ -340,7 +424,7 @@ export default function Dashboard() {
       label: "Danh sách yêu thích",
       path: "/dashboard/wishlist",
       icon: Heart,
-      count: wishlist.length,
+      count: wishlistTotal,
     },
     {
       label: "Thông báo",
@@ -368,7 +452,6 @@ export default function Dashboard() {
       <Header />
       <div className="container mx-auto px-4 py-8">
         <div className="flex gap-8">
-          {/* Sidebar */}
           <aside className="w-64 flex-shrink-0 hidden lg:block">
             <div className="sticky top-20 space-y-2">
               <div className="flex items-center gap-3 mb-6 p-4 bg-secondary rounded-lg">
@@ -411,9 +494,7 @@ export default function Dashboard() {
             </div>
           </aside>
 
-          {/* Main */}
           <main className="flex-1 min-w-0">
-            {/* Mobile Nav */}
             <div className="lg:hidden flex gap-2 overflow-x-auto pb-4 mb-6">
               {navItems.map((item) => (
                 <Link
@@ -436,7 +517,6 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* ── Khóa học của tôi ── */}
             {isMyLearning && (
               <div>
                 <h1 className="text-2xl font-bold mb-6">Khóa học của tôi</h1>
@@ -445,54 +525,64 @@ export default function Dashboard() {
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                   </div>
                 ) : enrollments.length > 0 ? (
-                  <div className="grid sm:grid-cols-2 gap-6">
-                    {enrollments.map((e) => (
-                      <Link
-                        key={e._id}
-                        to={`/course/${e.courseId}/learn`}
-                        className="bg-card border border-border rounded-lg overflow-hidden hover:shadow-course-hover transition-shadow group"
-                      >
-                        <div className="relative h-44">
-                          <img
-                            src={e.courseThumbnail}
-                            alt={e.courseTitle}
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute inset-0 bg-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <div className="w-14 h-14 bg-background rounded-full flex items-center justify-center">
-                              <Play className="w-7 h-7 text-primary fill-primary" />
+                  <>
+                    <div className="grid sm:grid-cols-2 gap-6">
+                      {enrollments.map((e) => (
+                        <Link
+                          key={e._id}
+                          to={`/course/${e.courseId}/learn`}
+                          className="bg-card border border-border rounded-lg overflow-hidden hover:shadow-course-hover transition-shadow group"
+                        >
+                          <div className="relative h-44">
+                            <img
+                              src={e.courseThumbnail}
+                              alt={e.courseTitle}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <div className="w-14 h-14 bg-background rounded-full flex items-center justify-center">
+                                <Play className="w-7 h-7 text-primary fill-primary" />
+                              </div>
+                            </div>
+                            {e.status === "COMPLETED" && (
+                              <div className="absolute top-2 right-2 bg-udemy-green text-background px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                                <Award className="w-3 h-3" />
+                                Hoàn thành
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-4">
+                            <h3 className="font-semibold line-clamp-2 mb-3 group-hover:text-primary transition-colors">
+                              {e.courseTitle}
+                            </h3>
+                            <Progress
+                              value={Number(e.progress)}
+                              className="h-2 mb-2"
+                            />
+                            <div className="flex items-center justify-between text-sm text-muted-foreground">
+                              <span>
+                                Hoàn thành {Math.round(Number(e.progress))}%
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {new Date(e.enrolledAt).toLocaleDateString(
+                                  "vi-VN",
+                                )}
+                              </span>
                             </div>
                           </div>
-                          {e.status === "COMPLETED" && (
-                            <div className="absolute top-2 right-2 bg-udemy-green text-background px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
-                              <Award className="w-3 h-3" />
-                              Hoàn thành
-                            </div>
-                          )}
-                        </div>
-                        <div className="p-4">
-                          <h3 className="font-semibold line-clamp-2 mb-3 group-hover:text-primary transition-colors">
-                            {e.courseTitle}
-                          </h3>
-                          <Progress
-                            value={Number(e.progress)}
-                            className="h-2 mb-2"
-                          />
-                          <div className="flex items-center justify-between text-sm text-muted-foreground">
-                            <span>
-                              Hoàn thành {Math.round(Number(e.progress))}%
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {new Date(e.enrolledAt).toLocaleDateString(
-                                "vi-VN",
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
+                        </Link>
+                      ))}
+                    </div>
+                    <AppPagination
+                      page={enrollmentPage}
+                      totalPages={enrollmentTotalPages}
+                      onPageChange={(p) => {
+                        setEnrollmentPage(p);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                    />
+                  </>
                 ) : (
                   <div className="text-center py-16 bg-secondary rounded-lg">
                     <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
@@ -513,56 +603,69 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* ── Danh sách yêu thích ── */}
             {isWishlist && (
               <div>
                 <h1 className="text-2xl font-bold mb-6">Danh sách yêu thích</h1>
-                {wishlist.length > 0 ? (
-                  <div className="grid sm:grid-cols-2 gap-6">
-                    {wishlist.map((item) => (
-                      <Link
-                        key={item._id}
-                        to={`/course/${item.courseId}`}
-                        className="bg-card border border-border rounded-lg overflow-hidden hover:shadow-course-hover transition-shadow group relative"
-                      >
-                        <div className="relative">
-                          <img
-                            src={item.thumbnail}
-                            alt={item.title}
-                            className="w-full h-44 object-cover"
-                          />
-                          <button
-                            onClick={(e) =>
-                              handleRemoveFromWishlist(
-                                e,
-                                item.courseId,
-                                item.title,
-                              )
-                            }
-                            className="absolute top-2 right-2 w-8 h-8 bg-background/80 hover:bg-background rounded-full flex items-center justify-center transition-colors"
-                            title="Bỏ yêu thích"
-                          >
-                            <Heart className="w-5 h-5 text-primary fill-primary" />
-                          </button>
-                        </div>
-                        <div className="p-4">
-                          <h3 className="font-semibold line-clamp-2 mb-2 group-hover:text-primary transition-colors">
-                            {item.title}
-                          </h3>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="font-bold">
-                              {formatCurrency(Number(item.price))}
-                            </span>
-                            {item.oldPrice > item.price && (
-                              <span className="text-sm text-muted-foreground line-through">
-                                {formatCurrency(Number(item.oldPrice))}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
+                {loadingWishlist ? (
+                  <div className="flex justify-center py-16">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
                   </div>
+                ) : wishlistItems.length > 0 ? (
+                  <>
+                    <div className="grid sm:grid-cols-2 gap-6">
+                      {wishlistItems.map((item) => (
+                        <Link
+                          key={item._id}
+                          to={`/course/${item.courseId}`}
+                          className="bg-card border border-border rounded-lg overflow-hidden hover:shadow-course-hover transition-shadow group relative"
+                        >
+                          <div className="relative">
+                            <img
+                              src={item.thumbnail}
+                              alt={item.title}
+                              className="w-full h-44 object-cover"
+                            />
+                            <button
+                              onClick={(e) =>
+                                handleRemoveFromWishlist(
+                                  e,
+                                  item.courseId,
+                                  item.title,
+                                )
+                              }
+                              className="absolute top-2 right-2 w-8 h-8 bg-background/80 hover:bg-background rounded-full flex items-center justify-center transition-colors"
+                              title="Bỏ yêu thích"
+                            >
+                              <Heart className="w-5 h-5 text-primary fill-primary" />
+                            </button>
+                          </div>
+                          <div className="p-4">
+                            <h3 className="font-semibold line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+                              {item.title}
+                            </h3>
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className="font-bold">
+                                {formatCurrency(Number(item.price))}
+                              </span>
+                              {item.oldPrice > item.price && (
+                                <span className="text-sm text-muted-foreground line-through">
+                                  {formatCurrency(Number(item.oldPrice))}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                    <AppPagination
+                      page={wishlistPage}
+                      totalPages={wishlistTotalPages}
+                      onPageChange={(p) => {
+                        setWishlistPage(p);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                    />
+                  </>
                 ) : (
                   <div className="text-center py-16 bg-secondary rounded-lg">
                     <Heart className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
@@ -584,7 +687,6 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* ── Thông báo ── */}
             {isNotifications && (
               <div>
                 <div className="flex items-center justify-between mb-6">
@@ -613,72 +715,82 @@ export default function Dashboard() {
                   <div className="flex justify-center py-16">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                   </div>
-                ) : userNotifs.length > 0 ? (
-                  <div className="space-y-4">
-                    {userNotifs.map((n) => {
-                      const { icon: Icon, className } = getIconStyle(n.type);
-                      return (
-                        <div
-                          key={n._id}
-                          className={`bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow ${
-                            !n.isRead ? "border-l-4 border-l-primary" : ""
-                          }`}
-                        >
-                          <div className="flex items-start gap-4">
-                            <div
-                              className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${className}`}
-                            >
-                              <Icon className="w-5 h-5" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <h3
-                                      className={`font-semibold ${!n.isRead ? "text-foreground" : "text-muted-foreground"}`}
-                                    >
-                                      {n.title}
-                                    </h3>
-                                    {!n.isRead && (
-                                      <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
-                                    )}
+                ) : notifItems.length > 0 ? (
+                  <>
+                    <div className="space-y-4">
+                      {notifItems.map((n) => {
+                        const { icon: Icon, className } = getIconStyle(n.type);
+                        return (
+                          <div
+                            key={n._id}
+                            className={`bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow ${
+                              !n.isRead ? "border-l-4 border-l-primary" : ""
+                            }`}
+                          >
+                            <div className="flex items-start gap-4">
+                              <div
+                                className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${className}`}
+                              >
+                                <Icon className="w-5 h-5" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <h3
+                                        className={`font-semibold ${!n.isRead ? "text-foreground" : "text-muted-foreground"}`}
+                                      >
+                                        {n.title}
+                                      </h3>
+                                      {!n.isRead && (
+                                        <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {n.message}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                      {formatTime(n.createdAt)}
+                                    </p>
                                   </div>
-                                  <p className="text-sm text-muted-foreground mt-1">
-                                    {n.message}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground mt-2">
-                                    {formatTime(n.createdAt)}
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-1 flex-shrink-0">
-                                  {!n.isRead && (
+                                  <div className="flex items-center gap-1 flex-shrink-0">
+                                    {!n.isRead && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleMarkAsRead(n._id)}
+                                        className="h-8 w-8 p-0 hover:bg-primary/10"
+                                        title="Đánh dấu đã đọc"
+                                      >
+                                        <Check className="w-4 h-4 text-primary" />
+                                      </Button>
+                                    )}
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => handleMarkAsRead(n._id)}
-                                      className="h-8 w-8 p-0 hover:bg-primary/10"
-                                      title="Đánh dấu đã đọc"
+                                      onClick={() => handleRemoveNotif(n._id)}
+                                      className="h-8 w-8 p-0 hover:bg-red-500/10"
+                                      title="Xóa thông báo"
                                     >
-                                      <Check className="w-4 h-4 text-primary" />
+                                      <X className="w-4 h-4 text-red-500" />
                                     </Button>
-                                  )}
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleRemoveNotif(n._id)}
-                                    className="h-8 w-8 p-0 hover:bg-red-500/10"
-                                    title="Xóa thông báo"
-                                  >
-                                    <X className="w-4 h-4 text-red-500" />
-                                  </Button>
+                                  </div>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                    <AppPagination
+                      page={notifPage}
+                      totalPages={notifTotalPages}
+                      onPageChange={(p) => {
+                        setNotifPage(p);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                    />
+                  </>
                 ) : (
                   <div className="text-center py-16 bg-secondary rounded-lg">
                     <Bell className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
@@ -694,12 +806,10 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* ── Cài đặt ── */}
             {isSettings && (
               <div>
                 <h1 className="text-2xl font-bold mb-6">Cài đặt tài khoản</h1>
                 <div className="max-w-2xl space-y-6">
-                  {/* Hồ sơ */}
                   <div className="bg-card border border-border rounded-lg p-6">
                     <h2 className="text-lg font-semibold mb-4">
                       Hồ sơ cá nhân
@@ -827,7 +937,6 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Bảo mật */}
                   {user?.provider?.toUpperCase() === "LOCAL" ||
                   !user?.provider ? (
                     <div className="bg-card border border-border rounded-lg p-6">
@@ -889,7 +998,6 @@ export default function Dashboard() {
                     </div>
                   )}
 
-                  {/* Liên kết tài khoản */}
                   <div className="bg-card border border-border rounded-lg p-6">
                     <h2 className="text-lg font-semibold mb-4">
                       Liên kết tài khoản
@@ -947,7 +1055,6 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Khóa tài khoản */}
                   <div className="bg-card border border-destructive rounded-lg p-6">
                     <h2 className="text-lg font-semibold text-destructive mb-2">
                       Khóa tài khoản

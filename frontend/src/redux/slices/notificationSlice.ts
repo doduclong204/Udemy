@@ -18,8 +18,11 @@ const initialState: NotificationState = {
 export const fetchNotifications = createAsyncThunk(
   'notification/fetchNotifications',
   async () => {
-    const res = await userNotificationService.getMyNotifications({ pageSize: 10 });
-    return res.result;
+    const [listRes, unreadRes] = await Promise.all([
+      userNotificationService.getMyNotifications({ pageSize: 10 }),
+      userNotificationService.getMyNotifications({ pageSize: 1, isRead: false }),
+    ]);
+    return { list: listRes.result, unreadCount: unreadRes.meta.total };
   },
 );
 
@@ -56,8 +59,8 @@ const notificationSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(fetchNotifications.fulfilled, (state, action) => {
-      state.notifications = action.payload;
-      state.unreadCount = action.payload.filter((n) => !n.isRead).length;
+      state.notifications = action.payload.list;
+      state.unreadCount = action.payload.unreadCount;
       state.loaded = true;
     });
   },

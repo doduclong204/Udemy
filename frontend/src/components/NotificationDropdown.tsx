@@ -14,6 +14,8 @@ import {
 import type { AppDispatch } from '@/redux/store';
 import type { NotificationType } from '@/types';
 
+const DROPDOWN_PAGE_SIZE = 5;
+
 const getNotificationLink = (n: { relatedType?: string; relatedCourseId?: string; relatedId?: string }) => {
   if (
     (n.relatedType === 'COURSE_ANSWER' || n.relatedType === 'QUESTION') &&
@@ -52,6 +54,7 @@ export function NotificationDropdown() {
   const loaded        = useSelector(selectNotiLoaded);
   const [isOpen, setIsOpen]   = useState(false);
   const [loading, setLoading] = useState(false);
+  const [page, setPage]       = useState(1);
 
   useEffect(() => {
     if (!loaded) dispatch(fetchNotifications());
@@ -67,6 +70,11 @@ export function NotificationDropdown() {
     dispatch(fetchNotifications()).finally(() => setLoading(false));
   }, [isOpen, dispatch]);
 
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) setPage(1);
+  };
+
   const handleRead = async (id: string) => {
     const notif = notifications.find((n) => n._id === id);
     if (!notif || notif.isRead) return;
@@ -78,8 +86,11 @@ export function NotificationDropdown() {
     }
   };
 
+  const totalPages   = Math.ceil(notifications.length / DROPDOWN_PAGE_SIZE);
+  const visibleNotifs = notifications.slice((page - 1) * DROPDOWN_PAGE_SIZE, page * DROPDOWN_PAGE_SIZE);
+
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <button className="relative nav-link p-2">
           <Bell className="w-5 h-5" />
@@ -109,51 +120,74 @@ export function NotificationDropdown() {
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
           ) : notifications.length > 0 ? (
-            notifications.map((n) => {
-              const { icon: Icon, className } = getIconStyle(n.type);
-              const link = getNotificationLink(n);
-              const sharedClass = `p-3 border-b border-border last:border-b-0 hover:bg-secondary/50 transition-colors cursor-pointer ${!n.isRead ? 'bg-primary/5' : ''}`;
-              const inner = (
-                <div className="flex items-start gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${className}`}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className={`text-sm font-medium truncate ${!n.isRead ? 'text-foreground' : 'text-muted-foreground'}`}>
-                        {n.title}
-                      </h4>
-                      {!n.isRead && (
-                        <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
+            <>
+              {visibleNotifs.map((n) => {
+                const { icon: Icon, className } = getIconStyle(n.type);
+                const link = getNotificationLink(n);
+                const sharedClass = `p-3 border-b border-border last:border-b-0 hover:bg-secondary/50 transition-colors cursor-pointer ${!n.isRead ? 'bg-primary/5' : ''}`;
+                const inner = (
+                  <div className="flex items-start gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${className}`}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className={`text-sm font-medium truncate ${!n.isRead ? 'text-foreground' : 'text-muted-foreground'}`}>
+                          {n.title}
+                        </h4>
+                        {!n.isRead && (
+                          <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                        {n.message}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatTime(n.createdAt)}
+                      </p>
+                      {link && (
+                        <p className="text-xs text-primary mt-1 font-medium">Xem câu hỏi →</p>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                      {n.message}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatTime(n.createdAt)}
-                    </p>
-                    {link && (
-                      <p className="text-xs text-primary mt-1 font-medium">Xem câu hỏi →</p>
-                    )}
                   </div>
+                );
+                return link ? (
+                  <Link
+                    key={n._id}
+                    to={link}
+                    onClick={() => { handleRead(n._id); setIsOpen(false); }}
+                    className={`block ${sharedClass}`}
+                  >
+                    {inner}
+                  </Link>
+                ) : (
+                  <div key={n._id} onClick={() => handleRead(n._id)} className={sharedClass}>
+                    {inner}
+                  </div>
+                );
+              })}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-3 py-2 border-t border-border bg-secondary/30">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="text-xs px-2 py-1 rounded border border-border hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    ‹
+                  </button>
+                  <span className="text-xs text-muted-foreground">
+                    {page} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="text-xs px-2 py-1 rounded border border-border hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    ›
+                  </button>
                 </div>
-              );
-              return link ? (
-                <Link
-                  key={n._id}
-                  to={link}
-                  onClick={() => { handleRead(n._id); setIsOpen(false); }}
-                  className={`block ${sharedClass}`}
-                >
-                  {inner}
-                </Link>
-              ) : (
-                <div key={n._id} onClick={() => handleRead(n._id)} className={sharedClass}>
-                  {inner}
-                </div>
-              );
-            })
+              )}
+            </>
           ) : (
             <div className="py-8 text-center">
               <Bell className="w-10 h-10 text-muted-foreground mx-auto mb-2" />

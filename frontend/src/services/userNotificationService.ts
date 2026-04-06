@@ -9,7 +9,7 @@ const userNotificationService = {
     const pageSize = params?.pageSize || 10;
 
     const filters: string[] = [];
-    if (params?.isRead !== undefined) filters.push(`isRead:${params.isRead}`);
+    if (params?.isRead !== undefined) filters.push(`read:${params.isRead}`);
     if (params?.type) filters.push(`type:'${params.type}'`);
 
     const response = await axiosInstance.get<ApiResponse<ApiPagination<UserNotificationResponse>>>(
