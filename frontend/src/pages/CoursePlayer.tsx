@@ -80,6 +80,14 @@ export default function CoursePlayer() {
   const defaultTab =
     tabFromUrl ?? (location.state as any)?.defaultTab ?? "overview";
   const [activeTab, setActiveTab] = useState(defaultTab);
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    params.delete("questionId");
+    navigate(`?${params.toString()}`, { replace: true });
+  };
   const [highlightedQuestionId, setHighlightedQuestionId] = useState<
     string | null
   >(questionIdFromUrl);
@@ -223,7 +231,11 @@ export default function CoursePlayer() {
     setReviewsLoading(true);
     reviewService
       .getReviewsByCourse(course._id)
-      .then((res) => setReviews(res.result))
+      .then((res) => {
+        setReviews(res.result);
+        const mine = res.result.find((r) => r.user?.id === user?.id);
+        if (mine) setMyReview(mine);
+      })
       .catch(() => {})
       .finally(() => setReviewsLoading(false));
   }, [course?._id]);
@@ -652,7 +664,7 @@ export default function CoursePlayer() {
           <div className="flex-1 bg-slate-50">
             <Tabs
               value={activeTab}
-              onValueChange={setActiveTab}
+              onValueChange={handleTabChange}
               className="flex flex-col h-full"
             >
               <div className="bg-white border-b border-slate-200 sticky top-0 z-10 flex-shrink-0">
@@ -1098,51 +1110,61 @@ export default function CoursePlayer() {
                     <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest px-1">
                       {reviews.length} đánh giá
                     </p>
-                    {reviews.map((review) => (
-                      <div
-                        key={review._id}
-                        className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"
-                      >
-                        <div className="flex items-start gap-3">
-                          <img
-                            src={
-                              getMediaUrl(review.user.avatar) ||
-                              "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"
-                            }
-                            alt={review.user.name}
-                            className="w-10 h-10 rounded-full object-cover flex-shrink-0 ring-2 ring-slate-100"
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1.5">
-                              <p className="font-semibold text-sm text-slate-700">
-                                {review.user.name}
-                              </p>
-                              <div className="flex gap-0.5">
-                                {[1, 2, 3, 4, 5].map((s) => (
-                                  <Star
-                                    key={s}
-                                    className={`w-3.5 h-3.5 ${s <= review.rating ? "text-amber-400 fill-amber-400" : "text-slate-200"}`}
-                                  />
-                                ))}
-                              </div>
+                    {reviews.map((review) => {
+                      const isMyReview = review.user?.id === user?.id;
+                      return (
+                        <div
+                          key={review._id}
+                          className={`bg-white rounded-xl border p-5 shadow-sm ${isMyReview ? "border-violet-300 ring-1 ring-violet-200" : "border-slate-200"}`}
+                        >
+                          {isMyReview && (
+                            <div className="flex items-center gap-1.5 mb-3">
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold bg-violet-100 text-violet-600 px-2.5 py-1 rounded-full">
+                                ✏️ Đánh giá của bạn
+                              </span>
                             </div>
-                            <p className="text-sm text-slate-500 leading-relaxed">
-                              {review.comment}
-                            </p>
-                            {review.adminReply && (
-                              <div className="mt-3 p-3 bg-violet-50 rounded-lg border border-violet-100">
-                                <p className="text-xs font-semibold text-violet-600 mb-1">
-                                  Phản hồi từ giảng viên
+                          )}
+                          <div className="flex items-start gap-3">
+                            <img
+                              src={
+                                getMediaUrl(review.user.avatar) ||
+                                "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"
+                              }
+                              alt={review.user.name}
+                              className="w-10 h-10 rounded-full object-cover flex-shrink-0 ring-2 ring-slate-100"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1.5">
+                                <p className="font-semibold text-sm text-slate-700">
+                                  {review.user.name}
                                 </p>
-                                <p className="text-xs text-slate-500 leading-relaxed">
-                                  {review.adminReply}
-                                </p>
+                                <div className="flex gap-0.5">
+                                  {[1, 2, 3, 4, 5].map((s) => (
+                                    <Star
+                                      key={s}
+                                      className={`w-3.5 h-3.5 ${s <= review.rating ? "text-amber-400 fill-amber-400" : "text-slate-200"}`}
+                                    />
+                                  ))}
+                                </div>
                               </div>
-                            )}
+                              <p className="text-sm text-slate-500 leading-relaxed">
+                                {review.comment}
+                              </p>
+                              {review.adminReply && (
+                                <div className="mt-3 p-3 bg-violet-50 rounded-lg border border-violet-100">
+                                  <p className="text-xs font-semibold text-violet-600 mb-1">
+                                    Phản hồi từ giảng viên
+                                  </p>
+                                  <p className="text-xs text-slate-500 leading-relaxed">
+                                    {review.adminReply}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-14">

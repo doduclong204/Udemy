@@ -73,6 +73,10 @@ public class ReviewService {
         review.setUser(currentUser);
         review.setReviewStatus(true);
 
+        if (reviewRepository.existsByUserAndCourse(currentUser, course)) {
+            throw new AppException(ErrorCode.REVIEW_ALREADY_EXISTS);
+        }
+
         Review savedReview = reviewRepository.save(review);
 
         recalculateCourseRating(course);

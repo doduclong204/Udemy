@@ -92,6 +92,7 @@ public enum ErrorCode {
 
     // REVIEW
     REVIEW_NOT_FOUND(404, "Review not found", HttpStatus.NOT_FOUND),
+    REVIEW_ALREADY_EXISTS(400, "You have already reviewed this course", HttpStatus.BAD_REQUEST),
     REVIEW_ALREADY_REPLIED(400, "Review already has an admin reply", HttpStatus.BAD_REQUEST),
     REVIEW_NOT_OWNED(403, "You do not have permission to modify this review", HttpStatus.FORBIDDEN),
 
