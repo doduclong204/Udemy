@@ -53,7 +53,7 @@ export default function Notifications() {
   const { user, isAuthenticated } = useAuth();
   const dispatch    = useDispatch<AppDispatch>();
   const unreadCount = useSelector(selectUnreadCount);
-  const notifications = useSelector(selectNotifications); // lấy từ Redux
+  const notifications = useSelector(selectNotifications);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -67,12 +67,12 @@ export default function Notifications() {
   const handleMarkAsRead = async (id: string) => {
     const target = notifications.find((n) => n._id === id);
     if (!target || target.isRead) return;
-    dispatch(markOneAsRead(id)); // cập nhật Redux ngay → badge header giảm ngay
+    dispatch(markOneAsRead(id));
     try {
       await userNotificationService.markAsRead(id);
       toast.success('Đã đánh dấu là đã đọc');
     } catch {
-      dispatch(fetchNotifications()); // rollback
+      dispatch(fetchNotifications());
       toast.error('Có lỗi xảy ra');
     }
   };
@@ -80,23 +80,23 @@ export default function Notifications() {
   const handleMarkAllAsRead = async () => {
     const hasUnread = notifications.some((n) => !n.isRead);
     if (!hasUnread) return;
-    dispatch(markAllAsRead()); // cập nhật Redux ngay
+    dispatch(markAllAsRead());
     try {
       await userNotificationService.markAllAsRead();
       toast.success('Đã đánh dấu tất cả là đã đọc');
     } catch {
-      dispatch(fetchNotifications()); // rollback
+      dispatch(fetchNotifications());
       toast.error('Có lỗi xảy ra');
     }
   };
 
   const handleRemove = async (id: string) => {
-    dispatch(removeOne(id)); // cập nhật Redux ngay
+    dispatch(removeOne(id));
     try {
       await userNotificationService.deleteNotification(id);
       toast.success('Đã xóa thông báo');
     } catch {
-      dispatch(fetchNotifications()); // rollback
+      dispatch(fetchNotifications());
       toast.error('Có lỗi xảy ra');
     }
   };
@@ -193,6 +193,15 @@ export default function Notifications() {
                               </div>
                               <p className="text-sm text-muted-foreground mt-1">{n.message}</p>
                               <p className="text-xs text-muted-foreground mt-2">{formatTime(n.createdAt)}</p>
+                              {(n.relatedType === 'COURSE_ANSWER' || n.relatedType === 'QUESTION') && n.relatedCourseId && (
+                                <Link
+                                  to={`/course/${n.relatedCourseId}/learn?tab=qa${n.relatedId ? `&questionId=${n.relatedId}` : ''}`}
+                                  onClick={() => handleMarkAsRead(n._id)}
+                                  className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                                >
+                                  Xem câu hỏi →
+                                </Link>
+                              )}
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0">
                               {!n.isRead && (

@@ -638,6 +638,7 @@ export interface UserNotificationResponse {
   message: string;
   type: NotificationType;
   relatedId?: string;
+  relatedCourseId?: string;
   relatedType?: string;
   isRead: boolean;
   readAt?: string;

@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Link,
   useParams,
   Navigate,
   useLocation,
   useNavigate,
+  useSearchParams,
 } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -73,7 +74,16 @@ export default function CoursePlayer() {
   const isAdmin = user?.role?.toUpperCase() === "ADMIN";
   const location = useLocation();
   const navigate = useNavigate();
-  const defaultTab = (location.state as any)?.defaultTab ?? "overview";
+  const [searchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const questionIdFromUrl = searchParams.get("questionId");
+  const defaultTab =
+    tabFromUrl ?? (location.state as any)?.defaultTab ?? "overview";
+  const [activeTab, setActiveTab] = useState(defaultTab);
+  const [highlightedQuestionId, setHighlightedQuestionId] = useState<
+    string | null
+  >(questionIdFromUrl);
+  const highlightRef = useRef<HTMLDivElement | null>(null);
 
   const [course, setCourse] = useState<CourseDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -192,6 +202,21 @@ export default function CoursePlayer() {
       .catch(() => {})
       .finally(() => setQaLoading(false));
   }, [course?._id, currentLectureData?._id]);
+
+  useEffect(() => {
+    if (!highlightedQuestionId || qaLoading) return;
+    const timer = setTimeout(() => {
+      if (highlightRef.current) {
+        highlightRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+      const clearTimer = setTimeout(() => setHighlightedQuestionId(null), 4000);
+      return () => clearTimeout(clearTimer);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [highlightedQuestionId, qaLoading]);
 
   useEffect(() => {
     if (!course?._id) return;
@@ -625,7 +650,11 @@ export default function CoursePlayer() {
 
           {/* TABS */}
           <div className="flex-1 bg-slate-50">
-            <Tabs defaultValue={defaultTab} className="flex flex-col h-full">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="flex flex-col h-full"
+            >
               <div className="bg-white border-b border-slate-200 sticky top-0 z-10 flex-shrink-0">
                 <TabsList className="h-auto bg-transparent p-0 w-full grid grid-cols-4">
                   {[
@@ -848,7 +877,15 @@ export default function CoursePlayer() {
                     {questions.map((q) => (
                       <div
                         key={q._id}
-                        className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
+                        id={`question-${q._id}`}
+                        ref={
+                          highlightedQuestionId === q._id ? highlightRef : null
+                        }
+                        className={`rounded-xl border shadow-sm overflow-hidden transition-all duration-700 ${
+                          highlightedQuestionId === q._id
+                            ? "bg-violet-50 border-violet-400 ring-2 ring-violet-200"
+                            : "bg-white border-slate-200"
+                        }`}
                       >
                         <div className="p-5">
                           <div className="flex items-start gap-3">

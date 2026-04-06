@@ -512,9 +512,7 @@ export default function AdminNotifications() {
 
   const handleReplyQuestion = (n: NotificationResponse) => {
     if (n.relatedCourseId) {
-      navigate(`/course/${n.relatedCourseId}/learn`, {
-        state: { defaultTab: "qa" },
-      });
+      navigate(`/course/${n.relatedCourseId}/learn?tab=qa${n.relatedId ? `&questionId=${n.relatedId}` : ''}`);
     }
   };
 

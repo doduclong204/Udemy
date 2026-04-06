@@ -20,6 +20,7 @@ public interface NotificationMapper {
     @Mapping(target = "message", source = "notification.message")
     @Mapping(target = "type", source = "notification.type")
     @Mapping(target = "relatedId", source = "notification.relatedId")
+    @Mapping(target = "relatedCourseId", source = "notification.relatedCourseId")
     @Mapping(target = "relatedType", source = "notification.relatedType")
     @Mapping(target = "createdAt", source = "createdAt")
     @Mapping(target = "isRead", source = "read")

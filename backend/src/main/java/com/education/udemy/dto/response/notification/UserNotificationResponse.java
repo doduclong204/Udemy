@@ -18,6 +18,7 @@ public class UserNotificationResponse {
     String message;
     String type;
     String relatedId;
+    String relatedCourseId;
     String relatedType;
 
     @JsonProperty("isRead")
