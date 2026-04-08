@@ -234,7 +234,7 @@ body:has(.admin-theme) [role="alertdialog"] * {
 
 @layer components {
   .course-card {
-    @apply bg-card rounded-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+    @apply bg-card rounded-lg overflow-hidden border border-border shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-transparent;
   }
 
   .badge-bestseller {
