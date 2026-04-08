@@ -11,6 +11,9 @@ interface VideoPlayerProps {
   subtitleUrl?: string;
   subtitleLabel?: string;
   onEnded?: () => void;
+  initialTime?: number;
+  onTimeUpdate?: (currentTime: number) => void;
+  onPauseOrSeek?: () => void;
 }
 
 type SettingsMenu = "main" | "speed" | "subtitle" | null;
@@ -31,7 +34,7 @@ function formatTime(s: number) {
 }
 
 export default function VideoPlayer({
-  src, poster, subtitleUrl, subtitleLabel = "Tiếng Việt", onEnded,
+  src, poster, subtitleUrl, subtitleLabel = "Tiếng Việt", onEnded, initialTime, onTimeUpdate, onPauseOrSeek,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -58,30 +61,76 @@ export default function VideoPlayer({
   const playFlashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Video events ──
+  // initialTime is intentionally NOT in this dependency array.
+  // Seek is handled in a separate useEffect below to avoid re-registering
+  // all listeners (which would cause loadedmetadata to be missed).
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    const onPlay = () => setPlaying(true);
-    const onPause = () => setPlaying(false);
-    const onTimeUpdate = () => {
+    const handlePlay = () => setPlaying(true);
+    const handlePause = () => {
+      setPlaying(false);
+      onPauseOrSeek?.();
+    };
+    const handleTimeUpdate = () => {
       setCurrentTime(v.currentTime);
       if (v.buffered.length > 0) setBuffered(v.buffered.end(v.buffered.length - 1));
+      onTimeUpdate?.(v.currentTime);
     };
-    const onLoaded = () => setDuration(v.duration);
+    // Fired after user drags the seek bar — save immediately
+    const handleSeeked = () => {
+      onPauseOrSeek?.();
+    };
+    const handleLoaded = () => {
+      setDuration(v.duration);
+    };
     const handleEnded = () => { setPlaying(false); onEnded?.(); };
-    v.addEventListener("play", onPlay);
-    v.addEventListener("pause", onPause);
-    v.addEventListener("timeupdate", onTimeUpdate);
-    v.addEventListener("loadedmetadata", onLoaded);
+
+    v.addEventListener("play", handlePlay);
+    v.addEventListener("pause", handlePause);
+    v.addEventListener("timeupdate", handleTimeUpdate);
+    v.addEventListener("seeked", handleSeeked);
+    v.addEventListener("loadedmetadata", handleLoaded);
     v.addEventListener("ended", handleEnded);
     return () => {
-      v.removeEventListener("play", onPlay);
-      v.removeEventListener("pause", onPause);
-      v.removeEventListener("timeupdate", onTimeUpdate);
-      v.removeEventListener("loadedmetadata", onLoaded);
+      v.removeEventListener("play", handlePlay);
+      v.removeEventListener("pause", handlePause);
+      v.removeEventListener("timeupdate", handleTimeUpdate);
+      v.removeEventListener("seeked", handleSeeked);
+      v.removeEventListener("loadedmetadata", handleLoaded);
       v.removeEventListener("ended", handleEnded);
     };
-  }, [onEnded]);
+  }, [onEnded, onTimeUpdate, onPauseOrSeek]);
+
+  // ── Seek to saved position ──
+  // Separated from event-listener effect so that when initialTime arrives
+  // late (watchedDurations loaded after VideoPlayer mounted), we can still
+  // seek without tearing down and re-registering all event listeners.
+  // Strategy: if metadata is already loaded, seek immediately;
+  // otherwise register a one-time loadedmetadata listener.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !initialTime || initialTime <= 0) return;
+
+    const doSeek = () => {
+      if (v.duration > 0) {
+        v.currentTime = Math.min(initialTime, v.duration - 1);
+      }
+    };
+
+    if (v.readyState >= 1) {
+      // Metadata already available — seek right away
+      doSeek();
+    } else {
+      // Wait for metadata then seek once
+      const handler = () => {
+        doSeek();
+        v.removeEventListener("loadedmetadata", handler);
+      };
+      v.addEventListener("loadedmetadata", handler);
+      return () => v.removeEventListener("loadedmetadata", handler);
+    }
+  }, [initialTime]);
 
   // ── Fullscreen listener ──
   useEffect(() => {
@@ -90,7 +139,6 @@ export default function VideoPlayer({
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
 
-  // ── Auto-hide controls ──
   const resetHideTimer = useCallback(() => {
     setShowControls(true);
     if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
@@ -137,12 +185,10 @@ export default function VideoPlayer({
     return () => document.removeEventListener("mousedown", handler);
   }, [settingsMenu]);
 
-  // ── Actions ──
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
     if (v.paused) { void v.play(); } else { v.pause(); }
-    // Flash icon
     if (playFlashTimer.current) clearTimeout(playFlashTimer.current);
     setShowPlayFlash(true);
     playFlashTimer.current = setTimeout(() => setShowPlayFlash(false), 500);
@@ -219,7 +265,6 @@ export default function VideoPlayer({
       onMouseMove={resetHideTimer}
       onMouseLeave={() => { if (playing && !settingsMenu) setShowControls(false); else if (!playing) setShowControls(false); }}
     >
-      {/* Video */}
       <video
         ref={videoRef}
         src={src}
@@ -233,11 +278,8 @@ export default function VideoPlayer({
         )}
       </video>
 
-      {/* ── Idle overlay: chỉ hiện khi chưa play, không block click khi đang play ── */}
       {!playing && (
-        <div
-          className="absolute inset-0 flex items-center justify-center cursor-pointer z-10 pointer-events-none"
-        >
+        <div className="absolute inset-0 flex items-center justify-center cursor-pointer z-10 pointer-events-none">
           <div className="absolute inset-0 bg-black/30" />
           <div className="relative w-20 h-20 rounded-full bg-black/50 border-2 border-white/80 flex items-center justify-center backdrop-blur-sm shadow-2xl">
             <Play className="w-8 h-8 text-white fill-white ml-1" />
@@ -245,7 +287,6 @@ export default function VideoPlayer({
         </div>
       )}
 
-      {/* ── Play/Pause flash khi click giữa màn hình ── */}
       {showPlayFlash && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
           <div className="w-16 h-16 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center animate-ping-once">
@@ -256,7 +297,6 @@ export default function VideoPlayer({
         </div>
       )}
 
-      {/* Speed toast */}
       {showSpeedToast && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/80 text-white text-sm font-semibold px-4 py-1.5 rounded-full pointer-events-none z-50 flex items-center gap-2 backdrop-blur-sm">
           <Settings className="w-3.5 h-3.5" />
@@ -264,19 +304,16 @@ export default function VideoPlayer({
         </div>
       )}
 
-      {/* Controls overlay — ẩn khi idle, hiện khi hover hoặc đang play */}
       <div
         className={`absolute inset-0 flex flex-col justify-end transition-opacity duration-200 ${
           showControls ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={togglePlay}
       >
-        {/* Gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent pointer-events-none" />
 
         <div className="relative z-10 px-3 pb-2.5 space-y-0.5" onClick={(e) => e.stopPropagation()}>
 
-          {/* ── PROGRESS BAR ── */}
           <div
             ref={progressRef}
             className="relative flex items-center h-5 cursor-pointer group/bar"
@@ -285,19 +322,14 @@ export default function VideoPlayer({
             onMouseLeave={() => setHoverTime(null)}
           >
             <div className="absolute w-full h-1 group-hover/bar:h-1.5 bg-white/25 rounded-full transition-all duration-150 overflow-visible">
-              {/* Buffered */}
               <div className="absolute left-0 top-0 h-full bg-white/30 rounded-full" style={{ width: `${bufferedPct}%` }} />
-              {/* Played */}
               <div className="absolute left-0 top-0 h-full bg-violet-500 rounded-full transition-none" style={{ width: `${progressPct}%` }}>
-                {/* Thumb dot */}
                 <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 bg-white rounded-full shadow-md scale-0 group-hover/bar:scale-100 transition-transform" />
               </div>
-              {/* Hover ghost */}
               {hoverTime !== null && (
                 <div className="absolute left-0 top-0 h-full bg-white/15 rounded-full pointer-events-none" style={{ width: `${hoverPct}%` }} />
               )}
             </div>
-            {/* Time tooltip */}
             {hoverTime !== null && (
               <div
                 className="absolute bottom-6 bg-black/90 text-white text-xs font-semibold px-2 py-1 rounded-md pointer-events-none -translate-x-1/2 shadow-lg"
@@ -308,17 +340,14 @@ export default function VideoPlayer({
             )}
           </div>
 
-          {/* ── BOTTOM BUTTONS ── */}
           <div className="flex items-center gap-0.5">
 
-            {/* Play/Pause */}
             <button onClick={togglePlay} className="p-1.5 text-white hover:text-violet-300 transition-colors rounded-lg hover:bg-white/10">
               {playing
                 ? <Pause className="w-5 h-5 fill-current" />
                 : <Play className="w-5 h-5 fill-current ml-px" />}
             </button>
 
-            {/* Skip back */}
             <button
               onClick={() => { if (videoRef.current) videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10); }}
               className="p-1.5 text-white hover:text-violet-300 transition-colors rounded-lg hover:bg-white/10"
@@ -327,7 +356,6 @@ export default function VideoPlayer({
               <SkipBack className="w-4.5 h-4.5" />
             </button>
 
-            {/* Skip forward */}
             <button
               onClick={() => { if (videoRef.current) videoRef.current.currentTime = Math.min(duration, videoRef.current.currentTime + 10); }}
               className="p-1.5 text-white hover:text-violet-300 transition-colors rounded-lg hover:bg-white/10"
@@ -336,7 +364,6 @@ export default function VideoPlayer({
               <SkipForward className="w-4.5 h-4.5" />
             </button>
 
-            {/* Volume */}
             <div
               className="flex items-center gap-1"
               onMouseEnter={() => setShowVolume(true)}
@@ -360,41 +387,36 @@ export default function VideoPlayer({
               </div>
             </div>
 
-            {/* Time */}
             <span className="text-white/90 text-xs font-medium tabular-nums ml-1 mr-auto">
               {formatTime(currentTime)}<span className="text-white/40 mx-1">/</span>{formatTime(duration)}
             </span>
 
-            {/* Subtitle + Settings group */}
             <div className="relative flex items-center">
-            {/* Subtitle button — luôn hiện, disabled nếu không có file */}
-            <button
-              onClick={() => subtitleUrl && setSettingsMenu(settingsMenu === "subtitle" ? null : "subtitle")}
-              className={`p-1.5 transition-colors rounded-lg ${
-                !subtitleUrl
-                  ? "text-white/20 cursor-not-allowed"
-                  : subtitleOn
-                  ? "text-violet-400 hover:bg-white/10"
-                  : "text-white hover:text-violet-300 hover:bg-white/10"
-              }`}
-              title={subtitleUrl ? "Phụ đề" : "Không có phụ đề"}
-            >
-              <Subtitles className="w-5 h-5" />
-            </button>
-
-            {/* Settings */}
-            <div className="relative">
               <button
-                data-settings-btn
-                onClick={() => setSettingsMenu(settingsMenu === "main" ? null : "main")}
-                className={`p-1.5 transition-colors rounded-lg hover:bg-white/10 ${settingsMenu === "main" || settingsMenu === "speed" ? "text-violet-400" : "text-white hover:text-violet-300"}`}
-                title="Cài đặt"
+                onClick={() => subtitleUrl && setSettingsMenu(settingsMenu === "subtitle" ? null : "subtitle")}
+                className={`p-1.5 transition-colors rounded-lg ${
+                  !subtitleUrl
+                    ? "text-white/20 cursor-not-allowed"
+                    : subtitleOn
+                    ? "text-violet-400 hover:bg-white/10"
+                    : "text-white hover:text-violet-300 hover:bg-white/10"
+                }`}
+                title={subtitleUrl ? "Phụ đề" : "Không có phụ đề"}
               >
-                <Settings className={`w-5 h-5 transition-transform duration-300 ${settingsMenu ? "rotate-45" : ""}`} />
+                <Subtitles className="w-5 h-5" />
               </button>
-            </div>
 
-              {/* ── Settings Panel ── */}
+              <div className="relative">
+                <button
+                  data-settings-btn
+                  onClick={() => setSettingsMenu(settingsMenu === "main" ? null : "main")}
+                  className={`p-1.5 transition-colors rounded-lg hover:bg-white/10 ${settingsMenu === "main" || settingsMenu === "speed" ? "text-violet-400" : "text-white hover:text-violet-300"}`}
+                  title="Cài đặt"
+                >
+                  <Settings className={`w-5 h-5 transition-transform duration-300 ${settingsMenu ? "rotate-45" : ""}`} />
+                </button>
+              </div>
+
               {settingsMenu && (
                 <div
                   data-settings-panel
@@ -402,13 +424,11 @@ export default function VideoPlayer({
                   style={{ minWidth: 240 }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {/* Main menu */}
                   {settingsMenu === "main" && (
                     <div className="py-2 px-2">
                       <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest px-2 pt-1 pb-2">
                         Cài đặt
                       </p>
-                      {/* Speed row */}
                       <button
                         onClick={() => setSettingsMenu("speed")}
                         className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-white/10 rounded-lg transition-all group"
@@ -422,7 +442,6 @@ export default function VideoPlayer({
                           <ChevronRight className="w-3.5 h-3.5" />
                         </span>
                       </button>
-                      {/* Subtitle row */}
                       <button
                         onClick={() => setSettingsMenu("subtitle")}
                         className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-white/10 rounded-lg transition-all"
@@ -439,7 +458,6 @@ export default function VideoPlayer({
                     </div>
                   )}
 
-                  {/* Speed submenu */}
                   {settingsMenu === "speed" && (
                     <div className="py-2">
                       <button
@@ -469,7 +487,6 @@ export default function VideoPlayer({
                     </div>
                   )}
 
-                  {/* Subtitle submenu */}
                   {settingsMenu === "subtitle" && (
                     <div className="py-2">
                       <button
@@ -509,9 +526,8 @@ export default function VideoPlayer({
                   )}
                 </div>
               )}
-            </div>{/* end settings+subtitle group */}
+            </div>
 
-            {/* Fullscreen */}
             <button
               onClick={toggleFullscreen}
               className="p-1.5 text-white hover:text-violet-300 transition-colors rounded-lg hover:bg-white/10"
@@ -523,7 +539,6 @@ export default function VideoPlayer({
         </div>
       </div>
 
-      {/* Subtitle CSS */}
       <style>{`
         @keyframes ping-once {
           0%   { transform: scale(1);   opacity: 1; }

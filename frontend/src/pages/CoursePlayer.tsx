@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Link,
   useParams,
@@ -68,6 +68,9 @@ const getMediaUrl = (url?: string | null) => {
   return `${apiBase}${url}`;
 };
 
+// Save every SAVE_DELTA seconds of new playback (not on every tick)
+const SAVE_DELTA = 15;
+
 export default function CoursePlayer() {
   const { slug } = useParams();
   const { isAuthenticated, user } = useAuth();
@@ -88,6 +91,7 @@ export default function CoursePlayer() {
     params.delete("questionId");
     navigate(`?${params.toString()}`, { replace: true });
   };
+
   const [highlightedQuestionId, setHighlightedQuestionId] = useState<
     string | null
   >(questionIdFromUrl);
@@ -104,6 +108,16 @@ export default function CoursePlayer() {
     section: 0,
     lecture: 0,
   });
+
+  // ── Progress tracking ──
+  // watchedDurations: loaded from server on mount, used to resume video position
+  const [watchedDurations, setWatchedDurations] = useState<
+    Record<string, number>
+  >({});
+  const videoTimeRef = useRef<number>(0); // current video time (no re-render)
+  const lastSavedTimeRef = useRef<number>(0); // last time we saved to server
+  const currentLectureIdRef = useRef<string | null>(null);
+  const enrollmentIdRef = useRef<string | null>(null);
 
   const [notes, setNotes] = useState<LectureNoteResponse[]>([]);
   const [noteContent, setNoteContent] = useState("");
@@ -132,25 +146,53 @@ export default function CoursePlayer() {
   const [reviewSending, setReviewSending] = useState(false);
   const [myReview, setMyReview] = useState<ReviewResponse | null>(null);
 
+  // ── Load course + enrollment + progress ──
   useEffect(() => {
     if (!slug) return;
     setLoading(true);
     courseService
       .getCourseById(slug)
       .then(async (c) => {
-        console.log("Course fetched:", c);
         setCourse(c);
         try {
           const enrollments = await enrollmentService.getMyEnrollments();
           const found = enrollments.result.find((e) => e.courseId === c._id);
           if (found) {
             setEnrollmentId(found._id);
+            enrollmentIdRef.current = found._id;
             try {
               const progressList = await processService.getProgress(found._id);
               const completedIds = new Set(
                 progressList.filter((p) => p.completed).map((p) => p.lectureId),
               );
               setCompletedLectures(completedIds);
+              // Build resume map: { lectureId -> watchedDuration (seconds) }
+              const durationsMap: Record<string, number> = {};
+              progressList.forEach((p) => {
+                if (p.lectureId && p.watchedDuration) {
+                  durationsMap[p.lectureId] = p.watchedDuration;
+                }
+              });
+              setWatchedDurations(durationsMap);
+
+              // Khoi phuc bai dang hoc do (lastWatchedAt moi nhat)
+              const lastProgress = progressList
+                .filter((p) => p.lastWatchedAt)
+                .sort((a, b) => new Date(b.lastWatchedAt).getTime() - new Date(a.lastWatchedAt).getTime())[0];
+              if (lastProgress?.lectureId) {
+                const allSections = c.sections || [];
+                let found2 = false;
+                for (let si = 0; si < allSections.length && !found2; si++) {
+                  const lectures = allSections[si].lectures || [];
+                  for (let li = 0; li < lectures.length; li++) {
+                    if (lectures[li]._id === lastProgress.lectureId) {
+                      setCurrentLecture({ section: si, lecture: li });
+                      found2 = true;
+                      break;
+                    }
+                  }
+                }
+              }
             } catch (_e) {}
           }
         } catch (_e) {}
@@ -163,10 +205,6 @@ export default function CoursePlayer() {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  const handleVideoEnded = async () => {
-    await handleMarkComplete();
-    handleNextLecture();
-  };
   const sections = course?.sections || [];
   const totalLectures = sections.reduce((sum, s) => sum + s.lectures.length, 0);
   const progress =
@@ -176,6 +214,166 @@ export default function CoursePlayer() {
   const currentSection = sections[currentLecture.section];
   const currentLectureData = currentSection?.lectures[currentLecture.lecture];
 
+  // ── Core save function (uses refs → no stale closure issues) ──
+  // Uses fetch with keepalive:true so the request survives page unload
+  const saveProgress = useCallback(() => {
+    const eid = enrollmentIdRef.current;
+    const lid = currentLectureIdRef.current;
+    if (!eid || !lid) return;
+    const t = Math.floor(videoTimeRef.current);
+    if (t <= 0) return;
+
+    const apiBase =
+      import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
+    // keepalive:true keeps the request alive even when the page is closed
+    fetch(`${apiBase}/enrollments/${eid}/progress`, {
+      method: "PATCH", // ✅ PATCH, not POST
+      keepalive: true,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+      },
+      body: JSON.stringify({ lectureId: lid, watchedDuration: t }),
+    })
+      .then(() => {
+        lastSavedTimeRef.current = t;
+        setWatchedDurations((prev) => ({ ...prev, [lid]: t }));
+      })
+      .catch(() => {});
+  }, []);
+
+  // ── Save article visit so lastWatchedAt is updated for ARTICLE type lectures ──
+  // Called once when an ARTICLE lecture becomes active.
+  const saveArticleVisit = useCallback((lectureId: string) => {
+    const eid = enrollmentIdRef.current;
+    if (!eid || !lectureId) return;
+    const apiBase =
+      import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+    fetch(`${apiBase}/enrollments/${eid}/progress`, {
+      method: 'PATCH',
+      keepalive: true,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+      },
+      body: JSON.stringify({ lectureId, watchedDuration: 0 }),
+    }).catch(() => {});
+  }, []);
+
+  // ── Sync refs when lecture changes ──
+  // Also pre-populate videoTimeRef/lastSavedTimeRef from watchedDurations so
+  // an immediate pause after switching bài won't overwrite with 0
+  useEffect(() => {
+    if (!currentLectureData?._id) return;
+    currentLectureIdRef.current = currentLectureData._id;
+    const savedTime = watchedDurations[currentLectureData._id] ?? 0;
+    videoTimeRef.current = savedTime;
+    lastSavedTimeRef.current = savedTime;
+  }, [currentLectureData?._id]); // watchedDurations intentionally omitted — only on lecture change
+
+  // ── Sync refs when watchedDurations first loads from server ──
+  // Handles the race: watchedDurations arrives after currentLectureData is set.
+  // Only runs once (first time the server data lands), and only if the user
+  // hasn't started watching yet (videoTimeRef still 0).
+  const watchedDurationsLoadedRef = useRef(false);
+  useEffect(() => {
+    if (watchedDurationsLoadedRef.current) return;
+    if (Object.keys(watchedDurations).length === 0) return;
+    watchedDurationsLoadedRef.current = true;
+    if (!currentLectureData?._id) return;
+    const savedTime = watchedDurations[currentLectureData._id] ?? 0;
+    if (videoTimeRef.current <= 0) {
+      videoTimeRef.current = savedTime;
+      lastSavedTimeRef.current = savedTime;
+    }
+  }, [watchedDurations, currentLectureData?._id]);
+
+  // ── Ping server when an ARTICLE lecture is opened so lastWatchedAt is updated ──
+  useEffect(() => {
+    if (currentLectureData?.type === 'ARTICLE' && currentLectureData._id) {
+      saveArticleVisit(currentLectureData._id);
+    }
+  }, [currentLectureData?._id, currentLectureData?.type, saveArticleVisit]);
+
+  // ── Save on tab close / page refresh ──
+  useEffect(() => {
+    const handleBeforeUnload = () => saveProgress();
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      // Also save when component unmounts (navigate away)
+      saveProgress();
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [saveProgress]);
+
+  // ── Called by VideoPlayer on every timeupdate tick ──
+  // Only calls saveProgress when user has watched SAVE_DELTA more seconds
+  const handleTimeUpdate = useCallback(
+    (t: number) => {
+      videoTimeRef.current = t;
+      if (t - lastSavedTimeRef.current >= SAVE_DELTA) {
+        saveProgress();
+      }
+    },
+    [saveProgress],
+  );
+
+  // ── Called by VideoPlayer on pause and seek ──
+  const handlePauseOrSeek = useCallback(() => {
+    saveProgress();
+  }, [saveProgress]);
+
+  // ── FIX: handleMarkComplete declared BEFORE handleNextLecture ──
+  const handleMarkComplete = async () => {
+    if (!enrollmentId || !currentLectureData?._id) return;
+    try {
+      await processService.updateProgress(enrollmentId, {
+        lectureId: currentLectureData._id,
+        completed: true,
+      });
+      setCompletedLectures(
+        (prev) => new Set([...prev, currentLectureData._id]),
+      );
+      toast.success("Đã đánh dấu hoàn thành!");
+    } catch {
+      toast.error("Không thể cập nhật tiến độ");
+    }
+  };
+
+  const handleNextLecture = async () => {
+    await handleMarkComplete();
+    const section = sections[currentLecture.section];
+    if (currentLecture.lecture < section.lectures.length - 1) {
+      setCurrentLecture({
+        ...currentLecture,
+        lecture: currentLecture.lecture + 1,
+      });
+    } else if (currentLecture.section < sections.length - 1) {
+      setCurrentLecture({ section: currentLecture.section + 1, lecture: 0 });
+    }
+  };
+
+  const handlePrevLecture = () => {
+    if (currentLecture.lecture > 0) {
+      setCurrentLecture({
+        ...currentLecture,
+        lecture: currentLecture.lecture - 1,
+      });
+    } else if (currentLecture.section > 0) {
+      const prevSection = sections[currentLecture.section - 1];
+      setCurrentLecture({
+        section: currentLecture.section - 1,
+        lecture: prevSection.lectures.length - 1,
+      });
+    }
+  };
+
+  const handleVideoEnded = async () => {
+    await handleMarkComplete();
+    handleNextLecture();
+  };
+
+  // ── Notes ──
   useEffect(() => {
     if (!currentLectureData?._id) return;
     setNotesLoading(true);
@@ -188,6 +386,7 @@ export default function CoursePlayer() {
       .finally(() => setNotesLoading(false));
   }, [currentLectureData?._id]);
 
+  // ── Q&A ──
   useEffect(() => {
     if (!course?._id) return;
     setQaLoading(true);
@@ -226,6 +425,7 @@ export default function CoursePlayer() {
     return () => clearTimeout(timer);
   }, [highlightedQuestionId, qaLoading]);
 
+  // ── Reviews ──
   useEffect(() => {
     if (!course?._id) return;
     setReviewsLoading(true);
@@ -239,51 +439,6 @@ export default function CoursePlayer() {
       .catch(() => {})
       .finally(() => setReviewsLoading(false));
   }, [course?._id]);
-
-  const handleNextLecture = async () => {
-    await handleMarkComplete();
-
-    const section = sections[currentLecture.section];
-    if (currentLecture.lecture < section.lectures.length - 1) {
-      setCurrentLecture({
-        ...currentLecture,
-        lecture: currentLecture.lecture + 1,
-      });
-    } else if (currentLecture.section < sections.length - 1) {
-      setCurrentLecture({ section: currentLecture.section + 1, lecture: 0 });
-    }
-  };
-
-  const handlePrevLecture = () => {
-    if (currentLecture.lecture > 0) {
-      setCurrentLecture({
-        ...currentLecture,
-        lecture: currentLecture.lecture - 1,
-      });
-    } else if (currentLecture.section > 0) {
-      const prevSection = sections[currentLecture.section - 1];
-      setCurrentLecture({
-        section: currentLecture.section - 1,
-        lecture: prevSection.lectures.length - 1,
-      });
-    }
-  };
-
-  const handleMarkComplete = async () => {
-    if (!enrollmentId || !currentLectureData?._id) return;
-    try {
-      await processService.updateProgress(enrollmentId, {
-        lectureId: currentLectureData._id,
-        completed: true,
-      });
-      setCompletedLectures(
-        (prev) => new Set([...prev, currentLectureData._id]),
-      );
-      toast.success("Đã đánh dấu hoàn thành!");
-    } catch {
-      toast.error("Không thể cập nhật tiến độ");
-    }
-  };
 
   const handleSaveNote = async () => {
     if (!currentLectureData?._id || !noteContent.trim()) return;
@@ -400,7 +555,6 @@ export default function CoursePlayer() {
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Đã tải xuống bài tập!");
-
     await handleMarkComplete();
   };
 
@@ -478,7 +632,6 @@ export default function CoursePlayer() {
         <main
           className={`flex-1 flex flex-col overflow-y-auto transition-all duration-300 ${isSidebarOpen ? "lg:mr-[340px]" : ""}`}
         >
-          {/* VIDEO / ARTICLE */}
           <div
             className="relative bg-black w-full"
             style={{ aspectRatio: "16/9" }}
@@ -491,7 +644,6 @@ export default function CoursePlayer() {
                     "linear-gradient(135deg, #f8f7ff 0%, #f0f4ff 100%)",
                 }}
               >
-                {/* Header bar */}
                 <div className="sticky top-0 z-10 backdrop-blur-md bg-white/80 border-b border-violet-100 px-8 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <div className="w-7 h-7 rounded-lg bg-violet-100 flex items-center justify-center">
@@ -510,9 +662,7 @@ export default function CoursePlayer() {
                   </button>
                 </div>
 
-                {/* Content */}
                 <div className="max-w-3xl mx-auto px-8 py-8">
-                  {/* Title card */}
                   <div className="bg-white rounded-2xl border border-violet-100 shadow-sm p-6 mb-6">
                     <div className="flex items-start gap-4">
                       <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center flex-shrink-0 shadow-sm">
@@ -529,7 +679,6 @@ export default function CoursePlayer() {
                     </div>
                   </div>
 
-                  {/* Body */}
                   {currentLectureData.content ? (
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
                       <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
@@ -547,7 +696,6 @@ export default function CoursePlayer() {
                     </div>
                   )}
 
-                  {/* Footer actions */}
                   <div className="flex items-center justify-between mt-6 pt-6 border-t border-slate-100">
                     <button
                       onClick={handlePrevLecture}
@@ -591,6 +739,9 @@ export default function CoursePlayer() {
                     : undefined
                 }
                 subtitleLabel="Tiếng Việt"
+                initialTime={watchedDurations[currentLectureData._id] ?? 0}
+                onTimeUpdate={handleTimeUpdate}
+                onPauseOrSeek={handlePauseOrSeek}
                 onEnded={handleVideoEnded}
               />
             ) : (
@@ -624,7 +775,6 @@ export default function CoursePlayer() {
             )}
           </div>
 
-          {/* LECTURE TITLE BAR */}
           <div className="bg-white border-b border-slate-200 px-6 py-3.5 flex items-center justify-between flex-shrink-0">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -660,7 +810,6 @@ export default function CoursePlayer() {
             </div>
           </div>
 
-          {/* TABS */}
           <div className="flex-1 bg-slate-50">
             <Tabs
               value={activeTab}
@@ -691,7 +840,6 @@ export default function CoursePlayer() {
                 </TabsList>
               </div>
 
-              {/* OVERVIEW TAB */}
               <TabsContent
                 value="overview"
                 className="p-5 sm:p-6 space-y-4 mt-0"
@@ -734,7 +882,6 @@ export default function CoursePlayer() {
                 </div>
               </TabsContent>
 
-              {/* NOTES TAB */}
               <TabsContent value="notes" className="p-5 sm:p-6 space-y-4 mt-0">
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50">
@@ -838,7 +985,6 @@ export default function CoursePlayer() {
                 )}
               </TabsContent>
 
-              {/* QA TAB */}
               <TabsContent value="qa" className="p-5 sm:p-6 space-y-4 mt-0">
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50">
@@ -1031,7 +1177,6 @@ export default function CoursePlayer() {
                 )}
               </TabsContent>
 
-              {/* REVIEWS TAB */}
               <TabsContent
                 value="reviews"
                 className="p-5 sm:p-6 space-y-4 mt-0"
@@ -1184,7 +1329,6 @@ export default function CoursePlayer() {
           </div>
         </main>
 
-        {/* SIDEBAR */}
         <aside
           className={`fixed top-16 right-0 bottom-0 w-[340px] bg-white border-l border-slate-200 flex flex-col transition-transform duration-300 z-40 ${isSidebarOpen ? "translate-x-0" : "translate-x-full"}`}
         >
