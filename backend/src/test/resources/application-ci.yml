@@ -1,26 +1,16 @@
 spring:
   datasource:
-    # --- MySQL ---
     url: jdbc:mysql://localhost:3306/udemy?allowPublicKeyRetrieval=true&useSSL=false&createDatabaseIfNotExist=true
     username: root
     password: ${MYSQL_ROOT_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
-
-    # --- PostgreSQL ---
-#    url: jdbc:postgresql://localhost:5432/udemy
-#    username: postgres
-#    password: dummy-password
-#    driver-class-name: org.postgresql.Driver
-
   jpa:
     hibernate:
       ddl-auto: create-drop
     show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect   # MySQL
-#        dialect: org.hibernate.dialect.PostgreSQLDialect
-
+        dialect: org.hibernate.dialect.MySQL8Dialect
   mail:
     host: smtp.gmail.com
     port: 587
@@ -40,14 +30,14 @@ upload:
     video-uri: file:///tmp/upload/videos/
 
 cloudinary:
-  cloud-name: dummy-cloud
-  api-key: dummy-key
-  api-secret: dummy-secret
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:dummy-cloud}
+  api-key: ${CLOUDINARY_API_KEY:dummy-key}
+  api-secret: ${CLOUDINARY_API_SECRET:dummy-secret}
 
 auth:
   jwt:
-    base64-secret-access: dummy-secret-access
-    base64-secret-fresh: dummy-secret-refresh
+    base64-secret-access: ${JWT_SECRET_ACCESS}
+    base64-secret-fresh: ${JWT_SECRET_REFRESH}
     access-token-validity-in-seconds: 3600
     refresh-token-validity-in-seconds: 3600
 
@@ -60,7 +50,6 @@ oauth2:
     client-id: dummy-client-id
   facebook:
     app-id: dummy-app-id
-
 vnpay:
   tmn-code: DUMMY_TMN_CODE
   hash-secret: DUMMY_HASH_SECRET
