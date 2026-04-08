@@ -13,9 +13,13 @@ spring:
       max-file-size: 2048MB
       max-request-size: 2048MB
   datasource:
-    driverClassName: com.mysql.cj.jdbc.Driver
-    url: ${DB_URL:jdbc:mysql://localhost:3306/udemy}
-    username: ${DB_USERNAME:root}
+#    driverClassName: com.mysql.cj.jdbc.Driver
+#    url: ${DB_URL:jdbc:mysql://localhost:3306/udemy}
+#    username: ${DB_USERNAME:root}
+#    password: ${DB_PASSWORD}
+    driverClassName: org.postgresql.Driver
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/udemy}
+    username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD}
   jpa:
     hibernate:
@@ -24,7 +28,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.MySQL8Dialect
+#        dialect: org.hibernate.dialect.MySQL8Dialect
+        dialect: org.hibernate.dialect.PostgreSQLDialect
   mail:
     host: smtp.gmail.com
     port: 587
