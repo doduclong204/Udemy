@@ -164,6 +164,19 @@ export default function CourseDetail() {
     navigate("/cart");
   };
 
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = course?.title ?? 'Khóa học';
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, url });
+      } catch (_) {}
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Đã sao chép link khóa học!' });
+    }
+  };
+
   const handleToggleWishlist = () => {
     if (!isAuthenticated) {
       navigate(`/login?redirect=${location.pathname}`);
@@ -552,7 +565,10 @@ export default function CourseDetail() {
                 </div>
 
                 <div className="flex justify-center gap-4 mt-6 pt-4 border-t border-border">
-                  <button className="flex items-center gap-1 text-sm text-foreground hover:text-primary transition-colors">
+                  <button
+                    onClick={handleShare}
+                    className="flex items-center gap-1 text-sm text-foreground hover:text-primary transition-colors"
+                  >
                     <Share2 className="w-4 h-4" />
                     Chia sẻ
                   </button>
