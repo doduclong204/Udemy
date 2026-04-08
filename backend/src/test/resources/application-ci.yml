@@ -1,0 +1,61 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/udemy?allowPublicKeyRetrieval=true&useSSL=false&createDatabaseIfNotExist=true
+    username: root
+    password: ${MYSQL_ROOT_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: dummy@gmail.com
+    password: dummy-password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+upload:
+  file:
+    uri: file:///tmp/upload/
+    image-uri: file:///tmp/upload/images/
+    video-uri: file:///tmp/upload/videos/
+
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:dummy-cloud}
+  api-key: ${CLOUDINARY_API_KEY:dummy-key}
+  api-secret: ${CLOUDINARY_API_SECRET:dummy-secret}
+
+auth:
+  jwt:
+    base64-secret-access: ${JWT_SECRET_ACCESS}
+    base64-secret-fresh: ${JWT_SECRET_REFRESH}
+    access-token-validity-in-seconds: 3600
+    refresh-token-validity-in-seconds: 3600
+
+resend:
+  api-key: dummy-api-key
+  from-email: dummy@example.com
+
+oauth2:
+  google:
+    client-id: dummy-client-id
+  facebook:
+    app-id: dummy-app-id
+vnpay:
+  tmn-code: DUMMY_TMN_CODE
+  hash-secret: DUMMY_HASH_SECRET
+  url: https://dummy/vpcpay.html
+  return-url: http://dummy/vnpay-return
+  frontend-url: http://dummy
+
+gemini:
+  api-key: DUMMY_GEMINI_API_KEY

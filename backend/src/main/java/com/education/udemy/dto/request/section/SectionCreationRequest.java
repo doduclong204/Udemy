@@ -1,0 +1,27 @@
+package com.education.udemy.dto.request.section;
+
+import com.education.udemy.dto.request.lecture.LectureCreationRequest;
+import jakarta.validation.constraints.NotBlank;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.FieldDefaults;
+
+import java.util.List;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class SectionCreationRequest {
+
+    String id;
+
+    @NotBlank(message = "Tiêu đề chương không được để trống")
+    String title;
+
+    List<LectureCreationRequest> lectures;
+}
