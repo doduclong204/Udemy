@@ -50,3 +50,4 @@ export function CourseCard({ course, size = 'md' }: CourseCardProps) {
     </Link>
   );
 }
+//longducdo
