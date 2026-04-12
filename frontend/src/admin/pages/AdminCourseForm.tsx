@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -10,6 +11,9 @@ import {
   Video,
   FileText,
   Image,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
@@ -33,7 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import uploadService from "@/services/uploadService";
+import uploadService, { clearSignatureCache } from "@/services/uploadService";
 
 type LectureType = "VIDEO" | "ARTICLE";
 
@@ -53,6 +57,17 @@ interface Section {
   id: string;
   title: string;
   lectures: Lecture[];
+}
+
+type UploadStatus = "pending" | "uploading" | "done" | "error";
+
+interface UploadItem {
+  id: string;
+  name: string;
+  type: "image" | "video";
+  percent: number;
+  status: UploadStatus;
+  sizeLabel?: string;
 }
 
 const DEFAULT_SECTIONS: Section[] = [
@@ -85,6 +100,271 @@ const secondsToMMSS = (secs?: number): string => {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 };
 
+const formatBytes = (bytes: number): string => {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const formatPercent = (val: number) =>
+  val >= 100 ? "100%" : `${val.toFixed(2).replace(/\.?0+$/, "")}%`;
+
+// ─── Upload Overlay ───────────────────────────────────────────────────────────
+// Portal vào document.body để position:fixed hoạt động đúng bất kể
+// stacking context của admin layout
+interface UploadOverlayProps {
+  items: UploadItem[];
+  doneCount: number;
+  totalCount: number;
+  totalPercent: number;
+}
+
+function UploadOverlay({
+  items,
+  doneCount,
+  totalCount,
+  totalPercent,
+}: UploadOverlayProps) {
+  return createPortal(
+    <>
+      <style>{`
+        @keyframes _uol-fadein { from{opacity:0} to{opacity:1} }
+        @keyframes _uol-slideup {
+          from{opacity:0;transform:translateY(14px) scale(.97)}
+          to  {opacity:1;transform:translateY(0)    scale(1)}
+        }
+        @keyframes _uol-dot {
+          0%,80%,100%{opacity:.2;transform:scale(.8)}
+          40%        {opacity:1; transform:scale(1)}
+        }
+        ._uol-bg {
+          position:fixed;inset:0;z-index:9999;
+          background:rgba(0,0,0,.73);
+          backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+          display:flex;align-items:center;justify-content:center;padding:1.5rem;
+          animation:_uol-fadein .2s ease;
+        }
+        ._uol-card {
+          width:100%;max-width:460px;border-radius:16px;overflow:hidden;
+          background:hsl(var(--admin-card,220 20% 13%));
+          border:1px solid hsl(var(--admin-border,220 20% 25%));
+          box-shadow:0 28px 70px rgba(0,0,0,.55);
+          animation:_uol-slideup .25s ease;
+        }
+        ._uol-header {
+          padding:1.375rem 1.5rem 1rem;
+          border-bottom:1px solid hsl(var(--admin-border,220 20% 25%));
+        }
+        ._uol-title-row {
+          display:flex;align-items:center;justify-content:space-between;
+          margin-bottom:12px;
+        }
+        ._uol-title {
+          display:flex;align-items:center;gap:8px;
+          font-size:14px;font-weight:600;
+          color:hsl(var(--admin-foreground,0 0% 95%));
+        }
+        ._uol-badge {
+          font-size:11px;font-weight:500;padding:3px 10px;border-radius:999px;
+          background:rgba(168,85,247,.15);color:#c084fc;
+          border:1px solid rgba(168,85,247,.25);white-space:nowrap;
+        }
+        ._uol-bar-track {
+          width:100%;height:5px;border-radius:999px;overflow:hidden;
+          background:hsl(var(--admin-accent,220 20% 22%));
+        }
+        ._uol-bar-fill {
+          height:100%;border-radius:999px;
+          background:linear-gradient(90deg,#a855f7,#6366f1);
+          transition:width .4s ease;
+        }
+        ._uol-pct-row {
+          display:flex;justify-content:flex-end;margin-top:5px;
+          font-size:11px;color:hsl(var(--admin-muted-foreground,220 10% 60%));
+          font-variant-numeric:tabular-nums;
+        }
+        ._uol-list {
+          padding:10px 10px 12px;display:flex;flex-direction:column;gap:6px;
+          max-height:300px;overflow-y:auto;
+          scrollbar-width:thin;scrollbar-color:rgba(168,85,247,.3) transparent;
+        }
+        ._uol-list::-webkit-scrollbar{width:4px}
+        ._uol-list::-webkit-scrollbar-track{background:transparent}
+        ._uol-list::-webkit-scrollbar-thumb{background:rgba(168,85,247,.3);border-radius:999px}
+        ._uol-item {
+          display:flex;align-items:center;gap:10px;
+          padding:9px 12px;border-radius:10px;
+          transition:background .25s,border-color .25s;
+          min-width:0;
+        }
+        ._uol-item.pending,._uol-item.uploading {
+          background:hsl(var(--admin-accent,220 20% 22%));
+          border:1px solid hsl(var(--admin-border,220 20% 25%));
+        }
+        ._uol-item.done  {background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.22)}
+        ._uol-item.error {background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.22)}
+        ._uol-icon {
+          width:34px;height:34px;border-radius:8px;flex-shrink:0;
+          display:flex;align-items:center;justify-content:center;
+        }
+        ._uol-icon.video{background:rgba(168,85,247,.14)}
+        ._uol-icon.image{background:rgba(59,130,246,.14)}
+        ._uol-body{flex:1;min-width:0}
+        ._uol-top {
+          display:flex;align-items:center;justify-content:space-between;
+          gap:8px;margin-bottom:6px;min-width:0;
+        }
+        ._uol-name {
+          font-size:12px;font-weight:500;
+          color:hsl(var(--admin-foreground,0 0% 95%));
+          overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+          flex:1;min-width:0;
+        }
+        ._uol-right{display:flex;align-items:center;gap:6px;flex-shrink:0;max-width:40%}
+        ._uol-size{font-size:11px;color:hsl(var(--admin-muted-foreground,220 10% 60%))}
+        ._uol-fpct{
+          font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;
+          color:#c084fc;min-width:40px;text-align:right;
+        }
+        ._uol-wait{font-size:11px;color:hsl(var(--admin-muted-foreground,220 10% 60%))}
+        ._uol-fbar-track{
+          width:100%;height:3px;border-radius:999px;overflow:hidden;
+          background:rgba(255,255,255,.06);
+        }
+        ._uol-fbar-fill{height:100%;border-radius:999px;transition:width .18s ease}
+        ._uol-fbar-fill.video  {background:linear-gradient(90deg,#a855f7,#7c3aed)}
+        ._uol-fbar-fill.image  {background:linear-gradient(90deg,#3b82f6,#2563eb)}
+        ._uol-fbar-fill.done   {background:linear-gradient(90deg,#22c55e,#16a34a)}
+        ._uol-fbar-fill.error  {background:#ef4444}
+        ._uol-footer {
+          padding:9px 1.5rem;
+          display:flex;align-items:center;justify-content:center;gap:6px;
+          border-top:1px solid hsl(var(--admin-border,220 20% 25%));
+          font-size:12px;color:hsl(var(--admin-muted-foreground,220 10% 60%));
+        }
+        ._uol-dots{display:flex;gap:3px;align-items:center}
+        ._uol-dots span{
+          width:3px;height:3px;border-radius:50%;
+          background:hsl(var(--admin-muted-foreground,220 10% 60%));
+          animation:_uol-dot 1.4s infinite;
+        }
+        ._uol-dots span:nth-child(2){animation-delay:.2s}
+        ._uol-dots span:nth-child(3){animation-delay:.4s}
+      `}</style>
+
+      <div className="_uol-bg">
+        <div className="_uol-card">
+          {/* Header */}
+          <div className="_uol-header">
+            <div className="_uol-title-row">
+              <div className="_uol-title">
+                <Loader2
+                  className="animate-spin"
+                  style={{ width: 15, height: 15, color: "#a855f7" }}
+                />
+                Đang tải lên tài nguyên
+              </div>
+              <span className="_uol-badge">
+                {doneCount}/{totalCount} hoàn thành
+              </span>
+            </div>
+            <div className="_uol-bar-track">
+              <div
+                className="_uol-bar-fill"
+                style={{ width: `${totalPercent}%` }}
+              />
+            </div>
+            <div className="_uol-pct-row">{totalPercent}%</div>
+          </div>
+
+          {/* File list */}
+          <div className="_uol-list">
+            {items.map((item) => {
+              const barCls =
+                item.status === "done"
+                  ? "done"
+                  : item.status === "error"
+                    ? "error"
+                    : item.type;
+              return (
+                <div key={item.id} className={`_uol-item ${item.status}`}>
+                  <div className={`_uol-icon ${item.type}`}>
+                    {item.type === "video" ? (
+                      <Video
+                        style={{ width: 15, height: 15, color: "#a855f7" }}
+                      />
+                    ) : (
+                      <Image
+                        style={{ width: 15, height: 15, color: "#3b82f6" }}
+                      />
+                    )}
+                  </div>
+                  <div className="_uol-body">
+                    <div className="_uol-top">
+                      <span className="_uol-name">{item.name}</span>
+                      <div className="_uol-right">
+                        {item.sizeLabel && (
+                          <span className="_uol-size">{item.sizeLabel}</span>
+                        )}
+                        {item.status === "done" ? (
+                          <CheckCircle2
+                            style={{
+                              width: 15,
+                              height: 15,
+                              color: "#22c55e",
+                              flexShrink: 0,
+                            }}
+                          />
+                        ) : item.status === "error" ? (
+                          <AlertCircle
+                            style={{
+                              width: 15,
+                              height: 15,
+                              color: "#ef4444",
+                              flexShrink: 0,
+                            }}
+                          />
+                        ) : item.status === "uploading" ? (
+                          <span className="_uol-fpct">
+                            {formatPercent(item.percent)}
+                          </span>
+                        ) : (
+                          <span className="_uol-wait">Chờ...</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="_uol-fbar-track">
+                      <div
+                        className={`_uol-fbar-fill ${barCls}`}
+                        style={{
+                          width: `${item.status === "done" ? 100 : item.percent}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Footer */}
+          <div className="_uol-footer">
+            {doneCount < totalCount && (
+              <div className="_uol-dots">
+                <span />
+                <span />
+                <span />
+              </div>
+            )}
+            Vui lòng không đóng trang trong khi tải lên
+          </div>
+        </div>
+      </div>
+    </>,
+    document.body,
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function AdminCourseForm() {
   const dispatch = useDispatch<AppDispatch>();
   const { id } = useParams();
@@ -93,6 +373,8 @@ export default function AdminCourseForm() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCourse, setLoadingCourse] = useState(false);
+  const [uploadItems, setUploadItems] = useState<UploadItem[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -110,7 +392,6 @@ export default function AdminCourseForm() {
   const [thumbnailPreview, setThumbnailPreview] = useState<string>("");
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string>("");
-
   const [learningPoints, setLearningPoints] = useState<string[]>([
     "",
     "",
@@ -118,6 +399,29 @@ export default function AdminCourseForm() {
     "",
   ]);
   const [sections, setSections] = useState<Section[]>(DEFAULT_SECTIONS);
+
+  const updateItemProgress = useCallback((itemId: string, percent: number) => {
+    setUploadItems((prev) =>
+      prev.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              percent,
+              status: percent >= 100 ? "done" : "uploading",
+            }
+          : item,
+      ),
+    );
+  }, []);
+
+  const updateItemStatus = useCallback(
+    (itemId: string, status: UploadStatus) => {
+      setUploadItems((prev) =>
+        prev.map((item) => (item.id === itemId ? { ...item, status } : item)),
+      );
+    },
+    [],
+  );
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -162,9 +466,8 @@ export default function AdminCourseForm() {
         if (course.learningOutcomes) {
           try {
             const points = JSON.parse(course.learningOutcomes);
-            if (Array.isArray(points) && points.length > 0) {
+            if (Array.isArray(points) && points.length > 0)
               setLearningPoints(points);
-            }
           } catch {
             setLearningPoints([course.learningOutcomes]);
           }
@@ -211,12 +514,6 @@ export default function AdminCourseForm() {
     return true;
   };
 
-  const uploadImage = (file: File): Promise<string> =>
-    uploadService.uploadImage(file);
-
-  const uploadVideo = (file: File): Promise<string> =>
-    uploadService.uploadVideo(file);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -225,52 +522,142 @@ export default function AdminCourseForm() {
       return;
     }
 
-    const hasNewImages = thumbnailFile || bannerFile;
-    if (hasNewImages) {
-      toast.loading("Đang upload ảnh...", { id: "upload" });
+    const imageItems: (UploadItem & { file: File; label: string })[] = [];
+    if (thumbnailFile) {
+      imageItems.push({
+        id: "thumbnail",
+        name: thumbnailFile.name,
+        type: "image",
+        percent: 0,
+        status: "pending",
+        sizeLabel: formatBytes(thumbnailFile.size),
+        file: thumbnailFile,
+        label: "Thumbnail",
+      });
+    }
+    if (bannerFile) {
+      imageItems.push({
+        id: "banner",
+        name: bannerFile.name,
+        type: "image",
+        percent: 0,
+        status: "pending",
+        sizeLabel: formatBytes(bannerFile.size),
+        file: bannerFile,
+        label: "Banner",
+      });
+    }
+
+    const videoItems: (UploadItem & {
+      file: File;
+      sectionId: string;
+      lectureId: string;
+    })[] = [];
+    for (const s of sections) {
+      for (const l of s.lectures) {
+        if (l.type === "VIDEO" && l.videoFile) {
+          videoItems.push({
+            id: `${s.id}-${l.id}`,
+            name: l.videoFile.name,
+            type: "video",
+            percent: 0,
+            status: "pending",
+            sizeLabel: formatBytes(l.videoFile.size),
+            file: l.videoFile,
+            sectionId: s.id,
+            lectureId: l.id,
+          });
+        }
+      }
+    }
+
+    const allItems: UploadItem[] = [
+      ...imageItems.map(({ file, label, ...item }) => item),
+      ...videoItems.map(({ file, sectionId, lectureId, ...item }) => item),
+    ];
+
+    if (allItems.length > 0) {
+      setUploadItems(allItems);
+      setIsUploading(true);
     }
 
     let thumbnailUrl = thumbnailPreview;
     let bannerUrl = bannerPreview;
+    const videoUrlMap: Record<string, string> = {};
 
     try {
-      if (thumbnailFile) thumbnailUrl = await uploadImage(thumbnailFile);
-      if (bannerFile) bannerUrl = await uploadImage(bannerFile);
-      if (hasNewImages) toast.dismiss("upload");
-    } catch (err) {
-      if (hasNewImages) toast.dismiss("upload");
-      toast.error("Upload ảnh thất bại, vui lòng thử lại");
-      return;
-    }
+      await Promise.all([
+        ...imageItems.map(async ({ id: itemId, file, label }) => {
+          updateItemStatus(itemId, "uploading");
+          try {
+            const url = await uploadService.uploadImage(file, (percent) =>
+              updateItemProgress(itemId, percent),
+            );
+            updateItemStatus(itemId, "done");
+            if (label === "Thumbnail") thumbnailUrl = url;
+            else bannerUrl = url;
+          } catch {
+            updateItemStatus(itemId, "error");
+            throw new Error(`Upload ${label} thất bại`);
+          }
+        }),
 
-    const hasNewVideos = sections.some((s) =>
-      s.lectures.some((l) => l.type === "VIDEO" && l.videoFile),
-    );
-    if (hasNewVideos) {
-      toast.loading("Đang upload video...", { id: "upload" });
-    }
-    try {
-      const sectionsWithVideoUrl = await Promise.all(
-        sections.map(async (s) => ({
-          ...s,
-          lectures: await Promise.all(
-            s.lectures.map(async (l) => {
-              if (l.type === "VIDEO" && l.videoFile) {
-                const videoUrl = await uploadVideo(l.videoFile);
-                return { ...l, videoUrl };
-              }
-              return l;
-            }),
-          ),
-        })),
-      );
+        ...videoItems.map(
+          async ({ id: itemId, file, sectionId, lectureId }) => {
+            updateItemStatus(itemId, "uploading");
+            try {
+              const url = await uploadService.uploadVideo(file, (percent) =>
+                updateItemProgress(itemId, percent),
+              );
+              updateItemStatus(itemId, "done");
+              videoUrlMap[`${sectionId}-${lectureId}`] = url;
+            } catch {
+              updateItemStatus(itemId, "error");
+              throw new Error(`Upload video "${file.name}" thất bại`);
+            }
+          },
+        ),
+      ]);
+
+      const sectionsWithVideoUrl = sections.map((s) => ({
+        ...s,
+        lectures: s.lectures.map((l) => {
+          const key = `${s.id}-${l.id}`;
+          if (l.type === "VIDEO" && videoUrlMap[key]) {
+            return { ...l, videoUrl: videoUrlMap[key] };
+          }
+          return l;
+        }),
+      }));
+
       setSections(sectionsWithVideoUrl);
-
-      toast.dismiss("upload");
+      await new Promise((r) => setTimeout(r, 800));
+      setIsUploading(false);
+      setUploadItems([]);
+      clearSignatureCache();
 
       const learningOutcomesJson = JSON.stringify(
         learningPoints.filter((p) => p.trim()),
       );
+
+      const isUUID = (s: string) =>
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          s,
+        );
+
+      const mapLecture = (l: Lecture, withId: boolean) => ({
+        ...(withId && isUUID(l.id) ? { id: l.id } : {}),
+        title: l.title,
+        type: l.type,
+        videoUrl: l.videoUrl || l.videoFileName,
+        content: l.articleContent,
+        duration:
+          l.type === "VIDEO"
+            ? parseInt(l.duration.split(":")[0]) * 60 +
+              parseInt(l.duration.split(":")[1] || "0")
+            : undefined,
+        isFree: l.isPreview,
+      });
 
       const coursePayload = isEditing
         ? ({
@@ -289,29 +676,9 @@ export default function AdminCourseForm() {
             outstanding: formData.isFeatured,
             learningOutcomes: learningOutcomesJson,
             sections: sectionsWithVideoUrl.map((s) => ({
-              id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-                s.id,
-              )
-                ? s.id
-                : undefined,
+              ...(isUUID(s.id) ? { id: s.id } : {}),
               title: s.title,
-              lectures: s.lectures.map((l) => ({
-                id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-                  l.id,
-                )
-                  ? l.id
-                  : undefined,
-                title: l.title,
-                type: l.type,
-                videoUrl: l.videoUrl || l.videoFileName,
-                content: l.articleContent,
-                duration:
-                  l.type === "VIDEO"
-                    ? parseInt(l.duration.split(":")[0]) * 60 +
-                      parseInt(l.duration.split(":")[1] || "0")
-                    : undefined,
-                isFree: l.isPreview,
-              })),
+              lectures: s.lectures.map((l) => mapLecture(l, true)),
             })),
           } as UpdateCourseRequest & { id: string })
         : ({
@@ -329,18 +696,7 @@ export default function AdminCourseForm() {
             learningOutcomes: learningOutcomesJson,
             sections: sectionsWithVideoUrl.map((s) => ({
               title: s.title,
-              lectures: s.lectures.map((l) => ({
-                title: l.title,
-                type: l.type,
-                videoUrl: l.videoUrl || l.videoFileName,
-                content: l.articleContent,
-                duration:
-                  l.type === "VIDEO"
-                    ? parseInt(l.duration.split(":")[0]) * 60 +
-                      parseInt(l.duration.split(":")[1] || "0")
-                    : undefined,
-                isFree: l.isPreview,
-              })),
+              lectures: s.lectures.map((l) => mapLecture(l, false)),
             })),
           } as CreateCourseRequest);
 
@@ -353,7 +709,9 @@ export default function AdminCourseForm() {
       }
       navigate("/admin/courses");
     } catch (error: any) {
-      toast.dismiss("upload");
+      setIsUploading(false);
+      setUploadItems([]);
+      clearSignatureCache();
       toast.error(isEditing ? "Cập nhật thất bại!" : "Tạo khóa học thất bại!");
       console.error("Course submit error", error);
     }
@@ -381,6 +739,7 @@ export default function AdminCourseForm() {
 
   const removeSection = (sectionId: string) =>
     setSections(sections.filter((s) => s.id !== sectionId));
+
   const updateSectionTitle = (sectionId: string, title: string) =>
     setSections(
       sections.map((s) => (s.id === sectionId ? { ...s, title } : s)),
@@ -467,7 +826,9 @@ export default function AdminCourseForm() {
       window.URL.revokeObjectURL(video.src);
       const minutes = Math.floor(video.duration / 60);
       const seconds = Math.floor(video.duration % 60);
-      const durationStr = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+      const durationStr = `${minutes.toString().padStart(2, "0")}:${seconds
+        .toString()
+        .padStart(2, "0")}`;
       setSections((prev) =>
         prev.map((s) => {
           if (s.id !== sectionId) return s;
@@ -516,7 +877,10 @@ export default function AdminCourseForm() {
     setSections(
       sections.map((s) => {
         if (s.id !== sectionId) return s;
-        return { ...s, lectures: s.lectures.filter((l) => l.id !== lectureId) };
+        return {
+          ...s,
+          lectures: s.lectures.filter((l) => l.id !== lectureId),
+        };
       }),
     );
   };
@@ -540,6 +904,16 @@ export default function AdminCourseForm() {
     );
   };
 
+  const totalPercent =
+    uploadItems.length > 0
+      ? Math.round(
+          uploadItems.reduce((sum, i) => sum + i.percent, 0) /
+            uploadItems.length,
+        )
+      : 0;
+  const doneCount = uploadItems.filter((i) => i.status === "done").length;
+  const totalCount = uploadItems.length;
+
   if (loadingCourse) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -552,6 +926,16 @@ export default function AdminCourseForm() {
 
   return (
     <div className="space-y-6 max-w-4xl">
+      {/* Upload overlay — portal vào document.body */}
+      {isUploading && uploadItems.length > 0 && (
+        <UploadOverlay
+          items={uploadItems}
+          doneCount={doneCount}
+          totalCount={totalCount}
+          totalPercent={totalPercent}
+        />
+      )}
+
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -616,7 +1000,6 @@ export default function AdminCourseForm() {
               />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* ✅ FIX: Danh mục dropdown */}
               <div>
                 <Label className="text-admin-foreground">Danh mục</Label>
                 <Select
@@ -628,26 +1011,15 @@ export default function AdminCourseForm() {
                   <SelectTrigger className="mt-1.5 bg-admin-accent border-admin-border text-admin-foreground">
                     <SelectValue placeholder="Chọn danh mục" />
                   </SelectTrigger>
-                  <SelectContent
-                    position="popper"
-                    sideOffset={4}
-                    className="border-admin-border"
-                    style={{ backgroundColor: "var(--admin-card, #1e2535)", color: "var(--admin-foreground, #f1f5f9)" }}
-                  >
+                  <SelectContent position="popper" sideOffset={4}>
                     {categories.map((cat) => (
-                      <SelectItem
-                        key={cat._id}
-                        value={cat._id}
-                        className="text-admin-foreground focus:bg-admin-accent focus:text-admin-foreground cursor-pointer"
-                      >
+                      <SelectItem key={cat._id} value={cat._id}>
                         {cat.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* ✅ FIX: Trình độ dropdown */}
               <div>
                 <Label className="text-admin-foreground">Trình độ</Label>
                 <Select
@@ -659,30 +1031,10 @@ export default function AdminCourseForm() {
                   <SelectTrigger className="mt-1.5 bg-admin-accent border-admin-border text-admin-foreground">
                     <SelectValue placeholder="Chọn trình độ" />
                   </SelectTrigger>
-                  <SelectContent
-                    position="popper"
-                    sideOffset={4}
-                    className="border-admin-border"
-                    style={{ backgroundColor: "var(--admin-card, #1e2535)", color: "var(--admin-foreground, #f1f5f9)" }}
-                  >
-                    <SelectItem
-                      value="BASIC"
-                      className="text-admin-foreground focus:bg-admin-accent focus:text-admin-foreground cursor-pointer"
-                    >
-                      Cơ bản
-                    </SelectItem>
-                    <SelectItem
-                      value="INTERMEDIATE"
-                      className="text-admin-foreground focus:bg-admin-accent focus:text-admin-foreground cursor-pointer"
-                    >
-                      Trung cấp
-                    </SelectItem>
-                    <SelectItem
-                      value="ADVANCED"
-                      className="text-admin-foreground focus:bg-admin-accent focus:text-admin-foreground cursor-pointer"
-                    >
-                      Nâng cao
-                    </SelectItem>
+                  <SelectContent position="popper" sideOffset={4}>
+                    <SelectItem value="BASIC">Cơ bản</SelectItem>
+                    <SelectItem value="INTERMEDIATE">Trung cấp</SelectItem>
+                    <SelectItem value="ADVANCED">Nâng cao</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -696,7 +1048,6 @@ export default function AdminCourseForm() {
             Hình ảnh
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Thumbnail */}
             <div>
               <Label className="text-admin-foreground">
                 Thumbnail (16:9){" "}
@@ -747,7 +1098,6 @@ export default function AdminCourseForm() {
               )}
             </div>
 
-            {/* Banner */}
             <div>
               <Label className="text-admin-foreground">
                 Banner (16:9){" "}
@@ -1020,14 +1370,14 @@ export default function AdminCourseForm() {
 
                         <div className="ml-7">
                           {lecture.type === "VIDEO" ? (
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 min-w-0 overflow-hidden">
                               {lecture.videoFileName ? (
-                                <div className="flex items-center gap-2 flex-1 bg-admin-accent px-3 py-2 rounded-lg border border-admin-border">
-                                  <Video className="w-4 h-4 text-purple-400" />
-                                  <span className="text-sm text-admin-foreground truncate flex-1">
+                                <div className="flex items-center gap-2 flex-1 min-w-0 bg-admin-accent px-3 py-2 rounded-lg border border-admin-border overflow-hidden">
+                                  <Video className="w-4 h-4 text-purple-400 shrink-0" />
+                                  <span className="text-sm text-admin-foreground truncate flex-1 min-w-0">
                                     {lecture.videoFileName}
                                   </span>
-                                  <span className="text-xs text-admin-muted-foreground bg-admin-card px-2 py-1 rounded">
+                                  <span className="text-xs text-admin-muted-foreground bg-admin-card px-2 py-1 rounded shrink-0 whitespace-nowrap">
                                     {lecture.duration}
                                   </span>
                                   <Button
@@ -1037,7 +1387,7 @@ export default function AdminCourseForm() {
                                     onClick={() =>
                                       removeVideo(section.id, lecture.id)
                                     }
-                                    className="h-6 w-6 text-red-400 hover:bg-red-500/10"
+                                    className="h-6 w-6 shrink-0 text-red-400 hover:bg-red-500/10"
                                   >
                                     <X className="w-3 h-3" />
                                   </Button>
@@ -1110,6 +1460,7 @@ export default function AdminCourseForm() {
           </Button>
           <Button
             type="submit"
+            disabled={isUploading}
             className="bg-admin-primary hover:bg-admin-primary/90"
           >
             {isEditing ? "Cập nhật khoá học" : "Tạo khoá học"}
