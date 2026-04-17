@@ -26,6 +26,8 @@ import OrderPayment from "./pages/OrderPayment";
 import PaymentResult from "./pages/PaymentResult";
 import NotFound from "./pages/NotFound";
 import AIChatBox from "@/components/AIChatBox";
+// Thêm trang callback cho Facebook OAuth popup
+import FacebookCallback from "./pages/FacebookCallback";
 
 import { AdminLayout } from "./admin/layouts/AdminLayout";
 import AdminDashboard from "./admin/pages/AdminDashboard";
@@ -62,6 +64,9 @@ function AppContent() {
         <Route path="/order/checkout" element={<OrderCheckout />} />
         <Route path="/order/payment" element={<OrderPayment />} />
         <Route path="/payment/result" element={<PaymentResult />} />
+
+        {/* Route callback cho Facebook OAuth popup - THÊM MỚI */}
+        <Route path="/auth/facebook/callback" element={<FacebookCallback />} />
 
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />

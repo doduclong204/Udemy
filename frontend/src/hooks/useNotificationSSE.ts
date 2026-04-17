@@ -7,56 +7,110 @@ import type { AppDispatch } from '@/redux/store';
 const SSE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'}/sse/subscribe`;
 const RECONNECT_DELAY = 5000;
 
+function parseSseBlock(block: string): { name: string; data: string } | null {
+  let name = '';
+  const dataLines: string[] = [];
+
+  for (const line of block.split('\n')) {
+    if (line.startsWith('event:')) {
+      name = line.slice(6).trim();
+    } else if (line.startsWith('data:')) {
+      dataLines.push(line.slice(5).trim());
+    }
+  }
+
+  if (!name || dataLines.length === 0) return null;
+
+  return { name, data: dataLines.join('\n') };
+}
+
 export function useNotificationSSE() {
   const dispatch = useDispatch<AppDispatch>();
   const isAuthenticated = useSelector(selectIsAuthenticated);
-  const esRef = useRef<EventSource | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stopped = useRef(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
       stopped.current = true;
-      esRef.current?.close();
-      esRef.current = null;
+      abortRef.current?.abort();
+      abortRef.current = null;
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
       return;
     }
 
     stopped.current = false;
 
-    function connect() {
+    async function connect() {
       if (stopped.current) return;
 
       const token = localStorage.getItem('access_token');
       if (!token) return;
 
-      const es = new EventSource(`${SSE_URL}?token=${encodeURIComponent(token)}`);
-      esRef.current = es;
+      const controller = new AbortController();
+      abortRef.current = controller;
 
-      es.addEventListener('notification', (e) => {
-        try {
-          dispatch(addNotification(JSON.parse(e.data)));
-        } catch {
-          // ignore
+      try {
+        const response = await fetch(SSE_URL, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'text/event-stream',
+            'Cache-Control': 'no-cache',
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok || !response.body) {
+          throw new Error(`SSE connect failed: ${response.status}`);
         }
-      });
 
-      es.onerror = () => {
-        es.close();
-        esRef.current = null;
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          const blocks = buffer.split('\n\n');
+
+          buffer = blocks.pop() ?? '';
+
+          for (const block of blocks) {
+            const trimmed = block.trim();
+            if (!trimmed) continue;
+
+            const parsed = parseSseBlock(trimmed);
+            if (!parsed) continue;
+
+            if (parsed.name === 'notification' && parsed.data) {
+              try {
+                const payload = JSON.parse(parsed.data);
+                dispatch(addNotification(payload));
+              } catch {
+                
+              }
+            }
+          }
+        }
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') return;
         if (!stopped.current) {
           reconnectTimer.current = setTimeout(connect, RECONNECT_DELAY);
         }
-      };
+      }
     }
 
     connect();
 
     return () => {
       stopped.current = true;
-      esRef.current?.close();
-      esRef.current = null;
+      abortRef.current?.abort();
+      abortRef.current = null;
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
     };
   }, [isAuthenticated, dispatch]);

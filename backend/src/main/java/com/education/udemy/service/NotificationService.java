@@ -70,8 +70,8 @@ public class NotificationService {
                             .read(false)
                             .build())
                     .toList();
-            userNotificationRepository.saveAll(userNotifications);
-            pushSseToRecipients(recipients, finalNotification);
+            List<UserNotification> savedUserNotifications = userNotificationRepository.saveAll(userNotifications);
+            pushSseToRecipients(savedUserNotifications, finalNotification);
         }
 
         return getDetail(notification.getId());
@@ -99,28 +99,28 @@ public class NotificationService {
                         .read(false)
                         .build())
                 .toList();
-        userNotificationRepository.saveAll(userNotifications);
-        pushSseToRecipients(recipients, notification);
+        List<UserNotification> savedUserNotifications = userNotificationRepository.saveAll(userNotifications);
+        pushSseToRecipients(savedUserNotifications, notification);
 
         return getDetail(id);
     }
 
-    private void pushSseToRecipients(List<User> recipients, Notification notification) {
-        UserNotificationResponse payload = UserNotificationResponse.builder()
-                .title(notification.getTitle())
-                .message(notification.getMessage())
-                .type(notification.getType() != null ? notification.getType().name() : null)
-                .relatedId(notification.getRelatedId())
-                .relatedCourseId(notification.getRelatedCourseId())
-                .relatedType(notification.getRelatedType())
-                .isRead(false)
-                .build();
+    private void pushSseToRecipients(List<UserNotification> savedUserNotifications, Notification notification) {
+        for (UserNotification un : savedUserNotifications) {
+            UserNotificationResponse payload = UserNotificationResponse.builder()
+                    .id(un.getId())
+                    .title(notification.getTitle())
+                    .message(notification.getMessage())
+                    .type(notification.getType() != null ? notification.getType().name() : null)
+                    .relatedId(notification.getRelatedId())
+                    .relatedCourseId(notification.getRelatedCourseId())
+                    .relatedType(notification.getRelatedType())
+                    .isRead(false)
+                    .createdAt(un.getCreatedAt())
+                    .build();
 
-        List<String> usernames = recipients.stream()
-                .map(User::getUsername)
-                .toList();
-
-        sseService.sendToUsers(usernames, payload);
+            sseService.sendToUser(un.getUser().getUsername(), payload);
+        }
     }
 
     private List<User> resolveRecipients(Notification notification) {
@@ -252,8 +252,8 @@ public class NotificationService {
                         .read(false)
                         .build())
                 .toList();
-        userNotificationRepository.saveAll(userNotifications);
-        pushSseToRecipients(recipients, notification);
+        List<UserNotification> savedUserNotifications = userNotificationRepository.saveAll(userNotifications);
+        pushSseToRecipients(savedUserNotifications, notification);
     }
 
     private Map<String, Long> toMap(List<Object[]> rows) {

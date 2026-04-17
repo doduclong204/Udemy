@@ -13,7 +13,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 
 @Component
-public class SseTokenFilter extends OncePerRequestFilter {
+public class NoOpSseFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,

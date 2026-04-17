@@ -1,6 +1,7 @@
 package com.education.udemy.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -45,7 +46,7 @@ public class SseService {
             emitter.send(SseEmitter.event()
                     .id(String.valueOf(eventIdCounter.incrementAndGet()))
                     .name("notification")
-                    .data(data));
+                    .data(data, MediaType.APPLICATION_JSON));
         } catch (IOException e) {
             emitters.remove(username);
         }

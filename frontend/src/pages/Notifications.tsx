@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -16,8 +16,10 @@ import {
   markOneAsRead,
   markAllAsRead,
   removeOne,
+  clearOptimisticReadIds,
   selectUnreadCount,
   selectNotifications,
+  selectNotiLoaded,
 } from '@/redux/slices/notificationSlice';
 import type { AppDispatch } from '@/redux/store';
 import type { NotificationType } from '@/types';
@@ -51,15 +53,16 @@ const navItems = [
 
 export default function Notifications() {
   const { user, isAuthenticated } = useAuth();
-  const dispatch    = useDispatch<AppDispatch>();
-  const unreadCount = useSelector(selectUnreadCount);
-  const notifications = useSelector(selectNotifications);
-  const [isLoading, setIsLoading] = useState(false);
+  const dispatch       = useDispatch<AppDispatch>();
+  const unreadCount    = useSelector(selectUnreadCount);
+  const notifications  = useSelector(selectNotifications);
+  const loaded         = useSelector(selectNotiLoaded);
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    setIsLoading(true);
-    dispatch(fetchNotifications()).finally(() => setIsLoading(false));
+    dispatch(fetchNotifications()).then(() => {
+      dispatch(clearOptimisticReadIds());
+    });
   }, [isAuthenticated, dispatch]);
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -165,7 +168,7 @@ export default function Notifications() {
               )}
             </div>
 
-            {isLoading ? (
+            {!loaded ? (
               <div className="flex justify-center py-16">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
