@@ -3,6 +3,7 @@ package com.education.udemy.service;
 import com.education.udemy.dto.request.notification.NotificationCreationRequest;
 import com.education.udemy.dto.response.api.ApiPagination;
 import com.education.udemy.dto.response.notification.NotificationResponse;
+import com.education.udemy.dto.response.notification.UserNotificationResponse;
 import com.education.udemy.entity.Notification;
 import com.education.udemy.entity.User;
 import com.education.udemy.entity.UserNotification;
@@ -41,6 +42,7 @@ public class NotificationService {
     UserRepository userRepository;
     NotificationMapper notificationMapper;
     CourseQuestionRepository courseQuestionRepository;
+    SseService sseService;
 
     @Transactional
     public NotificationResponse createNotification(NotificationCreationRequest request) {
@@ -69,6 +71,7 @@ public class NotificationService {
                             .build())
                     .toList();
             userNotificationRepository.saveAll(userNotifications);
+            pushSseToRecipients(recipients, finalNotification);
         }
 
         return getDetail(notification.getId());
@@ -97,8 +100,27 @@ public class NotificationService {
                         .build())
                 .toList();
         userNotificationRepository.saveAll(userNotifications);
+        pushSseToRecipients(recipients, notification);
 
         return getDetail(id);
+    }
+
+    private void pushSseToRecipients(List<User> recipients, Notification notification) {
+        UserNotificationResponse payload = UserNotificationResponse.builder()
+                .title(notification.getTitle())
+                .message(notification.getMessage())
+                .type(notification.getType() != null ? notification.getType().name() : null)
+                .relatedId(notification.getRelatedId())
+                .relatedCourseId(notification.getRelatedCourseId())
+                .relatedType(notification.getRelatedType())
+                .isRead(false)
+                .build();
+
+        List<String> usernames = recipients.stream()
+                .map(User::getUsername)
+                .toList();
+
+        sseService.sendToUsers(usernames, payload);
     }
 
     private List<User> resolveRecipients(Notification notification) {
@@ -231,6 +253,7 @@ public class NotificationService {
                         .build())
                 .toList();
         userNotificationRepository.saveAll(userNotifications);
+        pushSseToRecipients(recipients, notification);
     }
 
     private Map<String, Long> toMap(List<Object[]> rows) {

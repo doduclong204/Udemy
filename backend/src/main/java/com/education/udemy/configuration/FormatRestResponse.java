@@ -1,6 +1,5 @@
 package com.education.udemy.configuration;
 
-
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.core.MethodParameter;
@@ -25,32 +24,37 @@ public class FormatRestResponse implements ResponseBodyAdvice<Object> {
 
     @Override
     public Object beforeBodyWrite(Object body, MethodParameter returnType, MediaType selectedContentType,
-            Class selectedConverterType, ServerHttpRequest request, ServerHttpResponse response) {
+                                  Class selectedConverterType, ServerHttpRequest request, ServerHttpResponse response) {
+
+        String path = request.getURI().getPath();
+
+        if (path.contains("/sse")) {
+            return body;
+        }
+
+        if (path.startsWith("/v3/api-docs") || path.startsWith("/swagger-ui")) {
+            return body;
+        }
+
         HttpServletResponse servletResponse = ((ServletServerHttpResponse) response).getServletResponse();
         int status = servletResponse.getStatus();
 
         ApiResponse<Object> res = new ApiResponse<>();
         res.setStatusCode(status);
 
-        // fix temp
         if (body instanceof String || body instanceof Resource) {
             return body;
         }
 
-        String path = request.getURI().getPath();
-        if (path.startsWith("/v3/api-docs") || path.startsWith("/swagger-ui")) {
-            return body;
-        }
         if (body instanceof Resource
-            || body instanceof org.springframework.http.ResponseEntity
-            || body instanceof byte[]) {
+                || body instanceof org.springframework.http.ResponseEntity
+                || body instanceof byte[]) {
             return body;
         }
+
         if (status >= 400) {
-            // case error
             return body;
         } else {
-            // case success
             res.setData(body);
             ApiMessage message = returnType.getMethodAnnotation(ApiMessage.class);
             res.setMessage(message != null ? message.value() : "CALL API SUCCESS");
@@ -58,5 +62,4 @@ public class FormatRestResponse implements ResponseBodyAdvice<Object> {
 
         return res;
     }
-
 }

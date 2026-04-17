@@ -56,6 +56,10 @@ const notificationSlice = createSlice({
     clearUnread: (state) => {
       state.unreadCount = 0;
     },
+    addNotification: (state, action: PayloadAction<UserNotificationResponse>) => {
+      state.notifications.unshift(action.payload);
+      state.unreadCount += 1;
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(fetchNotifications.fulfilled, (state, action) => {
@@ -72,6 +76,7 @@ export const {
   removeOne,
   decrementUnread,
   clearUnread,
+  addNotification,
 } = notificationSlice.actions;
 
 export const selectUnreadCount   = (state: RootState) => state.notification.unreadCount;
