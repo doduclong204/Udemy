@@ -15,7 +15,6 @@ import {
   fetchNotifications,
   selectUnreadCount,
   selectNotifications,
-  selectNotiLoaded,
 } from "@/redux/slices/notificationSlice";
 import {
   fetchEnrolledCount,
@@ -112,10 +111,7 @@ export default function Dashboard() {
 
   const unreadCount = useSelector(selectUnreadCount);
   const reduxNotifications = useSelector(selectNotifications);
-  const notiLoaded = useSelector(selectNotiLoaded);
   const enrolledCount = useSelector(selectEnrolledCount);
-
-  // ── Enrollment (server-side, đã đúng) ──────────────────────────────
   const [enrollments, setEnrollments] = useState<EnrollmentResponse[]>([]);
   const [loadingEnrollments, setLoadingEnrollments] = useState(true);
   const [enrollmentPage, setEnrollmentPage] = useState(1);
@@ -132,7 +128,7 @@ export default function Dashboard() {
       .then((res) => {
         setEnrollments(res.result);
         setEnrollmentTotalPages(
-          Math.ceil(res.meta.total / ENROLLMENT_PAGE_SIZE),
+          Math.ceil(res.meta.total / ENROLLMENT_PAGE_SIZE) || 1,
         );
         dispatch(fetchEnrolledCount());
       })
@@ -177,7 +173,7 @@ export default function Dashboard() {
         setWishlistItems(res.data.data.result);
         setWishlistTotal(res.data.data.meta.total);
         setWishlistTotalPages(
-          Math.ceil(res.data.data.meta.total / WISHLIST_PAGE_SIZE),
+          Math.ceil(res.data.data.meta.total / WISHLIST_PAGE_SIZE) || 1,
         );
       })
       .catch(() => {})
@@ -193,7 +189,10 @@ export default function Dashboard() {
     setWishlistPage(1);
   }, [isWishlist]);
 
-  // ── Notification (Redux-driven cho realtime SSE) ─────────────────────
+  // ── Notification ────────────────────────────────────────────────────────
+  // Root cause fix:
+  //   Trang 1 → dùng reduxNotifications trực tiếp (SSE push vào Redux → UI cập nhật ngay)
+  //   Trang 2+ → fetch server bình thường
   const [notifPage, setNotifPage] = useState(1);
   const [notifTotalPages, setNotifTotalPages] = useState(1);
   const [notifTotal, setNotifTotal] = useState(0);
@@ -202,7 +201,8 @@ export default function Dashboard() {
     UserNotificationResponse[]
   >([]);
 
-  const notifItems = notifPage === 1 ? reduxNotifications : serverNotifItems;
+  // Trang 1: dùng Redux (realtime SSE); trang 2+: dùng server fetch
+  const notifItems = notifPage === 1 ? reduxNotifications.slice(0, NOTIF_PAGE_SIZE) : serverNotifItems;
 
   const fetchNotifPage = (page: number) => {
     setLoadingNotifs(true);
@@ -210,8 +210,9 @@ export default function Dashboard() {
       .getMyNotifications({ page, pageSize: NOTIF_PAGE_SIZE })
       .then((res) => {
         setNotifTotal(res.meta.total);
-        setNotifTotalPages(Math.ceil(res.meta.total / NOTIF_PAGE_SIZE));
+        setNotifTotalPages(Math.ceil(res.meta.total / NOTIF_PAGE_SIZE) || 1);
         if (page === 1) {
+          // Trang 1: sync Redux để reduxNotifications + unreadCount chính xác
           dispatch(fetchNotifications());
         } else {
           setServerNotifItems(res.result);
@@ -221,30 +222,21 @@ export default function Dashboard() {
       .finally(() => setLoadingNotifs(false));
   };
 
+  // Vào tab hoặc đổi trang → fetch để có total/totalPages + sync Redux trang 1
   useEffect(() => {
     if (!isNotifications) return;
     fetchNotifPage(notifPage);
   }, [notifPage, isNotifications]);
 
+  // Reset về trang 1 khi vào tab
   useEffect(() => {
-    if (isNotifications) {
-      userNotificationService
-        .getMyNotifications({ page: 1, pageSize: NOTIF_PAGE_SIZE })
-        .then((res) => {
-          setNotifTotal(res.meta.total);
-          setNotifTotalPages(Math.ceil(res.meta.total / NOTIF_PAGE_SIZE));
-        })
-        .catch(() => {});
-    }
-  }, [reduxNotifications.length, isNotifications]);
-
-  useEffect(() => {
-    setNotifPage(1);
+    if (isNotifications) setNotifPage(1);
   }, [isNotifications]);
 
   const handleMarkAsRead = async (id: string) => {
     const target = notifItems.find((n) => n._id === id);
     if (!target || target.isRead) return;
+    // Dispatch Redux → cập nhật reduxNotifications + unreadCount ngay (trang 1 hiển thị liền)
     dispatch(markOneAsRead(id));
     try {
       await userNotificationService.markAsRead(id);
@@ -268,18 +260,27 @@ export default function Dashboard() {
   };
 
   const handleRemoveNotif = async (id: string) => {
+    // Optimistic: removeOne() trong slice tự trừ unreadCount nếu chưa đọc → không cần decrementUnread()
     dispatch(removeOne(id));
-    setNotifTotal((t) => Math.max(0, t - 1));
+    const newTotal = Math.max(0, notifTotal - 1);
+    setNotifTotal(newTotal);
+    setNotifTotalPages(Math.ceil(newTotal / NOTIF_PAGE_SIZE) || 1);
+
     try {
       await userNotificationService.deleteNotification(id);
       sonnerToast.success("Đã xóa thông báo");
-      if (notifPage > 1 && serverNotifItems.length === 1) {
+      if (notifPage === 1) {
+        // Trang 1: Redux đã update, chỉ cần sync total từ server
+        fetchNotifPage(1);
+      } else if (serverNotifItems.length <= 1 && notifPage > 1) {
+        // Xóa item cuối trang → lùi về trang trước
         setNotifPage((p) => p - 1);
-      } else if (notifPage > 1) {
+      } else {
         fetchNotifPage(notifPage);
       }
     } catch {
       dispatch(fetchNotifications());
+      if (notifPage > 1) fetchNotifPage(notifPage);
       sonnerToast.error("Có lỗi xảy ra");
     }
   };
@@ -435,14 +436,15 @@ export default function Dashboard() {
   ) => {
     e.preventDefault();
     e.stopPropagation();
-    // optimistic: xóa khỏi danh sách hiện tại
+    const remainingAfterDelete = wishlistItems.filter((c) => c.courseId !== courseId).length;
+    // Optimistic update
     setWishlistItems((prev) => prev.filter((c) => c.courseId !== courseId));
-    setWishlistTotal((t) => t - 1);
+    setWishlistTotal((t) => Math.max(0, t - 1));
     await ctxRemoveFromWishlist(courseId);
     refetchWishlistBadge();
     toast({ title: "Đã bỏ yêu thích", description: `${title} đã được xóa.` });
-    // nếu xóa hết trang hiện tại thì lùi 1 trang, ngược lại refetch trang này
-    if (wishlistItems.length === 1 && wishlistPage > 1) {
+    // Nếu xóa hết trang hiện tại thì lùi 1 trang, ngược lại refetch trang này
+    if (remainingAfterDelete === 0 && wishlistPage > 1) {
       setWishlistPage((p) => p - 1);
     } else {
       fetchWishlistPage(wishlistPage);
@@ -758,7 +760,7 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                {loadingNotifs && notifPage === 1 && !notiLoaded ? (
+                {loadingNotifs && notifItems.length === 0 ? (
                   <div className="flex justify-center py-16">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                   </div>

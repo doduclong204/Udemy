@@ -19,10 +19,14 @@ const initialState: NotificationState = {
   optimisticReadIds: [],
 };
 
+// pageSize phải khớp với NOTIF_PAGE_SIZE trong Dashboard (= 10)
+// để reduxNotifications.slice(0, NOTIF_PAGE_SIZE) ở trang 1 luôn đúng
+const NOTIF_PAGE_SIZE = 10;
+
 export const fetchNotifications = createAsyncThunk(
   'notification/fetchNotifications',
   async () => {
-    const listRes = await userNotificationService.getMyNotifications({ pageSize: 20 });
+    const listRes = await userNotificationService.getMyNotifications({ pageSize: NOTIF_PAGE_SIZE });
     return { list: listRes.result };
   },
 );
