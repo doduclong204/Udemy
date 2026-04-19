@@ -23,9 +23,9 @@ public class SseService implements SmartLifecycle {
     public SseEmitter subscribe(String username) {
         SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
 
-        emitter.onCompletion(() -> emitters.remove(username));
-        emitter.onTimeout(() -> emitters.remove(username));
-        emitter.onError((e) -> emitters.remove(username));
+        emitter.onCompletion(() -> emitters.remove(username, emitter));
+        emitter.onTimeout(() -> emitters.remove(username, emitter));
+        emitter.onError((e) -> emitters.remove(username, emitter));
 
         SseEmitter old = emitters.put(username, emitter);
         if (old != null) {
@@ -38,7 +38,7 @@ public class SseService implements SmartLifecycle {
                     .name("connected")
                     .data("ok"));
         } catch (IOException e) {
-            emitters.remove(username);
+            emitters.remove(username, emitter);
         }
 
         return emitter;
@@ -53,7 +53,7 @@ public class SseService implements SmartLifecycle {
                     .name("notification")
                     .data(data, MediaType.APPLICATION_JSON));
         } catch (IOException e) {
-            emitters.remove(username);
+            emitters.remove(username, emitter);
         }
     }
 

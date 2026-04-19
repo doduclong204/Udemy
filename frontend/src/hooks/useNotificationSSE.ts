@@ -21,7 +21,6 @@ function parseSseBlock(block: string): { name: string; data: string } | null {
   }
 
   if (!name || dataLines.length === 0) return null;
-
   return { name, data: dataLines.join('\n') };
 }
 
@@ -32,6 +31,8 @@ export function useNotificationSSE() {
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stopped = useRef(false);
   const reconnectDelay = useRef(RECONNECT_DELAY_MIN);
+  const dispatchRef = useRef(dispatch);
+  dispatchRef.current = dispatch;
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -51,6 +52,7 @@ export function useNotificationSSE() {
       const token = localStorage.getItem('access_token');
       if (!token) return;
 
+      abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
 
@@ -77,17 +79,19 @@ export function useNotificationSSE() {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-
         let buffer = '';
 
         while (true) {
+          if (stopped.current) {
+            reader.cancel();
+            break;
+          }
+
           const { done, value } = await reader.read();
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
-
           const blocks = buffer.split('\n\n');
-
           buffer = blocks.pop() ?? '';
 
           for (const block of blocks) {
@@ -100,13 +104,17 @@ export function useNotificationSSE() {
             if (parsed.name === 'notification' && parsed.data) {
               try {
                 const payload = JSON.parse(parsed.data);
-                dispatch(addNotification(payload));
+                dispatchRef.current(addNotification(payload));
               } catch {
-                // ignore malformed JSON
               }
             }
           }
         }
+
+        if (!stopped.current) {
+          reconnectTimer.current = setTimeout(connect, RECONNECT_DELAY_MIN);
+        }
+
       } catch (err: unknown) {
         if (err instanceof Error && err.name === 'AbortError') return;
         if (!stopped.current) {
@@ -124,5 +132,5 @@ export function useNotificationSSE() {
       abortRef.current = null;
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
     };
-  }, [isAuthenticated, dispatch]);
+  }, [isAuthenticated]);
 }
