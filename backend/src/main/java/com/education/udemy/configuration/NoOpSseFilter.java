@@ -1,4 +1,4 @@
-/*package com.education.udemy.configuration;
+package com.education.udemy.configuration;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -52,4 +52,4 @@ public class NoOpSseFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
     }
-}*/
+}

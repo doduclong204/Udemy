@@ -16,12 +16,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity(securedEnabled = true)
 public class SecurityConfiguration {
 
-/*    private final NoOpSseFilter noOpSseFilter;
+    private final NoOpSseFilter noOpSseFilter;
 
     public SecurityConfiguration(NoOpSseFilter noOpSseFilter) {
         this.noOpSseFilter = noOpSseFilter;
     }
- */
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -49,7 +48,7 @@ public class SecurityConfiguration {
         http
                 .csrf(c -> c.disable())
                 .cors(Customizer.withDefaults())
-                //.addFilterBefore(noOpSseFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(noOpSseFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(
                         authz -> authz
                                 .requestMatchers("/admin/**").hasAuthority("ADMIN")
