@@ -5,7 +5,8 @@ import { addNotification } from '@/redux/slices/notificationSlice';
 import type { AppDispatch } from '@/redux/store';
 
 const SSE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'}/sse/subscribe`;
-const RECONNECT_DELAY = 5000;
+const RECONNECT_DELAY_MIN = 2000;
+const RECONNECT_DELAY_MAX = 30000;
 
 function parseSseBlock(block: string): { name: string; data: string } | null {
   let name = '';
@@ -30,6 +31,7 @@ export function useNotificationSSE() {
   const abortRef = useRef<AbortController | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stopped = useRef(false);
+  const reconnectDelay = useRef(RECONNECT_DELAY_MIN);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -41,6 +43,7 @@ export function useNotificationSSE() {
     }
 
     stopped.current = false;
+    reconnectDelay.current = RECONNECT_DELAY_MIN;
 
     async function connect() {
       if (stopped.current) return;
@@ -61,9 +64,16 @@ export function useNotificationSSE() {
           signal: controller.signal,
         });
 
+        if (response.status === 401) {
+          stopped.current = true;
+          return;
+        }
+
         if (!response.ok || !response.body) {
           throw new Error(`SSE connect failed: ${response.status}`);
         }
+
+        reconnectDelay.current = RECONNECT_DELAY_MIN;
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -92,7 +102,7 @@ export function useNotificationSSE() {
                 const payload = JSON.parse(parsed.data);
                 dispatch(addNotification(payload));
               } catch {
-                
+                // ignore malformed JSON
               }
             }
           }
@@ -100,7 +110,8 @@ export function useNotificationSSE() {
       } catch (err: unknown) {
         if (err instanceof Error && err.name === 'AbortError') return;
         if (!stopped.current) {
-          reconnectTimer.current = setTimeout(connect, RECONNECT_DELAY);
+          reconnectTimer.current = setTimeout(connect, reconnectDelay.current);
+          reconnectDelay.current = Math.min(reconnectDelay.current * 2, RECONNECT_DELAY_MAX);
         }
       }
     }
