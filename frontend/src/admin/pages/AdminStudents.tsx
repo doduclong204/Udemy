@@ -2,10 +2,11 @@ import { useEffect, useState, useRef } from "react";
 import {
   Search, Mail, MoreVertical, Eye, Ban, UserCheck,
   UserPlus, Edit, Trash2, Phone, Calendar, BookOpen, Star, Upload,
+  Users, Activity, Wallet,
 } from "lucide-react";
 import userService from "@/services/userService";
 import notificationService from "@/services/notificationService";
-import { Student, NotificationType } from "@/types";
+import { Student, NotificationType, UserStats } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -52,6 +53,12 @@ export default function AdminStudents() {
   const [currentPage, setCurrentPage] = useState(1);
   const [students, setStudents] = useState<Student[]>([]);
   const [totalItems, setTotalItems] = useState(0);
+  const [userStats, setUserStats] = useState<UserStats>({
+    activeCount: 0,
+    inactiveCount: 0,
+    totalSpent: 0,
+    enrolledCourses: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -95,6 +102,7 @@ export default function AdminStudents() {
       });
       setStudents(res.result);
       setTotalItems(res.meta.total);
+      if (res.stats) setUserStats(res.stats as unknown as UserStats);
     } catch (err) {
       console.error("Fetch students error", err);
     } finally {
@@ -227,14 +235,50 @@ export default function AdminStudents() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Tổng học viên", value: totalItems, color: "text-admin-foreground" },
-          { label: "Đang hoạt động", value: students.filter(s => s.status === "Active").length, color: "text-green-500" },
-          { label: "Tổng chi tiêu", value: formatCurrency(students.reduce((sum, s) => sum + s.totalSpent, 0)), color: "text-admin-foreground" },
-          { label: "Lượt đăng ký", value: students.reduce((sum, s) => sum + s.enrolledCourses, 0), color: "text-admin-foreground" },
-        ].map(card => (
-          <div key={card.label} className="bg-admin-card border border-admin-border rounded-xl p-4">
-            <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
-            <p className="text-sm text-admin-muted-foreground">{card.label}</p>
+          {
+            label: "Tổng học viên",
+            value: totalItems.toLocaleString(),
+            color: "text-admin-foreground",
+            icon: <Users className="w-5 h-5" />,
+            iconBg: "rgba(99,102,241,0.15)",
+            iconColor: "#818cf8",
+          },
+          {
+            label: "Đang hoạt động",
+            value: userStats.activeCount.toLocaleString(),
+            color: "text-green-400",
+            icon: <Activity className="w-5 h-5" />,
+            iconBg: "rgba(34,197,94,0.15)",
+            iconColor: "#4ade80",
+          },
+          {
+            label: "Tổng chi tiêu",
+            value: formatCurrency(userStats.totalSpent),
+            color: "text-yellow-400",
+            icon: <Wallet className="w-5 h-5" />,
+            iconBg: "rgba(234,179,8,0.15)",
+            iconColor: "#facc15",
+          },
+          {
+            label: "Lượt đăng ký",
+            value: userStats.enrolledCourses.toLocaleString(),
+            color: "text-blue-400",
+            icon: <BookOpen className="w-5 h-5" />,
+            iconBg: "rgba(59,130,246,0.15)",
+            iconColor: "#60a5fa",
+          },
+        ].map((card) => (
+          <div key={card.label} className="bg-admin-card border border-admin-border rounded-xl p-4 flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: card.iconBg, color: card.iconColor }}
+            >
+              {card.icon}
+            </div>
+            <div>
+              <p className={`text-xl font-bold leading-tight ${card.color}`}>{card.value}</p>
+              <p className="text-xs text-admin-muted-foreground mt-0.5">{card.label}</p>
+            </div>
           </div>
         ))}
       </div>

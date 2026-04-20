@@ -17,6 +17,7 @@ import com.education.udemy.dto.request.user.UserCreationRequest;
 import com.education.udemy.dto.request.user.UserUpdateRequest;
 import com.education.udemy.dto.response.api.ApiPagination;
 import com.education.udemy.dto.response.user.UserResponse;
+import com.education.udemy.dto.response.stats.UserStatsResponse;
 import com.education.udemy.entity.User;
 import com.education.udemy.exception.AppException;
 import com.education.udemy.exception.ErrorCode;
@@ -136,8 +137,16 @@ public class UserService {
         mt.setPages(pageUser.getTotalPages());
         mt.setTotal(pageUser.getTotalElements());
 
+        UserStatsResponse stats = UserStatsResponse.builder()
+                .activeCount(userRepository.countByActiveTrue())
+                .inactiveCount(userRepository.countByActiveFalse())
+                .totalSpent(userRepository.sumAllCompletedRevenue())
+                .enrolledCourses(userRepository.countAllEnrollments())
+                .build();
+
         return ApiPagination.<UserResponse>builder()
                 .meta(mt)
+                .stats(stats)
                 .result(listUser)
                 .build();
     }

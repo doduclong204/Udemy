@@ -39,6 +39,7 @@ interface RawPaginatedResponse {
     pages?: number;
     total?: number;
   };
+  stats?: unknown;
 }
 
 interface CreateUserPayload {
@@ -160,6 +161,7 @@ const userService = {
           pages: meta.pages ?? 1,
           total: meta.total ?? students.length,
         },
+        stats: payload?.stats,
         result: students,
       };
     } catch {
