@@ -6,6 +6,7 @@ import com.education.udemy.dto.request.order.OrderCreationRequest;
 import com.education.udemy.dto.request.order.OrderUpdateRequest;
 import com.education.udemy.dto.response.api.ApiPagination;
 import com.education.udemy.dto.response.order.OrderResponse;
+import com.education.udemy.dto.response.stats.OrderStatsResponse;
 import com.education.udemy.entity.*;
 import com.education.udemy.enums.OrderStatus;
 import com.education.udemy.enums.PaymentMethod;
@@ -241,7 +242,14 @@ public class OrderService {
         mt.setPages(pageOrder.getTotalPages());
         mt.setTotal(pageOrder.getTotalElements());
 
-        return ApiPagination.<OrderResponse>builder().meta(mt).result(listOrder).build();
+        OrderStatsResponse stats = OrderStatsResponse.builder()
+                .totalRevenue(orderRepository.calculateTotalRevenue())
+                .completedCount(orderRepository.countByPaymentStatus(OrderStatus.COMPLETED))
+                .pendingCount(orderRepository.countByPaymentStatus(OrderStatus.PENDING))
+                .refundedCount(orderRepository.countByPaymentStatus(OrderStatus.REFUNDED))
+                .build();
+
+        return ApiPagination.<OrderResponse>builder().meta(mt).stats(stats).result(listOrder).build();
     }
 
     @Transactional
