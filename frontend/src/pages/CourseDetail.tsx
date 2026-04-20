@@ -326,7 +326,7 @@ export default function CourseDetail() {
                   <span className="badge-bestseller text-sm">Nổi bật</span>
                 </div>
               )}
-              <h1 className="text-2xl md:text-3xl font-bold mb-4 leading-snug">
+              <h1 className="text-3xl md:text-4xl font-bold mb-5 leading-tight text-white">
                 {course.title}
               </h1>
               <p className="text-lg text-background/80 mb-4">
@@ -335,10 +335,9 @@ export default function CourseDetail() {
               <div className="flex flex-wrap items-center gap-4 mb-4">
                 <Rating
                   rating={Number(course.rating) || 0}
-                  reviewCount={Number(course.ratingCount) || 0}
                   size="lg"
                 />
-                <span className="text-background/80">
+                <span className="text-background/60">
                   ({(course.totalStudents || 0).toLocaleString()} học viên)
                 </span>
               </div>
