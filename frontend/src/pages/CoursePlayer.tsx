@@ -45,6 +45,7 @@ import noteService from "@/services/noteService";
 import qaService from "@/services/qaService";
 import reviewService from "@/services/reviewService";
 import processService from "@/services/processService";
+import { useQAWebSocket } from "@/hooks/useQAWebSocket";
 import type {
   CourseDetailResponse,
   LectureResponse,
@@ -213,6 +214,32 @@ export default function CoursePlayer() {
       : 0;
   const currentSection = sections[currentLecture.section];
   const currentLectureData = currentSection?.lectures[currentLecture.lecture];
+
+  // ── WebSocket realtime Q&A ──
+  useQAWebSocket({
+    lectureId: currentLectureData?._id,
+    onNewQuestion: (question) => {
+      setQuestions((prev) => {
+        if (prev.some((q) => q._id === question._id)) return prev;
+        return [question, ...prev];
+      });
+      setAnswersMap((prev) => ({ ...prev, [question._id]: [] }));
+    },
+    onNewAnswer: (questionId, answer) => {
+      setAnswersMap((prev) => {
+        const existing = prev[questionId] ?? [];
+        if (existing.some((a) => a._id === answer._id)) return prev;
+        return { ...prev, [questionId]: [...existing, answer] };
+      });
+      if (answer.instructorAnswer) {
+        setQuestions((prev) =>
+          prev.map((q) =>
+            q._id === questionId ? { ...q, answered: true } : q,
+          ),
+        );
+      }
+    },
+  });
 
   // ── Core save function (uses refs → no stale closure issues) ──
   // Uses fetch with keepalive:true so the request survives page unload
@@ -491,7 +518,10 @@ export default function CoursePlayer() {
         courseId: course._id,
         lectureId: currentLectureData?._id,
       });
-      setQuestions((prev) => [created, ...prev]);
+      setQuestions((prev) => {
+        if (prev.some((q) => q._id === created._id)) return prev;
+        return [created, ...prev];
+      });
       setAnswersMap((prev) => ({ ...prev, [created._id]: [] }));
       setQuestionTitle("");
       setQuestionContent("");

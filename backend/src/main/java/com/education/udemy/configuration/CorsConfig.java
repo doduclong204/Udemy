@@ -16,7 +16,12 @@ public class CorsConfig {
         configuration.setAllowedOrigins(
                 Arrays.asList("http://localhost:8081", "http://localhost:4173", "http://localhost:5173"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "x-no-retry", "Last-Event-ID", "Cache-Control"));
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization", "Content-Type", "Accept",
+                "x-no-retry", "Last-Event-ID", "Cache-Control",
+                "Upgrade", "Connection",
+                "Sec-WebSocket-Key", "Sec-WebSocket-Version", "Sec-WebSocket-Extensions"
+        ));
         configuration.setExposedHeaders(Arrays.asList("Content-Type"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);

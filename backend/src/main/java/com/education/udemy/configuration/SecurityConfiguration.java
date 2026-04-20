@@ -43,7 +43,8 @@ public class SecurityConfiguration {
                 "/orders/vnpay/return",
                 "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
                 "/storage/**", "/files/**", "/images/**", "/videos/**",
-                "/ws/**"
+                "/ws/**",
+                "/ws/info/**"
         };
         http
                 .csrf(c -> c.disable())

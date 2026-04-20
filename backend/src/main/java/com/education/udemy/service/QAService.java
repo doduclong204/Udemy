@@ -3,6 +3,7 @@ package com.education.udemy.service;
 import com.education.udemy.dto.request.qa.QARequest;
 import com.education.udemy.dto.response.api.ApiPagination;
 import com.education.udemy.dto.response.qa.QAResponse;
+import com.education.udemy.dto.response.qa.QAWebSocketPayload;
 import com.education.udemy.entity.*;
 import com.education.udemy.exception.AppException;
 import com.education.udemy.exception.ErrorCode;
@@ -16,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,7 @@ public class QAService {
     LectureRepository lectureRepository;
     UserRepository userRepository;
     NotificationService notificationService;
+    SimpMessagingTemplate messagingTemplate;
     QAMapper qaMapper;
 
     @Transactional
@@ -71,7 +74,19 @@ public class QAService {
                 admins
         );
 
-        return qaMapper.toQuestionResponse(question);
+        QAResponse response = qaMapper.toQuestionResponse(question);
+
+        if (lecture != null) {
+            QAWebSocketPayload payload = QAWebSocketPayload.builder()
+                    .type("NEW_QUESTION")
+                    .lectureId(lecture.getId())
+                    .courseId(course.getId())
+                    .data(response)
+                    .build();
+            messagingTemplate.convertAndSend("/topic/qa/" + lecture.getId(), payload);
+        }
+
+        return response;
     }
 
     @Transactional
@@ -108,7 +123,20 @@ public class QAService {
             );
         }
 
-        return qaMapper.toAnswerResponse(answer);
+        QAResponse response = qaMapper.toAnswerResponse(answer);
+
+        if (question.getLecture() != null) {
+            QAWebSocketPayload payload = QAWebSocketPayload.builder()
+                    .type("NEW_ANSWER")
+                    .lectureId(question.getLecture().getId())
+                    .courseId(question.getCourse().getId())
+                    .questionId(question.getId())
+                    .data(response)
+                    .build();
+            messagingTemplate.convertAndSend("/topic/qa/" + question.getLecture().getId(), payload);
+        }
+
+        return response;
     }
 
     public ApiPagination<QAResponse> getAllQuestions(Specification<CourseQuestion> spec, Pageable pageable) {
