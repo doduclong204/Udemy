@@ -3,6 +3,7 @@ package com.education.udemy.service;
 import com.education.udemy.dto.request.review.ReviewRequest;
 import com.education.udemy.dto.response.api.ApiPagination;
 import com.education.udemy.dto.response.review.ReviewResponse;
+import com.education.udemy.dto.response.stats.ReviewStatsResponse;
 import com.education.udemy.entity.Course;
 import com.education.udemy.entity.Review;
 import com.education.udemy.entity.User;
@@ -116,6 +117,30 @@ public class ReviewService {
         }
 
         return reviewMapper.toReviewResponse(updated);
+    }
+
+    public ReviewStatsResponse getStats() {
+        double avg = safeAvg(reviewRepository.findAverageRating());
+        long total = reviewRepository.countByReviewStatusTrue();
+
+        List<Object[]> rows = reviewRepository.countGroupByRating();
+        java.util.Map<Integer, Long> distribution = new java.util.LinkedHashMap<>();
+        for (int star = 5; star >= 1; star--) {
+            distribution.put(star, 0L);
+        }
+        for (Object[] row : rows) {
+            distribution.put(((Number) row[0]).intValue(), ((Number) row[1]).longValue());
+        }
+
+        return ReviewStatsResponse.builder()
+                .avgRating(avg)
+                .totalCount(total)
+                .distribution(distribution)
+                .build();
+    }
+
+    private double safeAvg(Double val) {
+        return val != null ? Math.round(val * 10.0) / 10.0 : 0.0;
     }
 
     @Transactional
