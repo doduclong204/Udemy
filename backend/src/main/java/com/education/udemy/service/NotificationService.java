@@ -4,6 +4,7 @@ import com.education.udemy.dto.request.notification.NotificationCreationRequest;
 import com.education.udemy.dto.response.api.ApiPagination;
 import com.education.udemy.dto.response.notification.NotificationResponse;
 import com.education.udemy.dto.response.notification.UserNotificationResponse;
+import com.education.udemy.dto.response.stats.NotificationStatsResponse;
 import com.education.udemy.entity.Notification;
 import com.education.udemy.entity.User;
 import com.education.udemy.entity.UserNotification;
@@ -140,7 +141,7 @@ public class NotificationService {
 
         Specification<Notification> excludeAnswers = (root, query, cb) -> cb.or(
                 cb.isNull(root.get("relatedType")),
-                cb.notEqual(root.get("relatedType"), "COURSE_ANSWER")
+                cb.not(root.get("relatedType").in("COURSE_ANSWER", "ADMIN_ALERT"))
         );
 
         Page<Notification> pageNotification = this.notificationRepository
@@ -170,8 +171,17 @@ public class NotificationService {
         mt.setPages(pageNotification.getTotalPages());
         mt.setTotal(pageNotification.getTotalElements());
 
+        long totalReadGlobal = userNotificationRepository.countByReadTrue();
+
+        NotificationStatsResponse stats = NotificationStatsResponse.builder()
+                .sentCount(notificationRepository.countAdminCreatedByStatus(NotificationStatus.SENT))
+                .draftCount(notificationRepository.countAdminCreatedByStatus(NotificationStatus.DRAFT))
+                .totalRead(totalReadGlobal)
+                .build();
+
         return ApiPagination.<NotificationResponse>builder()
                 .meta(mt)
+                .stats(stats)
                 .result(listNotification)
                 .build();
     }
