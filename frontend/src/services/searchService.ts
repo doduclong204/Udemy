@@ -7,6 +7,7 @@ export interface SearchCoursesParams {
   pageSize?: number;
   search?: string;
   category?: string;
+  categories?: string[];   // hỗ trợ multi-select
   levels?: string[];
   minRating?: number;
   priceType?: 'all' | 'free' | 'paid';
@@ -30,8 +31,16 @@ const searchService = {
       filters.push(`(title~'${kw}' or smallDescription~'${kw}' or category.name~'${kw}' or instructor.name~'${kw}')`);
     }
 
-    if (params.category) {
-      filters.push(`category.name:'${params.category}'`);
+    // Category filter — hỗ trợ cả single và multi (OR)
+    const cats = params.categories && params.categories.length > 0
+      ? params.categories
+      : params.category ? [params.category] : [];
+
+    if (cats.length === 1) {
+      filters.push(`category.name:'${cats[0]}'`);
+    } else if (cats.length > 1) {
+      const catOr = cats.map((c) => `category.name:'${c}'`).join(' or ');
+      filters.push(`(${catOr})`);
     }
 
     // Multiple levels với OR grouping
