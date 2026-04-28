@@ -10,6 +10,10 @@ import {
   Plus,
   ChevronDown,
   X,
+  DollarSign,
+  CheckCircle2,
+  Clock,
+  RotateCcw,
 } from "lucide-react";
 import orderService from "@/services/orderService";
 import userService from "@/services/userService";
@@ -17,6 +21,7 @@ import courseService from "@/services/courseService";
 import {
   OrderResponse,
   OrderStatus,
+  OrderStats,
   PaymentMethod,
   Student,
   AdminCourse,
@@ -485,6 +490,12 @@ function PaymentSelect({
 export default function AdminOrders() {
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [totalItems, setTotalItems] = useState(0);
+  const [orderStats, setOrderStats] = useState<OrderStats>({
+    totalRevenue: 0,
+    completedCount: 0,
+    pendingCount: 0,
+    refundedCount: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const isMounted = useRef(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -532,6 +543,7 @@ export default function AdminOrders() {
       });
       setOrders(res.result);
       setTotalItems(res.meta.total);
+      if (res.stats) setOrderStats(res.stats as unknown as OrderStats);
     } catch (err) {
       console.error(err);
       toast.error("Không thể tải danh sách đơn hàng");
@@ -581,19 +593,6 @@ export default function AdminOrders() {
       couponCode: "",
       paymentMethod: "VNPAY",
     });
-
-  const totalRevenue = orders
-    .filter((o) => o.paymentStatus === "COMPLETED")
-    .reduce((s, o) => s + o.finalAmount, 0);
-  const completedCount = orders.filter(
-    (o) => o.paymentStatus === "COMPLETED",
-  ).length;
-  const pendingCount = orders.filter(
-    (o) => o.paymentStatus === "PENDING",
-  ).length;
-  const refundedCount = orders.filter(
-    (o) => o.paymentStatus === "REFUNDED",
-  ).length;
 
   const handleAddOrder = async () => {
     if (!newOrder.studentId) {
@@ -749,31 +748,35 @@ export default function AdminOrders() {
         {[
           {
             label: "Tổng doanh thu",
-            value: formatCurrency(totalRevenue),
+            value: formatCurrency(orderStats.totalRevenue),
             color: "text-green-400",
-            icon: "💰",
-            iconBg: "rgba(34,197,94,0.1)",
+            icon: <DollarSign className="w-5 h-5" />,
+            iconBg: "rgba(34,197,94,0.15)",
+            iconColor: "#4ade80",
           },
           {
             label: "Đơn hoàn thành",
-            value: completedCount,
+            value: orderStats.completedCount,
             color: "text-admin-foreground",
-            icon: "✅",
-            iconBg: "rgba(99,102,241,0.1)",
+            icon: <CheckCircle2 className="w-5 h-5" />,
+            iconBg: "rgba(99,102,241,0.15)",
+            iconColor: "#818cf8",
           },
           {
             label: "Đang xử lý",
-            value: pendingCount,
+            value: orderStats.pendingCount,
             color: "text-yellow-400",
-            icon: "⏳",
-            iconBg: "rgba(234,179,8,0.1)",
+            icon: <Clock className="w-5 h-5" />,
+            iconBg: "rgba(234,179,8,0.15)",
+            iconColor: "#facc15",
           },
           {
             label: "Hoàn tiền",
-            value: refundedCount,
+            value: orderStats.refundedCount,
             color: "text-blue-400",
-            icon: "↩️",
-            iconBg: "rgba(59,130,246,0.1)",
+            icon: <RotateCcw className="w-5 h-5" />,
+            iconBg: "rgba(59,130,246,0.15)",
+            iconColor: "#60a5fa",
           },
         ].map((s) => (
           <div
@@ -781,8 +784,8 @@ export default function AdminOrders() {
             className="bg-admin-card border border-admin-border rounded-xl p-4 flex items-center gap-3"
           >
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
-              style={{ background: s.iconBg }}
+              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: s.iconBg, color: s.iconColor }}
             >
               {s.icon}
             </div>

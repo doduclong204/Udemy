@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Bell, BookOpen, Info, CheckCircle, Loader2 } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -10,11 +10,13 @@ import {
   selectUnreadCount,
   selectNotifications,
   selectNotiLoaded,
+  selectLastFetchedAt,
 } from '@/redux/slices/notificationSlice';
 import type { AppDispatch } from '@/redux/store';
 import type { NotificationType } from '@/types';
 
 const DROPDOWN_PAGE_SIZE = 5;
+const FETCH_DEBOUNCE_MS = 10000;
 
 const getNotificationLink = (n: { relatedType?: string; relatedCourseId?: string; relatedId?: string }) => {
   if (
@@ -47,11 +49,11 @@ const formatTime = (iso: string) => {
 };
 
 export function NotificationDropdown() {
-  const dispatch      = useDispatch<AppDispatch>();
-  const location      = useLocation();
-  const unreadCount   = useSelector(selectUnreadCount);
-  const notifications = useSelector(selectNotifications);
-  const loaded        = useSelector(selectNotiLoaded);
+  const dispatch        = useDispatch<AppDispatch>();
+  const unreadCount     = useSelector(selectUnreadCount);
+  const notifications   = useSelector(selectNotifications);
+  const loaded          = useSelector(selectNotiLoaded);
+  const lastFetchedAt   = useSelector(selectLastFetchedAt);
   const [isOpen, setIsOpen]   = useState(false);
   const [loading, setLoading] = useState(false);
   const [page, setPage]       = useState(1);
@@ -61,14 +63,12 @@ export function NotificationDropdown() {
   }, [dispatch, loaded]);
 
   useEffect(() => {
-    dispatch(fetchNotifications());
-  }, [dispatch, location.pathname]);
-
-  useEffect(() => {
     if (!isOpen) return;
+    const stale = Date.now() - lastFetchedAt > FETCH_DEBOUNCE_MS;
+    if (!stale) return;
     setLoading(true);
     dispatch(fetchNotifications()).finally(() => setLoading(false));
-  }, [isOpen, dispatch]);
+  }, [isOpen, dispatch, lastFetchedAt]);
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
@@ -86,7 +86,7 @@ export function NotificationDropdown() {
     }
   };
 
-  const totalPages   = Math.ceil(notifications.length / DROPDOWN_PAGE_SIZE);
+  const totalPages    = Math.ceil(notifications.length / DROPDOWN_PAGE_SIZE);
   const visibleNotifs = notifications.slice((page - 1) * DROPDOWN_PAGE_SIZE, page * DROPDOWN_PAGE_SIZE);
 
   return (

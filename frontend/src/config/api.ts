@@ -13,8 +13,10 @@ const axiosInstance = axios.create({
     const parts: string[] = [];
     Object.entries(params).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
-      if (key === 'filter' || key === 'sort') {
+      if (key === 'sort') {
         parts.push(`${key}=${value}`);
+      } else if (key === 'filter') {
+        parts.push(`${key}=${encodeURIComponent(value)}`);
       } else if (Array.isArray(value)) {
         value.forEach((v) => parts.push(`${key}=${encodeURIComponent(v)}`));
       } else {

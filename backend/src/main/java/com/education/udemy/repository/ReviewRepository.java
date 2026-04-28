@@ -18,4 +18,9 @@ public interface ReviewRepository extends JpaRepository<Review, String>, JpaSpec
 
     @Query("SELECT AVG(r.rating) FROM reviews r")
     Double findAverageRating();
+
+    long countByReviewStatusTrue();
+
+    @Query("SELECT r.rating, COUNT(r) FROM reviews r WHERE r.reviewStatus = true GROUP BY r.rating")
+    List<Object[]> countGroupByRating();
 }

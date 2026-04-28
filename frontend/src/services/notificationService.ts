@@ -25,7 +25,10 @@ const notificationService = {
 
     const filters: string[] = [];
     if (params?.search) filters.push(`title~'*${params.search}*'`);
-    if (params?.status) filters.push(`status:'${params.status}'`);
+    if (params?.status) {
+      filters.push(`status:'${params.status}'`);
+      filters.push(`(relatedType is null or not (relatedType:'QUESTION'))`);
+    }
     if (params?.type) filters.push(`type:'${params.type}'`);
 
     const response = await axiosInstance.get<

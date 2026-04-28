@@ -7,22 +7,27 @@ interface NotificationState {
   notifications: UserNotificationResponse[];
   unreadCount: number;
   loaded: boolean;
+  lastFetchedAt: number;
+  optimisticReadIds: string[];
 }
 
 const initialState: NotificationState = {
   notifications: [],
   unreadCount: 0,
   loaded: false,
+  lastFetchedAt: 0,
+  optimisticReadIds: [],
 };
+
+// pageSize phải khớp với NOTIF_PAGE_SIZE trong Dashboard (= 10)
+// để reduxNotifications.slice(0, NOTIF_PAGE_SIZE) ở trang 1 luôn đúng
+const NOTIF_PAGE_SIZE = 10;
 
 export const fetchNotifications = createAsyncThunk(
   'notification/fetchNotifications',
   async () => {
-    const [listRes, unreadRes] = await Promise.all([
-      userNotificationService.getMyNotifications({ pageSize: 10 }),
-      userNotificationService.getMyNotifications({ pageSize: 1, isRead: false }),
-    ]);
-    return { list: listRes.result, unreadCount: unreadRes.meta.total };
+    const listRes = await userNotificationService.getMyNotifications({ pageSize: NOTIF_PAGE_SIZE });
+    return { list: listRes.result };
   },
 );
 
@@ -37,18 +42,32 @@ const notificationSlice = createSlice({
       if (notif && !notif.isRead) {
         notif.isRead = true;
         state.unreadCount = Math.max(0, state.unreadCount - 1);
+        if (!state.optimisticReadIds.includes(action.payload)) {
+          state.optimisticReadIds.push(action.payload);
+        }
       }
     },
     markAllAsRead: (state) => {
-      state.notifications.forEach((n) => { n.isRead = true; });
+      state.notifications.forEach((n) => {
+        if (!n.isRead && !state.optimisticReadIds.includes(n._id)) {
+          state.optimisticReadIds.push(n._id);
+        }
+        n.isRead = true;
+      });
       state.unreadCount = 0;
     },
+    clearOptimisticReadIds: (state) => {
+      state.optimisticReadIds = [];
+    },
     removeOne: (state, action: PayloadAction<string>) => {
-      const notif = state.notifications.find((n) => n._id === action.payload);
-      if (notif && !notif.isRead) {
+      const idx = state.notifications.findIndex((n) => n._id === action.payload);
+      if (idx === -1) return;
+      const notif = state.notifications[idx];
+      if (!notif.isRead) {
         state.unreadCount = Math.max(0, state.unreadCount - 1);
       }
-      state.notifications = state.notifications.filter((n) => n._id !== action.payload);
+      state.optimisticReadIds = state.optimisticReadIds.filter((id) => id !== action.payload);
+      state.notifications.splice(idx, 1);
     },
     decrementUnread: (state) => {
       if (state.unreadCount > 0) state.unreadCount -= 1;
@@ -56,12 +75,35 @@ const notificationSlice = createSlice({
     clearUnread: (state) => {
       state.unreadCount = 0;
     },
+    addNotification: (state, action: PayloadAction<UserNotificationResponse>) => {
+      const exists = state.notifications.some((n) => n._id === action.payload._id);
+      if (exists) return;
+      state.notifications.unshift(action.payload);
+      if (!action.payload.isRead) {
+        state.unreadCount += 1;
+      }
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(fetchNotifications.fulfilled, (state, action) => {
-      state.notifications = action.payload.list;
-      state.unreadCount = action.payload.unreadCount;
+      const incoming = action.payload.list as UserNotificationResponse[];
+      const incomingIds = new Set(incoming.map((n) => n._id));
+      const realtimeOnly = state.notifications.filter((n) => !incomingIds.has(n._id));
+
+      const merged = [
+        ...realtimeOnly,
+        ...incoming.map((n) => {
+          if (state.optimisticReadIds.includes(n._id)) {
+            return { ...n, isRead: true };
+          }
+          return n;
+        }),
+      ];
+
+      state.notifications = merged;
+      state.unreadCount = merged.filter((n) => !n.isRead).length;
       state.loaded = true;
+      state.lastFetchedAt = Date.now();
     });
   },
 });
@@ -72,10 +114,13 @@ export const {
   removeOne,
   decrementUnread,
   clearUnread,
+  addNotification,
+  clearOptimisticReadIds,
 } = notificationSlice.actions;
 
 export const selectUnreadCount   = (state: RootState) => state.notification.unreadCount;
 export const selectNotifications = (state: RootState) => state.notification.notifications;
 export const selectNotiLoaded    = (state: RootState) => state.notification.loaded;
+export const selectLastFetchedAt = (state: RootState) => state.notification.lastFetchedAt;
 
 export default notificationSlice.reducer;

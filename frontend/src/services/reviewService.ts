@@ -5,6 +5,7 @@ import {
   ApiPagination,
   ReviewResponse,
   ReviewRequest,
+  ReviewStats,
   GetReviewsParams,
 } from "@/types";
 
@@ -130,6 +131,13 @@ const reviewService = {
    */
   deleteReview: async (reviewId: string): Promise<void> => {
     await axiosInstance.delete(`${API_ENDPOINTS.REVIEWS.BASE}/${reviewId}`);
+  },
+
+  getStats: async (): Promise<ReviewStats> => {
+    const response = await axiosInstance.get<ApiResponse<ReviewStats>>(
+      API_ENDPOINTS.REVIEWS.STATS,
+    );
+    return response.data.data;
   },
 };
 

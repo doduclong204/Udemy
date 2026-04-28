@@ -19,6 +19,7 @@ import lombok.experimental.FieldDefaults;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiPagination<T> {
     Meta meta;
+    Object stats;
     List<T> result;
 
     @Data

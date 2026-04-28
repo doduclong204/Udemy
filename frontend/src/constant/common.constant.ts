@@ -100,6 +100,7 @@ export const API_ENDPOINTS = {
   },
   REVIEWS: {
     BASE: "/reviews",
+    STATS: "/reviews/stats",
   },
   ORDERS: {
     BASE: "/orders",

@@ -8,11 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Eye, EyeOff, User, Lock } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  loginAsync,
-  loginGoogleAsync,
-  loginFacebookAsync,
-} from "@/redux/slices/authSlice";
+import { loginAsync, loginGoogleAsync } from "@/redux/slices/authSlice";
 import type { RootState, AppDispatch } from "@/redux/store";
 import { useGoogleLogin } from "@react-oauth/google";
 
@@ -72,34 +68,19 @@ export default function Login() {
   });
 
   const handleFacebookLogin = () => {
-    if (!window.FB) {
-      toast({
-        title: "Facebook SDK chưa sẵn sàng, vui lòng thử lại",
-        variant: "destructive",
-      });
-      return;
-    }
-    window.FB.login(
-      (response) => {
-        if (response.authResponse) {
-          dispatch(
-            loginFacebookAsync({ token: response.authResponse.accessToken }),
-          ).then((result) => {
-            if (loginFacebookAsync.fulfilled.match(result)) {
-              toast({ title: "Đăng nhập Facebook thành công!" });
-              navigate(redirectTo);
-            } else {
-              toast({
-                title: "Đăng nhập Facebook thất bại",
-                description: result.payload as string,
-                variant: "destructive",
-              });
-            }
-          });
-        }
-      },
-      { scope: "email,public_profile" },
-    );
+    const FACEBOOK_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID || "";
+    const currentOrigin = window.location.origin;
+
+    sessionStorage.setItem("fb_redirect_after_login", redirectTo);
+
+    const fbAuthUrl =
+      `https://www.facebook.com/dialog/oauth` +
+      `?client_id=${FACEBOOK_APP_ID}` +
+      `&redirect_uri=${encodeURIComponent(currentOrigin + "/auth/facebook/callback")}` +
+      `&scope=email,public_profile` +
+      `&response_type=token`;
+
+    window.location.href = fbAuthUrl;
   };
 
   return (

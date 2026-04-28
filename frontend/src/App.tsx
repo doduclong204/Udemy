@@ -10,6 +10,7 @@ import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
+import { useNotificationSSE } from "@/hooks/useNotificationSSE";
 
 import Index from "./pages/Index";
 import CourseDetail from "./pages/CourseDetail";
@@ -24,8 +25,9 @@ import OrderCheckout from "./pages/OrderCheckout";
 import OrderPayment from "./pages/OrderPayment";
 import PaymentResult from "./pages/PaymentResult";
 import NotFound from "./pages/NotFound";
-import AIChatBox from '@/components/AIChatBox';
-
+import AIChatBox from "@/components/AIChatBox";
+// Thêm trang callback cho Facebook OAuth popup
+import FacebookCallback from "./pages/FacebookCallback";
 
 import { AdminLayout } from "./admin/layouts/AdminLayout";
 import AdminDashboard from "./admin/pages/AdminDashboard";
@@ -41,6 +43,52 @@ import AdminSettings from "./admin/pages/AdminSettings";
 
 const queryClient = new QueryClient();
 
+function AppContent() {
+  useNotificationSSE();
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/course/:id" element={<CourseDetail />} />
+        <Route path="/course/:slug/learn" element={<CoursePlayer />} />
+        <Route path="/search" element={<Search />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard/wishlist" element={<Dashboard />} />
+        <Route path="/dashboard/settings" element={<Dashboard />} />
+        <Route path="/dashboard/notifications" element={<Dashboard />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/order/checkout" element={<OrderCheckout />} />
+        <Route path="/order/payment" element={<OrderPayment />} />
+        <Route path="/payment/result" element={<PaymentResult />} />
+
+        {/* Route callback cho Facebook OAuth popup - THÊM MỚI */}
+        <Route path="/auth/facebook/callback" element={<FacebookCallback />} />
+
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="courses" element={<AdminCourses />} />
+          <Route path="courses/new" element={<AdminCourseForm />} />
+          <Route path="courses/:id/edit" element={<AdminCourseForm />} />
+          <Route path="categories" element={<AdminCategories />} />
+          <Route path="students" element={<AdminStudents />} />
+          <Route path="orders" element={<AdminOrders />} />
+          <Route path="coupons" element={<AdminCoupons />} />
+          <Route path="notifications" element={<AdminNotifications />} />
+          <Route path="reviews" element={<AdminReviews />} />
+          <Route path="settings" element={<AdminSettings />} />
+        </Route>
+
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <AIChatBox />
+    </BrowserRouter>
+  );
+}
+
 const App = () => (
   <Provider store={store}>
     <QueryClientProvider client={queryClient}>
@@ -52,74 +100,7 @@ const App = () => (
                 <TooltipProvider>
                   <Toaster />
                   <Sonner />
-                  <BrowserRouter>
-                    <Routes>
-                      {/* Public Routes */}
-                      <Route path="/" element={<Index />} />
-                      <Route path="/course/:id" element={<CourseDetail />} />
-                      <Route
-                        path="/course/:slug/learn"
-                        element={<CoursePlayer />}
-                      />
-                      <Route path="/search" element={<Search />} />
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/signup" element={<Signup />} />
-                      <Route
-                        path="/forgot-password"
-                        element={<ForgotPassword />}
-                      />
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      <Route
-                        path="/dashboard/wishlist"
-                        element={<Dashboard />}
-                      />
-                      <Route
-                        path="/dashboard/settings"
-                        element={<Dashboard />}
-                      />
-                      <Route
-                        path="/dashboard/notifications"
-                        element={<Dashboard />}
-                      />
-                      <Route path="/cart" element={<Cart />} />
-                      <Route
-                        path="/order/checkout"
-                        element={<OrderCheckout />}
-                      />
-                      <Route path="/order/payment" element={<OrderPayment />} />
-                      <Route path="/payment/result" element={<PaymentResult />} />
-
-                      {/* Admin Routes */}
-                      <Route path="/admin" element={<AdminLayout />}>
-                        <Route index element={<AdminDashboard />} />
-                        <Route path="courses" element={<AdminCourses />} />
-                        <Route
-                          path="courses/new"
-                          element={<AdminCourseForm />}
-                        />
-                        <Route
-                          path="courses/:id/edit"
-                          element={<AdminCourseForm />}
-                        />
-                        <Route
-                          path="categories"
-                          element={<AdminCategories />}
-                        />
-                        <Route path="students" element={<AdminStudents />} />
-                        <Route path="orders" element={<AdminOrders />} />
-                        <Route path="coupons" element={<AdminCoupons />} />
-                        <Route
-                          path="notifications"
-                          element={<AdminNotifications />}
-                        />
-                        <Route path="reviews" element={<AdminReviews />} />
-                        <Route path="settings" element={<AdminSettings />} />
-                      </Route>
-
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                    <AIChatBox />
-                  </BrowserRouter>
+                  <AppContent />
                 </TooltipProvider>
               </SettingsProvider>
             </AdminAuthProvider>

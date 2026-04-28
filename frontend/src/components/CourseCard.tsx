@@ -38,14 +38,16 @@ export function CourseCard({ course, size = 'md' }: CourseCardProps) {
                 </span>
               )}
             </div>
-            {course.outstanding && (
-              <div className="mt-2">
-                <span className="badge-bestseller">Nổi bật</span>
-              </div>
-            )}
+            <div className="mt-2">
+              {course.outstanding
+                ? <span className="badge-bestseller">Nổi bật</span>
+                : <span className="invisible badge-bestseller">Nổi bật</span>
+              }
+            </div>
           </div>
         </div>
       </div>
     </Link>
   );
 }
+//longducdo

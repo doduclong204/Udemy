@@ -9,10 +9,12 @@ import {
   Heart,
   BookOpen,
   LayoutDashboard,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSelector, useDispatch } from "react-redux";
 import { logoutAsync } from "@/redux/slices/authSlice";
+import { selectUnreadCount } from "@/redux/slices/notificationSlice";
 import type { RootState, AppDispatch } from "@/redux/store";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
@@ -26,7 +28,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import categoryService from "@/services/categoryService";
 import type { Category } from "@/types";
-import { fetchEnrolledCount, selectEnrolledCount } from "@/redux/slices/enrollmentSlice";
+import {
+  fetchEnrolledCount,
+  selectEnrolledCount,
+} from "@/redux/slices/enrollmentSlice";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -51,6 +56,7 @@ export function Header() {
 
   // Enrollment count từ Redux slice mới
   const enrolledCount = useSelector(selectEnrolledCount);
+  const unreadCount = useSelector(selectUnreadCount);
 
   const { items } = useCart();
   const navigate = useNavigate();
@@ -173,7 +179,10 @@ export function Header() {
                 </Link>
 
                 {/* Wishlist + badge */}
-                <Link to="/dashboard/wishlist" className="relative nav-link p-2">
+                <Link
+                  to="/dashboard/wishlist"
+                  className="relative nav-link p-2"
+                >
                   <Heart className="w-5 h-5" />
                   <Badge count={wishlistCount} />
                 </Link>
@@ -337,10 +346,16 @@ export function Header() {
 
                   <Link
                     to="/dashboard/notifications"
-                    className="px-4 py-2 hover:bg-secondary rounded-lg"
+                    className="flex items-center gap-2 px-4 py-2 hover:bg-secondary rounded-lg"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Thông báo
+                    <Bell className="w-5 h-5" />
+                    <span>Thông báo</span>
+                    {unreadCount > 0 && (
+                      <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
                   </Link>
                   <Link
                     to="/dashboard/settings"

@@ -16,6 +16,7 @@ public interface UserNotificationRepository extends JpaRepository<UserNotificati
     long countByNotificationId(String notificationId);
     long countByNotificationIdAndReadTrue(String notificationId);
     long countByUserIdAndReadFalse(String userId);
+    long countByReadTrue();
 
     @Modifying
     @Transactional

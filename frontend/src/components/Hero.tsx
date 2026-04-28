@@ -94,7 +94,7 @@ export function Hero() {
           </form>
 
           <div className="flex flex-wrap justify-center gap-4 mt-8 animate-fade-in" style={{ animationDelay: '0.3s' }}>
-            {['Lập trình', 'Thiết kế', 'Marketing', 'Kinh doanh'].map((topic) => (
+            {['Lập trình', 'Thiết kế đồ họa', 'Marketing', 'Kinh doanh'].map((topic) => (
               <button
                 key={topic}
                 onClick={() => navigate(`/search?category=${encodeURIComponent(topic)}`)}

@@ -3,6 +3,8 @@ package com.education.udemy.service;
 import com.education.udemy.dto.request.notification.NotificationCreationRequest;
 import com.education.udemy.dto.response.api.ApiPagination;
 import com.education.udemy.dto.response.notification.NotificationResponse;
+import com.education.udemy.dto.response.notification.UserNotificationResponse;
+import com.education.udemy.dto.response.stats.NotificationStatsResponse;
 import com.education.udemy.entity.Notification;
 import com.education.udemy.entity.User;
 import com.education.udemy.entity.UserNotification;
@@ -41,6 +43,7 @@ public class NotificationService {
     UserRepository userRepository;
     NotificationMapper notificationMapper;
     CourseQuestionRepository courseQuestionRepository;
+    SseService sseService;
 
     @Transactional
     public NotificationResponse createNotification(NotificationCreationRequest request) {
@@ -68,7 +71,8 @@ public class NotificationService {
                             .read(false)
                             .build())
                     .toList();
-            userNotificationRepository.saveAll(userNotifications);
+            List<UserNotification> savedUserNotifications = userNotificationRepository.saveAll(userNotifications);
+            pushSseToRecipients(savedUserNotifications, finalNotification);
         }
 
         return getDetail(notification.getId());
@@ -96,9 +100,28 @@ public class NotificationService {
                         .read(false)
                         .build())
                 .toList();
-        userNotificationRepository.saveAll(userNotifications);
+        List<UserNotification> savedUserNotifications = userNotificationRepository.saveAll(userNotifications);
+        pushSseToRecipients(savedUserNotifications, notification);
 
         return getDetail(id);
+    }
+
+    private void pushSseToRecipients(List<UserNotification> savedUserNotifications, Notification notification) {
+        for (UserNotification un : savedUserNotifications) {
+            UserNotificationResponse payload = UserNotificationResponse.builder()
+                    .id(un.getId())
+                    .title(notification.getTitle())
+                    .message(notification.getMessage())
+                    .type(notification.getType() != null ? notification.getType().name() : null)
+                    .relatedId(notification.getRelatedId())
+                    .relatedCourseId(notification.getRelatedCourseId())
+                    .relatedType(notification.getRelatedType())
+                    .isRead(false)
+                    .createdAt(un.getCreatedAt())
+                    .build();
+
+            sseService.sendToUser(un.getUser().getUsername(), payload);
+        }
     }
 
     private List<User> resolveRecipients(Notification notification) {
@@ -118,7 +141,7 @@ public class NotificationService {
 
         Specification<Notification> excludeAnswers = (root, query, cb) -> cb.or(
                 cb.isNull(root.get("relatedType")),
-                cb.notEqual(root.get("relatedType"), "COURSE_ANSWER")
+                cb.not(root.get("relatedType").in("COURSE_ANSWER", "ADMIN_ALERT"))
         );
 
         Page<Notification> pageNotification = this.notificationRepository
@@ -148,8 +171,17 @@ public class NotificationService {
         mt.setPages(pageNotification.getTotalPages());
         mt.setTotal(pageNotification.getTotalElements());
 
+        long totalReadGlobal = userNotificationRepository.countByReadTrue();
+
+        NotificationStatsResponse stats = NotificationStatsResponse.builder()
+                .sentCount(notificationRepository.countAdminCreatedByStatus(NotificationStatus.SENT))
+                .draftCount(notificationRepository.countAdminCreatedByStatus(NotificationStatus.DRAFT))
+                .totalRead(totalReadGlobal)
+                .build();
+
         return ApiPagination.<NotificationResponse>builder()
                 .meta(mt)
+                .stats(stats)
                 .result(listNotification)
                 .build();
     }
@@ -230,7 +262,8 @@ public class NotificationService {
                         .read(false)
                         .build())
                 .toList();
-        userNotificationRepository.saveAll(userNotifications);
+        List<UserNotification> savedUserNotifications = userNotificationRepository.saveAll(userNotifications);
+        pushSseToRecipients(savedUserNotifications, notification);
     }
 
     private Map<String, Long> toMap(List<Object[]> rows) {

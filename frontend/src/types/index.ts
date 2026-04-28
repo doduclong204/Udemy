@@ -14,7 +14,34 @@ export interface ApiPagination<T> {
     pages: number;
     total: number;
   };
+  stats?: unknown;
   result: T[];
+}
+
+export interface OrderStats {
+  totalRevenue: number;
+  completedCount: number;
+  pendingCount: number;
+  refundedCount: number;
+}
+
+export interface UserStats {
+  activeCount: number;
+  inactiveCount: number;
+  totalSpent: number;
+  enrolledCourses: number;
+}
+
+export interface NotificationStats {
+  sentCount: number;
+  draftCount: number;
+  totalRead: number;
+}
+
+export interface ReviewStats {
+  avgRating: number;
+  totalCount: number;
+  distribution: Record<number, number>;
 }
 
 export interface ErrorResponse {

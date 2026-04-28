@@ -4,6 +4,7 @@ import com.education.udemy.dto.request.review.ReviewRequest;
 import com.education.udemy.dto.response.api.ApiPagination;
 import com.education.udemy.dto.response.api.ApiString;
 import com.education.udemy.dto.response.review.ReviewResponse;
+import com.education.udemy.dto.response.stats.ReviewStatsResponse;
 import com.education.udemy.entity.Review;
 import com.education.udemy.service.ReviewService;
 import com.education.udemy.util.annotation.ApiMessage;
@@ -32,6 +33,12 @@ public class ReviewController {
     @ApiMessage("Create review success")
     public ResponseEntity<ReviewResponse> createReview(@RequestBody @Valid ReviewRequest request) {
         return ResponseEntity.ok(reviewService.createReview(request));
+    }
+
+    @GetMapping("/stats")
+    @ApiMessage("Get review stats success")
+    public ResponseEntity<ReviewStatsResponse> getStats() {
+        return ResponseEntity.ok(reviewService.getStats());
     }
 
     @GetMapping

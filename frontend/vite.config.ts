@@ -8,9 +8,11 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     headers: {
-      "Cross-Origin-Opener-Policy": "unsafe-none",
-      "Cross-Origin-Embedder-Policy": "unsafe-none",
+      "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     },
+  },
+  define: {
+    global: "window",
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {

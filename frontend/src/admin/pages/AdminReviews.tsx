@@ -4,7 +4,7 @@ import {
   MessageSquare, MoreVertical, ChevronDown,
 } from 'lucide-react';
 import reviewService from '@/services/reviewService';
-import { ReviewResponse } from '@/types';
+import { ReviewResponse, ReviewStats } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -96,6 +96,11 @@ export default function AdminReviews() {
   const [reviews, setReviews]         = useState<ReviewResponse[]>([]);
   const [totalItems, setTotalItems]   = useState(0);
   const [isLoading, setIsLoading]     = useState(true);
+  const [reviewStats, setReviewStats] = useState<ReviewStats>({
+    avgRating: 0,
+    totalCount: 0,
+    distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+  });
   const isMounted = useRef(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [ratingFilter, setRatingFilter] = useState<string>('all');
@@ -133,29 +138,37 @@ export default function AdminReviews() {
     }
   };
 
+  const fetchStats = async () => {
+    try {
+      const stats = await reviewService.getStats();
+      setReviewStats(stats);
+    } catch {
+      console.error('Không thể tải thống kê đánh giá');
+    }
+  };
+
   useEffect(() => { fetchReviews(currentPage, searchQuery, ratingFilter); }, [currentPage]); // eslint-disable-line
+  useEffect(() => { fetchStats(); }, []); // eslint-disable-line
   useEffect(() => {
     if (!isMounted.current) { isMounted.current = true; return; }
     const t = setTimeout(() => { setCurrentPage(1); fetchReviews(1, searchQuery, ratingFilter); }, 350);
     return () => clearTimeout(t);
   }, [searchQuery, ratingFilter]); // eslint-disable-line
 
-  // ── stats ──
-  const avgRating = reviews.length
-    ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
-    : '0.0';
-  const ratingCounts = [5,4,3,2,1].map(r => ({
+  const ratingCounts = [5, 4, 3, 2, 1].map((r) => ({
     rating: r,
-    count: reviews.filter(x => x.rating === r).length,
-    pct: reviews.length ? (reviews.filter(x => x.rating === r).length / reviews.length) * 100 : 0,
+    count: reviewStats.distribution[r] ?? 0,
+    pct: reviewStats.totalCount > 0
+      ? ((reviewStats.distribution[r] ?? 0) / reviewStats.totalCount) * 100
+      : 0,
   }));
 
-  // ── handlers ──
   const handleToggle = async (r: ReviewResponse) => {
     try {
       await reviewService.toggleReviewVisibility(r._id, r.reviewStatus);
       toast.success(r.reviewStatus ? 'Đã ẩn đánh giá!' : 'Đã hiện đánh giá!');
       fetchReviews(currentPage, searchQuery, ratingFilter);
+      fetchStats();
     } catch (e: any) {
       toast.error(e?.response?.data?.message || 'Thao tác thất bại');
     }
@@ -186,6 +199,7 @@ export default function AdminReviews() {
       setDeleteOpen(false);
       setSelected(null);
       fetchReviews(currentPage, searchQuery, ratingFilter);
+      fetchStats();
     } catch (e: any) {
       toast.error(e?.response?.data?.message || 'Xoá thất bại');
     }
@@ -214,7 +228,7 @@ export default function AdminReviews() {
             <Star className="w-8 h-8 text-yellow-500 fill-yellow-500" />
           </div>
           <div>
-            <p className="text-3xl font-bold text-admin-foreground">{avgRating}</p>
+            <p className="text-3xl font-bold text-admin-foreground">{reviewStats.avgRating.toFixed(1)}</p>
             <p className="text-sm text-admin-muted-foreground">Đánh giá trung bình</p>
           </div>
         </div>

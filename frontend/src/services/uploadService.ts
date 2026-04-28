@@ -1,25 +1,49 @@
 import axiosInstance from "@/config/api";
 
-const CLOUDINARY_BASE = import.meta.env.VITE_CLOUDINARY_BASE_URL || "https://api.cloudinary.com/v1_1";
+const CLOUDINARY_BASE =
+  import.meta.env.VITE_CLOUDINARY_BASE_URL || "https://api.cloudinary.com/v1_1";
 
-const getSignature = async (folder: string, resourceType: "image" | "video") => {
+type SigResult = {
+  signature: string;
+  timestamp: number;
+  apiKey: string;
+  cloudName: string;
+  folder: string;
+  resourceType: string;
+};
+
+// Cache signature theo folder:resourceType để tránh gọi API nhiều lần khi upload song song
+const sigCache = new Map<string, SigResult>();
+
+const getSignature = async (
+  folder: string,
+  resourceType: "image" | "video"
+): Promise<SigResult> => {
+  const key = `${folder}:${resourceType}`;
+  if (sigCache.has(key)) return sigCache.get(key)!;
+
   const res = await axiosInstance.get("/upload/signature", {
     params: { folder, resource_type: resourceType },
   });
-  return res.data.data as {
-    signature: string;
-    timestamp: number;
-    apiKey: string;
-    cloudName: string;
-    folder: string;
-    resourceType: string;
-  };
+  const sig = res.data.data as SigResult;
+  sigCache.set(key, sig);
+  return sig;
 };
+
+// Xoá cache sau mỗi batch upload (gọi khi submit xong hoặc lỗi)
+export const clearSignatureCache = () => sigCache.clear();
 
 const CHUNK_SIZE = 20 * 1024 * 1024;
 
+// Giữ đúng 2 chữ số sau dấu phẩy, không vượt quá 100
+const toPercent = (value: number) =>
+  Math.min(100, Math.floor(value * 100) / 100);
+
 const uploadService = {
-  uploadImage: async (file: File): Promise<string> => {
+  uploadImage: async (
+    file: File,
+    onProgress?: (percent: number) => void
+  ): Promise<string> => {
     const sig = await getSignature("udemy/images", "image");
 
     const formData = new FormData();
@@ -29,13 +53,31 @@ const uploadService = {
     formData.append("api_key", sig.apiKey);
     formData.append("folder", sig.folder);
 
-    const res = await fetch(
-      `${CLOUDINARY_BASE}/${sig.cloudName}/image/upload`,
-      { method: "POST", body: formData }
-    );
-    if (!res.ok) throw new Error("Upload ảnh thất bại");
-    const data = await res.json();
-    return data.secure_url as string;
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.addEventListener("progress", (e) => {
+        if (e.lengthComputable && onProgress) {
+          onProgress(toPercent((e.loaded / e.total) * 100));
+        }
+      });
+
+      xhr.addEventListener("load", () => {
+        if (xhr.status === 200) {
+          const data = JSON.parse(xhr.responseText);
+          resolve(data.secure_url as string);
+        } else {
+          reject(new Error("Upload ảnh thất bại"));
+        }
+      });
+
+      xhr.addEventListener("error", () =>
+        reject(new Error("Lỗi mạng khi upload ảnh"))
+      );
+
+      xhr.open("POST", `${CLOUDINARY_BASE}/${sig.cloudName}/image/upload`);
+      xhr.send(formData);
+    });
   },
 
   uploadVideo: async (
@@ -69,7 +111,7 @@ const uploadService = {
           if (e.lengthComputable && onProgress) {
             const chunkProgress = e.loaded / e.total;
             const overall = ((chunkIndex + chunkProgress) / totalChunks) * 100;
-            onProgress(Math.round(overall));
+            onProgress(toPercent(overall));
           }
         });
 
@@ -79,7 +121,7 @@ const uploadService = {
             secureUrl = data.secure_url;
             resolve();
           } else {
-            reject(new Error(`Chunk ${chunkIndex + 1} upload thất bại`));
+            reject(new Error(`Chunk ${chunkIndex + 1} upload video thất bại`));
           }
         });
 

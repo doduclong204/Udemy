@@ -11,9 +11,10 @@ import {
   markOneAsRead,
   markAllAsRead,
   removeOne,
-  decrementUnread,
   clearUnread,
+  fetchNotifications,
   selectUnreadCount,
+  selectNotifications,
 } from "@/redux/slices/notificationSlice";
 import {
   fetchEnrolledCount,
@@ -29,7 +30,14 @@ import userService from "@/services/userService";
 import uploadService from "@/services/uploadService";
 import axiosInstance from "@/config/api";
 import { API_ENDPOINTS } from "@/constant/common.constant";
-import type { EnrollmentResponse, NotificationType, UserNotificationResponse, WishlistResponse, ApiResponse, ApiPagination } from "@/types";
+import type {
+  EnrollmentResponse,
+  NotificationType,
+  UserNotificationResponse,
+  WishlistResponse,
+  ApiResponse,
+  ApiPagination,
+} from "@/types";
 import { Button } from "@/components/ui/button";
 import {
   BookOpen,
@@ -87,7 +95,10 @@ const formatTime = (iso: string) => {
 
 export default function Dashboard() {
   const { user, isAuthenticated, logout } = useAuth();
-  const { removeFromWishlist: ctxRemoveFromWishlist, refetch: refetchWishlistBadge } = useWishlist();
+  const {
+    removeFromWishlist: ctxRemoveFromWishlist,
+    refetch: refetchWishlistBadge,
+  } = useWishlist();
   const dispatch = useAppDispatch();
   const location = useLocation();
 
@@ -99,9 +110,8 @@ export default function Dashboard() {
   const isSettings = currentPath === "/dashboard/settings";
 
   const unreadCount = useSelector(selectUnreadCount);
+  const reduxNotifications = useSelector(selectNotifications);
   const enrolledCount = useSelector(selectEnrolledCount);
-
-  // ── Enrollment (server-side, đã đúng) ──────────────────────────────
   const [enrollments, setEnrollments] = useState<EnrollmentResponse[]>([]);
   const [loadingEnrollments, setLoadingEnrollments] = useState(true);
   const [enrollmentPage, setEnrollmentPage] = useState(1);
@@ -111,17 +121,24 @@ export default function Dashboard() {
     if (!isMyLearning) return;
     setLoadingEnrollments(true);
     enrollmentService
-      .getMyEnrollments({ page: enrollmentPage, pageSize: ENROLLMENT_PAGE_SIZE })
+      .getMyEnrollments({
+        page: enrollmentPage,
+        pageSize: ENROLLMENT_PAGE_SIZE,
+      })
       .then((res) => {
         setEnrollments(res.result);
-        setEnrollmentTotalPages(Math.ceil(res.meta.total / ENROLLMENT_PAGE_SIZE));
+        setEnrollmentTotalPages(
+          Math.ceil(res.meta.total / ENROLLMENT_PAGE_SIZE) || 1,
+        );
         dispatch(fetchEnrolledCount());
       })
       .catch(() => {})
       .finally(() => setLoadingEnrollments(false));
   }, [enrollmentPage, isMyLearning, dispatch]);
 
-  useEffect(() => { setEnrollmentPage(1); }, [isMyLearning]);
+  useEffect(() => {
+    setEnrollmentPage(1);
+  }, [isMyLearning]);
 
   // ── Wishlist (server-side) ──────────────────────────────────────────
   const [wishlistItems, setWishlistItems] = useState<WishlistResponse[]>([]);
@@ -133,9 +150,12 @@ export default function Dashboard() {
   // Fetch total riêng để badge sidebar luôn đúng dù chưa vào tab wishlist
   useEffect(() => {
     axiosInstance
-      .get<ApiResponse<ApiPagination<WishlistResponse>>>(API_ENDPOINTS.WISHLIST.BASE, {
-        params: { page: 1, size: 1 },
-      })
+      .get<ApiResponse<ApiPagination<WishlistResponse>>>(
+        API_ENDPOINTS.WISHLIST.BASE,
+        {
+          params: { page: 1, size: 1 },
+        },
+      )
       .then((res) => setWishlistTotal(res.data.data.meta.total))
       .catch(() => {});
   }, []);
@@ -143,13 +163,18 @@ export default function Dashboard() {
   const fetchWishlistPage = (page: number) => {
     setLoadingWishlist(true);
     axiosInstance
-      .get<ApiResponse<ApiPagination<WishlistResponse>>>(API_ENDPOINTS.WISHLIST.BASE, {
-        params: { page, size: WISHLIST_PAGE_SIZE },
-      })
+      .get<ApiResponse<ApiPagination<WishlistResponse>>>(
+        API_ENDPOINTS.WISHLIST.BASE,
+        {
+          params: { page, size: WISHLIST_PAGE_SIZE },
+        },
+      )
       .then((res) => {
         setWishlistItems(res.data.data.result);
         setWishlistTotal(res.data.data.meta.total);
-        setWishlistTotalPages(Math.ceil(res.data.data.meta.total / WISHLIST_PAGE_SIZE));
+        setWishlistTotalPages(
+          Math.ceil(res.data.data.meta.total / WISHLIST_PAGE_SIZE) || 1,
+        );
       })
       .catch(() => {})
       .finally(() => setLoadingWishlist(false));
@@ -160,79 +185,102 @@ export default function Dashboard() {
     fetchWishlistPage(wishlistPage);
   }, [wishlistPage, isWishlist]);
 
-  useEffect(() => { setWishlistPage(1); }, [isWishlist]);
+  useEffect(() => {
+    setWishlistPage(1);
+  }, [isWishlist]);
 
-  // ── Notification (server-side) ──────────────────────────────────────
-  const [notifItems, setNotifItems] = useState<UserNotificationResponse[]>([]);
-  const [loadingNotifs, setLoadingNotifs] = useState(false);
+  // ── Notification ────────────────────────────────────────────────────────
+  // Root cause fix:
+  //   Trang 1 → dùng reduxNotifications trực tiếp (SSE push vào Redux → UI cập nhật ngay)
+  //   Trang 2+ → fetch server bình thường
   const [notifPage, setNotifPage] = useState(1);
   const [notifTotalPages, setNotifTotalPages] = useState(1);
   const [notifTotal, setNotifTotal] = useState(0);
+  const [loadingNotifs, setLoadingNotifs] = useState(false);
+  const [serverNotifItems, setServerNotifItems] = useState<
+    UserNotificationResponse[]
+  >([]);
+
+  // Trang 1: dùng Redux (realtime SSE); trang 2+: dùng server fetch
+  const notifItems = notifPage === 1 ? reduxNotifications.slice(0, NOTIF_PAGE_SIZE) : serverNotifItems;
 
   const fetchNotifPage = (page: number) => {
     setLoadingNotifs(true);
     userNotificationService
       .getMyNotifications({ page, pageSize: NOTIF_PAGE_SIZE })
       .then((res) => {
-        setNotifItems(res.result);
         setNotifTotal(res.meta.total);
-        setNotifTotalPages(Math.ceil(res.meta.total / NOTIF_PAGE_SIZE));
+        setNotifTotalPages(Math.ceil(res.meta.total / NOTIF_PAGE_SIZE) || 1);
+        if (page === 1) {
+          // Trang 1: sync Redux để reduxNotifications + unreadCount chính xác
+          dispatch(fetchNotifications());
+        } else {
+          setServerNotifItems(res.result);
+        }
       })
       .catch(() => {})
       .finally(() => setLoadingNotifs(false));
   };
 
+  // Vào tab hoặc đổi trang → fetch để có total/totalPages + sync Redux trang 1
   useEffect(() => {
     if (!isNotifications) return;
     fetchNotifPage(notifPage);
   }, [notifPage, isNotifications]);
 
-  useEffect(() => { setNotifPage(1); }, [isNotifications]);
+  // Reset về trang 1 khi vào tab
+  useEffect(() => {
+    if (isNotifications) setNotifPage(1);
+  }, [isNotifications]);
 
   const handleMarkAsRead = async (id: string) => {
     const target = notifItems.find((n) => n._id === id);
     if (!target || target.isRead) return;
-    setNotifItems((prev) => prev.map((n) => n._id === id ? { ...n, isRead: true } : n));
-    dispatch(decrementUnread());
+    // Dispatch Redux → cập nhật reduxNotifications + unreadCount ngay (trang 1 hiển thị liền)
+    dispatch(markOneAsRead(id));
     try {
       await userNotificationService.markAsRead(id);
       sonnerToast.success("Đã đánh dấu là đã đọc");
     } catch {
-      fetchNotifPage(notifPage);
+      dispatch(fetchNotifications());
       sonnerToast.error("Có lỗi xảy ra");
     }
   };
 
   const handleMarkAllAsRead = async () => {
     if (!notifItems.some((n) => !n.isRead)) return;
-    const unreadOnPage = notifItems.filter((n) => !n.isRead).length;
-    setNotifItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    dispatch(clearUnread());
+    dispatch(markAllAsRead());
     try {
       await userNotificationService.markAllAsRead();
       sonnerToast.success("Đã đánh dấu tất cả là đã đọc");
     } catch {
-      fetchNotifPage(notifPage);
+      dispatch(fetchNotifications());
       sonnerToast.error("Có lỗi xảy ra");
     }
   };
 
   const handleRemoveNotif = async (id: string) => {
-    const isUnread = notifItems.find((n) => n._id === id && !n.isRead);
-    setNotifItems((prev) => prev.filter((n) => n._id !== id));
-    setNotifTotal((t) => t - 1);
+    // Optimistic: removeOne() trong slice tự trừ unreadCount nếu chưa đọc → không cần decrementUnread()
     dispatch(removeOne(id));
-    if (isUnread) dispatch(decrementUnread());
+    const newTotal = Math.max(0, notifTotal - 1);
+    setNotifTotal(newTotal);
+    setNotifTotalPages(Math.ceil(newTotal / NOTIF_PAGE_SIZE) || 1);
+
     try {
       await userNotificationService.deleteNotification(id);
       sonnerToast.success("Đã xóa thông báo");
-      if (notifItems.length === 1 && notifPage > 1) {
+      if (notifPage === 1) {
+        // Trang 1: Redux đã update, chỉ cần sync total từ server
+        fetchNotifPage(1);
+      } else if (serverNotifItems.length <= 1 && notifPage > 1) {
+        // Xóa item cuối trang → lùi về trang trước
         setNotifPage((p) => p - 1);
       } else {
         fetchNotifPage(notifPage);
       }
     } catch {
-      fetchNotifPage(notifPage);
+      dispatch(fetchNotifications());
+      if (notifPage > 1) fetchNotifPage(notifPage);
       sonnerToast.error("Có lỗi xảy ra");
     }
   };
@@ -388,14 +436,15 @@ export default function Dashboard() {
   ) => {
     e.preventDefault();
     e.stopPropagation();
-    // optimistic: xóa khỏi danh sách hiện tại
+    const remainingAfterDelete = wishlistItems.filter((c) => c.courseId !== courseId).length;
+    // Optimistic update
     setWishlistItems((prev) => prev.filter((c) => c.courseId !== courseId));
-    setWishlistTotal((t) => t - 1);
+    setWishlistTotal((t) => Math.max(0, t - 1));
     await ctxRemoveFromWishlist(courseId);
     refetchWishlistBadge();
     toast({ title: "Đã bỏ yêu thích", description: `${title} đã được xóa.` });
-    // nếu xóa hết trang hiện tại thì lùi 1 trang, ngược lại refetch trang này
-    if (wishlistItems.length === 1 && wishlistPage > 1) {
+    // Nếu xóa hết trang hiện tại thì lùi 1 trang, ngược lại refetch trang này
+    if (remainingAfterDelete === 0 && wishlistPage > 1) {
       setWishlistPage((p) => p - 1);
     } else {
       fetchWishlistPage(wishlistPage);
@@ -458,7 +507,7 @@ export default function Dashboard() {
                 <img
                   src={
                     user?.avatar ||
-                    "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"
+                    "https://fptshop.com.vn/tin-tuc/thu-thuat/avatar-trang-154450"
                   }
                   alt={user?.name}
                   className="w-12 h-12 rounded-full object-cover"
@@ -711,7 +760,7 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                {loadingNotifs ? (
+                {loadingNotifs && notifItems.length === 0 ? (
                   <div className="flex justify-center py-16">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                   </div>
@@ -819,7 +868,7 @@ export default function Dashboard() {
                         <img
                           src={
                             user?.avatar ||
-                            "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"
+                            "https://fptshop.com.vn/tin-tuc/thu-thuat/avatar-trang-154450"
                           }
                           alt={user?.name}
                           className="w-20 h-20 rounded-full object-cover"

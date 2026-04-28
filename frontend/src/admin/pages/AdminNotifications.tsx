@@ -13,6 +13,8 @@ import {
   ChevronDown,
   MessageSquare,
   HelpCircle,
+  FileText,
+  BookOpen,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import notificationService from "@/services/notificationService";
@@ -23,6 +25,7 @@ import {
   NotificationType,
   NotificationTarget,
   NotificationCreationRequest,
+  NotificationStats,
 } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -361,6 +364,11 @@ export default function AdminNotifications() {
 
   const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
   const [totalItems, setTotalItems] = useState(0);
+  const [notifStats, setNotifStats] = useState<NotificationStats>({
+    sentCount: 0,
+    draftCount: 0,
+    totalRead: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [answeredMap, setAnsweredMap] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState("");
@@ -395,6 +403,7 @@ export default function AdminNotifications() {
 
       setNotifications(res.result);
       setTotalItems(res.meta.total);
+      if (res.stats) setNotifStats(res.stats as unknown as NotificationStats);
 
       // Fetch answered status cho các notification loại QUESTION
       const questionNotifs = res.result.filter(
@@ -425,10 +434,6 @@ export default function AdminNotifications() {
     );
     return () => clearTimeout(t);
   }, [currentPage, searchQuery, statusFilter]); // eslint-disable-line
-
-  const sentCount = notifications.filter((n) => n.status === "SENT").length;
-  const draftCount = notifications.filter((n) => n.status === "DRAFT").length;
-  const totalRead = notifications.reduce((s, n) => s + (n.totalRead ?? 0), 0);
 
   const handleFormSubmit = async (data: FormData, sendNow: boolean) => {
     if (!data.title.trim() || !data.message.trim()) {
@@ -535,14 +540,50 @@ export default function AdminNotifications() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Tổng thông báo", value: totalItems, color: "text-admin-foreground" },
-          { label: "Đã gửi", value: sentCount, color: "text-green-500" },
-          { label: "Bản nháp", value: draftCount, color: "text-gray-400" },
-          { label: "Lượt đọc", value: totalRead.toLocaleString(), color: "text-admin-foreground" },
+          {
+            label: "Tổng thông báo",
+            value: totalItems.toLocaleString(),
+            color: "text-admin-foreground",
+            icon: <Bell className="w-5 h-5" />,
+            iconBg: "rgba(99,102,241,0.15)",
+            iconColor: "#818cf8",
+          },
+          {
+            label: "Đã gửi",
+            value: notifStats.sentCount.toLocaleString(),
+            color: "text-green-400",
+            icon: <Send className="w-5 h-5" />,
+            iconBg: "rgba(34,197,94,0.15)",
+            iconColor: "#4ade80",
+          },
+          {
+            label: "Bản nháp",
+            value: notifStats.draftCount.toLocaleString(),
+            color: "text-gray-400",
+            icon: <FileText className="w-5 h-5" />,
+            iconBg: "rgba(148,163,184,0.15)",
+            iconColor: "#94a3b8",
+          },
+          {
+            label: "Lượt đọc",
+            value: notifStats.totalRead.toLocaleString(),
+            color: "text-blue-400",
+            icon: <BookOpen className="w-5 h-5" />,
+            iconBg: "rgba(59,130,246,0.15)",
+            iconColor: "#60a5fa",
+          },
         ].map((s) => (
-          <div key={s.label} className="bg-admin-card border border-admin-border rounded-xl p-4">
-            <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-            <p className="text-sm text-admin-muted-foreground">{s.label}</p>
+          <div key={s.label} className="bg-admin-card border border-admin-border rounded-xl p-4 flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: s.iconBg, color: s.iconColor }}
+            >
+              {s.icon}
+            </div>
+            <div>
+              <p className={`text-xl font-bold leading-tight ${s.color}`}>{s.value}</p>
+              <p className="text-xs text-admin-muted-foreground mt-0.5">{s.label}</p>
+            </div>
           </div>
         ))}
       </div>

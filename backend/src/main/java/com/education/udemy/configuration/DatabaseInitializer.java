@@ -51,7 +51,7 @@ public class DatabaseInitializer implements CommandLineRunner {
             Setting defaultSetting = Setting.builder()
                     .siteName("Education Udemy")
                     .siteDescription("Hệ thống quản lý khóa học chuyên nghiệp")
-                    .logo("https://res.cloudinary.com/dbn11jpxd/image/upload/v1774169087/udemy/images/jy3getyvrhhgvqizbzju.png")
+                    .logo("https://res.cloudinary.com/dbn11jpxd/image/upload/v1776353306/udemy/images/lw3yrt2mlv9iqzrmurnz.png")
                     .favicon("https://example.com/favicon.ico")
                     .primaryColor("#981b34")
                     .contactEmail("admin@education.com")

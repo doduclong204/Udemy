@@ -1,12 +1,15 @@
 import { useSearchParams } from 'react-router-dom';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { CourseCard } from '@/components/CourseCard';
 import { Rating } from '@/components/Rating';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Filter, X, Loader2, Star, BarChart2, Tag, DollarSign } from 'lucide-react';
+import {
+  Filter, X, Loader2, Star, BarChart2, Tag, DollarSign,
+  ChevronDown, ArrowUpDown, TrendingUp, ArrowUpNarrowWide, ArrowDownNarrowWide,
+} from 'lucide-react';
 import searchService from '@/services/searchService';
 import categoryService from '@/services/categoryService';
 import type { CourseSummaryResponse, Category } from '@/types';
@@ -20,214 +23,247 @@ const LEVELS = [
   { label: 'Nâng cao',        value: 'ADVANCED' },
 ];
 
+const SORT_OPTIONS = [
+  { value: 'createdAt,desc',      label: 'Mới nhất',      icon: ArrowUpDown },
+  { value: 'totalStudents,desc',  label: 'Phổ biến nhất', icon: TrendingUp },
+  { value: 'effectivePrice,asc',  label: 'Giá tăng dần',  icon: ArrowUpNarrowWide },
+  { value: 'effectivePrice,desc', label: 'Giá giảm dần',  icon: ArrowDownNarrowWide },
+];
+
+const PAGE_SIZE = 12;
+
+// Đọc tất cả filter từ URL — single source of truth
+function useFilters(searchParams: URLSearchParams) {
+  return {
+    query:      searchParams.get('q')      || '',
+    categories: searchParams.getAll('category'),
+    rating:     searchParams.get('rating') ? parseFloat(searchParams.get('rating')!) : null,
+    levels:     searchParams.getAll('level'),
+    price:      (searchParams.get('price') as 'all' | 'free' | 'paid') || 'all',
+    sort:       searchParams.get('sort')   || 'createdAt,desc',
+    page:       parseInt(searchParams.get('p') || '1', 10),
+  };
+}
+
 export default function Search() {
-  const [searchParams] = useSearchParams();
-  const query         = searchParams.get('q')        || '';
-  const categoryParam = searchParams.get('category') || '';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filters = useFilters(searchParams);
 
-  // ── Filter state ──────────────────────────────────────────────────────────
-  const [selectedRating,     setSelectedRating]     = useState<number | null>(null);
-  const [selectedLevels,     setSelectedLevels]     = useState<string[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(
-    categoryParam ? [categoryParam] : []
-  );
-  const [priceFilter,  setPriceFilter]  = useState<'all' | 'paid' | 'free'>('all');
-  const [sortBy,       setSortBy]       = useState<string>('createdAt,desc');
-  const [showFilters,  setShowFilters]  = useState(true);
+  // UI-only state — không cần vào URL
+  const [showFilters, setShowFilters] = useState(true);
+  const [sortOpen,    setSortOpen]    = useState(false);
 
-  // ── Data state ────────────────────────────────────────────────────────────
+  // Data state
   const [courses,    setCourses]    = useState<CourseSummaryResponse[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [total,      setTotal]      = useState(0);
-  const [page,       setPage]       = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading,    setLoading]    = useState(false);
 
-  const PAGE_SIZE = 12;
+  // Helper ghi filter vào URL
+  // keepPage=true khi chỉ đổi trang/sort, không reset về p=1
+  const setFilter = (
+    updates: Record<string, string | string[] | null>,
+    keepPage = false,
+  ) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (!keepPage) next.delete('p');
+      Object.entries(updates).forEach(([key, val]) => {
+        next.delete(key);
+        if (Array.isArray(val))  val.forEach((v) => next.append(key, v));
+        else if (val !== null)   next.set(key, val);
+      });
+      return next;
+    }, { replace: true });
+  };
 
-  // ── Load categories once ──────────────────────────────────────────────────
+  // Load categories 1 lần
   useEffect(() => {
-    categoryService.getCategories({ pageSize: 20 })
+    categoryService.getCategories({ pageSize: 30 })
       .then((res) => setCategories(res.result))
       .catch(() => {});
   }, []);
 
-  // Sync category từ URL param khi thay đổi
+  // Đóng sort dropdown khi click ngoài
   useEffect(() => {
-    if (categoryParam) setSelectedCategories([categoryParam]);
-  }, [categoryParam]);
+    if (!sortOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('[data-sort-dropdown]')) setSortOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [sortOpen]);
 
-  // ── Fetch courses ─────────────────────────────────────────────────────────
-  const fetchCourses = useCallback(async (resetPage = false) => {
-    setLoading(true);
-    const currentPage = resetPage ? 1 : page;
-    if (resetPage) setPage(1);
-
-    try {
-      // Dùng category đầu tiên nếu có (spring-filter không hỗ trợ OR dễ dàng)
-      const categoryFilter = selectedCategories.length > 0
-        ? selectedCategories[0]
-        : (categoryParam || undefined);
-
-      const levelFilter = selectedLevels.length === 1 && selectedLevels[0] !== 'ALL'
-        ? selectedLevels[0]
-        : undefined;
-
-      const res = await searchService.searchCourses({
-        page:      currentPage,
-        pageSize:  PAGE_SIZE,
-        search:    query || undefined,
-        category:  categoryFilter,
-        level:     levelFilter,
-        minRating: selectedRating ?? undefined,
-        priceType: priceFilter,
-        sort:      sortBy,
-      });
-
-      setCourses(res.result);
-      setTotal(res.meta.total);
-      setTotalPages(res.meta.pages);
-    } catch {
-      setCourses([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [query, categoryParam, selectedRating, selectedLevels, selectedCategories, priceFilter, sortBy, page]);
-
-  // Re-fetch khi filter thay đổi → reset page 0
+  // Fetch duy nhất — debounce 300ms + cleanup để tránh race condition
   useEffect(() => {
-    fetchCourses(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, categoryParam, selectedRating, selectedLevels, selectedCategories, priceFilter, sortBy]);
+    let cancelled = false;
 
-  // Re-fetch khi chuyển trang
-  useEffect(() => {
-    fetchCourses(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+    const timer = setTimeout(() => {
+      setLoading(true);
+      searchService.searchCourses({
+      page:       filters.page,
+      pageSize:   PAGE_SIZE,
+      search:     filters.query      || undefined,
+      categories: filters.categories.length > 0 ? filters.categories : undefined,
+      levels:     filters.levels,
+      minRating:  filters.rating     ?? undefined,
+      priceType:  filters.price,
+      sort:       filters.sort,
+    })
+      .then((res) => {
+        if (cancelled) return;
+        setCourses(res.result);
+        setTotal(res.meta.total);
+        setTotalPages(res.meta.pages);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCourses([]);
+        setTotal(0);
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    }, 300);
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  const toggleLevel = (value: string) =>
-    setSelectedLevels((prev) =>
-      prev.includes(value) ? prev.filter((l) => l !== value) : [...prev, value]
-    );
+    return () => { cancelled = true; clearTimeout(timer); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.toString()]);
 
-  const toggleCategory = (name: string) =>
-    setSelectedCategories((prev) =>
-      prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name]
-    );
-
-  const clearFilters = () => {
-    setSelectedRating(null);
-    setSelectedLevels([]);
-    setSelectedCategories(categoryParam ? [categoryParam] : []);
-    setPriceFilter('all');
+  // Helpers
+  const toggleCategory = (name: string) => {
+    const next = filters.categories.includes(name)
+      ? filters.categories.filter((c) => c !== name)
+      : [...filters.categories, name];
+    setFilter({ category: next });
   };
 
+  const toggleLevel = (value: string) => {
+    const next = filters.levels.includes(value)
+      ? filters.levels.filter((l) => l !== value)
+      : [...filters.levels, value];
+    setFilter({ level: next });
+  };
+
+  const clearFilters = () =>
+    setFilter({ rating: null, level: [], category: [], price: null });
+
   const hasActiveFilters =
-    selectedRating !== null ||
-    selectedLevels.length > 0 ||
-    (selectedCategories.length > 0 && !categoryParam) ||
-    (selectedCategories.length > 0 && selectedCategories[0] !== categoryParam) ||
-    priceFilter !== 'all';
+    filters.rating !== null ||
+    filters.levels.filter((l) => l !== 'ALL').length > 0 ||
+    filters.price !== 'all' ||
+    filters.categories.length > 0;
+
+  const currentSort = SORT_OPTIONS.find((o) => o.value === filters.sort) ?? SORT_OPTIONS[0];
+
+  const pageTitle = filters.query
+    ? `Kết quả tìm kiếm "${filters.query}"`
+    : filters.categories.length === 1
+    ? `Khóa học ${filters.categories[0]}`
+    : 'Tất cả khóa học';
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
       <div className="container mx-auto px-4 py-8">
-        {/* Title */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-1">
-            {query
-              ? `Kết quả tìm kiếm "${query}"`
-              : categoryParam
-              ? `Khóa học ${categoryParam}`
-              : 'Tất cả khóa học'}
-          </h1>
+          <h1 className="text-2xl font-bold mb-1">{pageTitle}</h1>
           <p className="text-muted-foreground">{total} kết quả</p>
         </div>
 
         <div className="flex gap-8">
-          {/* ── Sidebar ── */}
+          {/* Sidebar */}
           <aside className={`w-64 flex-shrink-0 ${showFilters ? 'block' : 'hidden lg:block'}`}>
             <div className="sticky top-20 space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold flex items-center gap-2">
-                  <Filter className="w-4 h-4" />
-                  Bộ lọc
-                </h3>
-              </div>
+              <h3 className="font-bold flex items-center gap-2">
+                <Filter className="w-4 h-4" />
+                Bộ lọc
+              </h3>
 
-              {/* ── Đánh giá ── */}
+              {/* Đánh giá */}
               <div>
-                <h4 className="font-semibold mb-3">Đánh giá</h4>
+                <h4 className="font-semibold mb-3 flex items-center gap-1.5">
+                  <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                  Đánh giá
+                </h4>
                 <div className="space-y-1">
-                  {RATING_OPTIONS.map((rating) => (
+                  {RATING_OPTIONS.map((r) => (
                     <button
-                      key={rating}
-                      onClick={() => setSelectedRating(selectedRating === rating ? null : rating)}
+                      key={r}
+                      onClick={() => setFilter({ rating: filters.rating === r ? null : String(r) })}
                       className={`flex items-center gap-2 w-full p-2 rounded-lg transition-colors ${
-                        selectedRating === rating ? 'bg-udemy-purple-light' : 'hover:bg-secondary'
+                        filters.rating === r ? 'bg-yellow-50 border border-yellow-200' : 'hover:bg-secondary'
                       }`}
                     >
-                      <Rating rating={rating} showNumber={false} size="sm" />
-                      <span className="text-sm">{rating} trở lên</span>
+                      <Rating rating={r} showNumber={false} size="sm" />
+                      <span className="text-sm">{r} trở lên</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* ── Trình độ ── */}
+              {/* Trình độ */}
               <div>
-                <h4 className="font-semibold mb-3">Trình độ</h4>
+                <h4 className="font-semibold mb-3 flex items-center gap-1.5">
+                  <BarChart2 className="w-4 h-4 text-blue-500" />
+                  Trình độ
+                </h4>
                 <div className="space-y-2">
                   {LEVELS.map((lvl) => (
-                    <label key={lvl.value} className="flex items-center gap-2 cursor-pointer">
+                    <label key={lvl.value} className="flex items-center gap-2 cursor-pointer group">
                       <Checkbox
-                        checked={selectedLevels.includes(lvl.value)}
+                        checked={filters.levels.includes(lvl.value)}
                         onCheckedChange={() => toggleLevel(lvl.value)}
                       />
-                      <span className="text-sm">{lvl.label}</span>
+                      <span className="text-sm group-hover:text-primary transition-colors">
+                        {lvl.label}
+                      </span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              {/* ── Danh mục ── */}
+              {/* Danh mục */}
               {categories.length > 0 && (
                 <div>
-                  <h4 className="font-semibold mb-3">Danh mục</h4>
+                  <h4 className="font-semibold mb-3 flex items-center gap-1.5">
+                    <Tag className="w-4 h-4 text-purple-500" />
+                    Danh mục
+                  </h4>
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                     {categories.map((cat) => (
-                      <label key={cat._id} className="flex items-center gap-2 cursor-pointer">
+                      <label key={cat._id} className="flex items-center gap-2 cursor-pointer group">
                         <Checkbox
-                          checked={selectedCategories.includes(cat.name)}
+                          checked={filters.categories.includes(cat.name)}
                           onCheckedChange={() => toggleCategory(cat.name)}
                         />
-                        <span className="text-sm">{cat.name}</span>
+                        <span className="text-sm group-hover:text-primary transition-colors">
+                          {cat.name}
+                        </span>
                       </label>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* ── Giá ── */}
+              {/* Giá */}
               <div>
-                <h4 className="font-semibold mb-3">Giá</h4>
+                <h4 className="font-semibold mb-3 flex items-center gap-1.5">
+                  <DollarSign className="w-4 h-4 text-green-500" />
+                  Giá
+                </h4>
                 <div className="space-y-2">
-                  {(['all', 'paid', 'free'] as const).map((price) => (
-                    <label key={price} className="flex items-center gap-2 cursor-pointer">
+                  {(['all', 'free', 'paid'] as const).map((val) => (
+                    <label key={val} className="flex items-center gap-2 cursor-pointer group">
                       <input
                         type="radio"
                         name="price"
-                        checked={priceFilter === price}
-                        onChange={() => setPriceFilter(price)}
+                        checked={filters.price === val}
+                        onChange={() => setFilter({ price: val === 'all' ? null : val })}
                         className="accent-primary"
                       />
-                      <span className="text-sm">
-                        {price === 'all' ? 'Tất cả' : price === 'paid' ? 'Trả phí' : 'Miễn phí'}
+                      <span className="text-sm group-hover:text-primary transition-colors">
+                        {val === 'all' ? 'Tất cả' : val === 'free' ? 'Miễn phí' : 'Trả phí'}
                       </span>
                     </label>
                   ))}
@@ -236,7 +272,7 @@ export default function Search() {
             </div>
           </aside>
 
-          {/* ── Results ── */}
+          {/* Results */}
           <div className="flex-1 min-w-0">
             {/* Sort bar */}
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
@@ -250,76 +286,98 @@ export default function Search() {
 
               <div className="flex items-center gap-2 ml-auto">
                 <span className="text-sm text-muted-foreground">Sắp xếp:</span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="createdAt,desc">Mới nhất</option>
-                  <option value="totalStudents,desc">Phổ biến nhất</option>
-                  <option value="price,asc">Giá tăng dần</option>
-                  <option value="price,desc">Giá giảm dần</option>
-                </select>
+                <div className="relative" data-sort-dropdown>
+                  <button
+                    onClick={() => setSortOpen((v) => !v)}
+                    className={`flex items-center gap-2 px-3 py-2 text-sm font-medium border rounded-xl bg-background transition-all hover:border-primary hover:text-primary ${
+                      sortOpen ? 'border-primary text-primary shadow-sm ring-2 ring-primary/10' : 'border-border'
+                    }`}
+                  >
+                    <currentSort.icon className="w-4 h-4" />
+                    <span>{currentSort.label}</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${sortOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {sortOpen && (
+                    <div className="absolute right-0 top-full mt-1.5 z-50 w-52 bg-background border border-border rounded-xl shadow-lg overflow-hidden">
+                      {SORT_OPTIONS.map((opt) => {
+                        const Icon = opt.icon;
+                        const active = filters.sort === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            onClick={() => { setFilter({ sort: opt.value }, true); setSortOpen(false); }}
+                            className={`flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-left transition-colors ${
+                              active ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-secondary text-foreground'
+                            }`}
+                          >
+                            <Icon className={`w-4 h-4 ${active ? 'text-primary' : 'text-muted-foreground'}`} />
+                            {opt.label}
+                            {active && <span className="ml-auto w-2 h-2 rounded-full bg-primary" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Active filter chips */}
             {hasActiveFilters && (
               <div className="flex flex-wrap items-center gap-2 mb-4">
-                {selectedRating !== null && (
+                {filters.rating !== null && (
                   <span className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-full text-sm font-medium">
                     <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-                    {selectedRating}+ sao
+                    {filters.rating}+ sao
                     <button
-                      onClick={() => setSelectedRating(null)}
+                      onClick={() => setFilter({ rating: null })}
                       className="ml-0.5 w-4 h-4 rounded-full bg-yellow-200 hover:bg-yellow-300 flex items-center justify-center transition-colors"
                     >
                       <X className="w-2.5 h-2.5" />
                     </button>
                   </span>
                 )}
-                {selectedLevels.map((lvl) => {
-                  const label = LEVELS.find((l) => l.value === lvl)?.label ?? lvl;
-                  return (
-                    <span key={lvl} className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-full text-sm font-medium">
-                      <BarChart2 className="w-3.5 h-3.5" />
-                      {label}
-                      <button
-                        onClick={() => toggleLevel(lvl)}
-                        className="ml-0.5 w-4 h-4 rounded-full bg-blue-200 hover:bg-blue-300 flex items-center justify-center transition-colors"
-                      >
-                        <X className="w-2.5 h-2.5" />
-                      </button>
-                    </span>
-                  );
-                })}
-                {selectedCategories
-                  .filter((c) => c !== categoryParam)
-                  .map((cat) => (
-                    <span key={cat} className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 bg-purple-50 border border-purple-200 text-purple-700 rounded-full text-sm font-medium">
-                      <Tag className="w-3.5 h-3.5" />
-                      {cat}
-                      <button
-                        onClick={() => toggleCategory(cat)}
-                        className="ml-0.5 w-4 h-4 rounded-full bg-purple-200 hover:bg-purple-300 flex items-center justify-center transition-colors"
-                      >
-                        <X className="w-2.5 h-2.5" />
-                      </button>
-                    </span>
-                  ))}
-                {priceFilter !== 'all' && (
+
+                {filters.levels.filter((l) => l !== 'ALL').map((lvl) => (
+                  <span key={lvl} className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-full text-sm font-medium">
+                    <BarChart2 className="w-3.5 h-3.5" />
+                    {LEVELS.find((l) => l.value === lvl)?.label ?? lvl}
+                    <button
+                      onClick={() => toggleLevel(lvl)}
+                      className="ml-0.5 w-4 h-4 rounded-full bg-blue-200 hover:bg-blue-300 flex items-center justify-center transition-colors"
+                    >
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  </span>
+                ))}
+
+                {filters.categories.map((cat) => (
+                  <span key={cat} className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 bg-purple-50 border border-purple-200 text-purple-700 rounded-full text-sm font-medium">
+                    <Tag className="w-3.5 h-3.5" />
+                    {cat}
+                    <button
+                      onClick={() => toggleCategory(cat)}
+                      className="ml-0.5 w-4 h-4 rounded-full bg-purple-200 hover:bg-purple-300 flex items-center justify-center transition-colors"
+                    >
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  </span>
+                ))}
+
+                {filters.price !== 'all' && (
                   <span className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 bg-green-50 border border-green-200 text-green-700 rounded-full text-sm font-medium">
                     <DollarSign className="w-3.5 h-3.5" />
-                    {priceFilter === 'paid' ? 'Trả phí' : 'Miễn phí'}
+                    {filters.price === 'paid' ? 'Trả phí' : 'Miễn phí'}
                     <button
-                      onClick={() => setPriceFilter('all')}
+                      onClick={() => setFilter({ price: null })}
                       className="ml-0.5 w-4 h-4 rounded-full bg-green-200 hover:bg-green-300 flex items-center justify-center transition-colors"
                     >
                       <X className="w-2.5 h-2.5" />
                     </button>
                   </span>
                 )}
-                {/* Nút xóa tất cả — nằm cuối hàng chips */}
+
                 <button
                   onClick={clearFilters}
                   className="flex items-center gap-1.5 pl-2.5 pr-3 py-1.5 border border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary hover:text-primary rounded-full text-sm transition-colors"
@@ -343,13 +401,12 @@ export default function Search() {
                   ))}
                 </div>
 
-                {/* Pagination */}
                 {totalPages > 1 && (
                   <div className="flex justify-center items-center gap-2 mt-10">
                     <Button
                       variant="outline" size="sm"
-                      disabled={page === 1}
-                      onClick={() => setPage((p) => p - 1)}
+                      disabled={filters.page === 1}
+                      onClick={() => setFilter({ p: String(filters.page - 1) }, true)}
                     >
                       Trước
                     </Button>
@@ -357,9 +414,9 @@ export default function Search() {
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map((i) => (
                       <button
                         key={i}
-                        onClick={() => setPage(i)}
+                        onClick={() => setFilter({ p: String(i) }, true)}
                         className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                          page === i
+                          filters.page === i
                             ? 'bg-primary text-primary-foreground'
                             : 'border border-border hover:bg-secondary'
                         }`}
@@ -370,8 +427,8 @@ export default function Search() {
 
                     <Button
                       variant="outline" size="sm"
-                      disabled={page >= totalPages}
-                      onClick={() => setPage((p) => p + 1)}
+                      disabled={filters.page >= totalPages}
+                      onClick={() => setFilter({ p: String(filters.page + 1) }, true)}
                     >
                       Sau
                     </Button>

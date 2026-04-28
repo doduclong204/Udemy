@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.Formula;
 
 @Getter
 @Setter
@@ -44,6 +45,9 @@ public class Course extends BaseEntity{
 
     @Column(precision = 10, scale = 2)
     BigDecimal discountPrice;
+
+    @Formula("COALESCE(discount_price, price)")
+    BigDecimal effectivePrice;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)

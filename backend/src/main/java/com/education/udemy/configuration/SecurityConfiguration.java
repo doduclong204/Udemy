@@ -10,10 +10,18 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableMethodSecurity(securedEnabled = true)
 public class SecurityConfiguration {
+
+    private final NoOpSseFilter noOpSseFilter;
+
+    public SecurityConfiguration(NoOpSseFilter noOpSseFilter) {
+        this.noOpSseFilter = noOpSseFilter;
+    }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -34,26 +42,25 @@ public class SecurityConfiguration {
                 "/auth/stats",
                 "/orders/vnpay/return",
                 "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
-                "/storage/**", "/files/**", "/images/**", "/videos/**"
+                "/storage/**", "/files/**", "/images/**", "/videos/**",
+                "/ws/**",
+                "/ws/info/**"
         };
         http
                 .csrf(c -> c.disable())
                 .cors(Customizer.withDefaults())
+                .addFilterBefore(noOpSseFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(
                         authz -> authz
                                 .requestMatchers("/admin/**").hasAuthority("ADMIN")
                                 .requestMatchers("/dashboard/**").hasAuthority("ADMIN")
-
-                                .requestMatchers(HttpMethod.GET, "/products/**")
-                                .permitAll()
-                                .requestMatchers(HttpMethod.GET,
-                                        "/categories/**")
-                                .permitAll()
+                                .requestMatchers(HttpMethod.GET, "/products/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/categories/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/settings/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/courses/**").permitAll()
-                                .requestMatchers(HttpMethod.GET, "/tags/**")
-                                .permitAll()
+                                .requestMatchers(HttpMethod.GET, "/tags/**").permitAll()
                                 .requestMatchers(whileList).permitAll()
+                                .requestMatchers("/sse/**").authenticated()
                                 .anyRequest().authenticated())
                 .oauth2ResourceServer((oauth2) -> oauth2.jwt(Customizer.withDefaults())
                         .authenticationEntryPoint(customAuthenticationEntryPoint))
@@ -62,5 +69,4 @@ public class SecurityConfiguration {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         return http.build();
     }
-
 }
