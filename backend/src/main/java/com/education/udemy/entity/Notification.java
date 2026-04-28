@@ -47,6 +47,7 @@ public class Notification extends BaseEntity {
     @ElementCollection
     @CollectionTable(name = "notification_target_users", joinColumns = @JoinColumn(name = "notification_id"))
     @Column(name = "user_id")
+    @OrderColumn(name = "idx")
     List<String> targetUserIds;
 
     @OneToMany(mappedBy = "notification", cascade = CascadeType.ALL)
