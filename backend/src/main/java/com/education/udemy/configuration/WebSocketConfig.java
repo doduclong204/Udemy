@@ -41,7 +41,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                         "http://localhost:5173",
                         "http://localhost:4173",
                         "http://localhost:8081",
-                        "https://*.vercel.app"
+                        "https://udemy-lilac.vercel.app"
                 )
                 .withSockJS();
     }

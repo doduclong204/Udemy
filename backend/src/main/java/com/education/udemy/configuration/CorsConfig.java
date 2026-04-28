@@ -14,7 +14,7 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(
-                Arrays.asList("http://localhost:8081", "http://localhost:4173", "http://localhost:5173", "https://*.vercel.app"));
+                Arrays.asList("http://localhost:8081", "http://localhost:4173", "http://localhost:5173", "https://udemy-lilac.vercel.app"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList(
                 "Authorization", "Content-Type", "Accept",
