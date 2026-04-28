@@ -40,7 +40,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .setAllowedOriginPatterns(
                         "http://localhost:5173",
                         "http://localhost:4173",
-                        "http://localhost:8081"
+                        "http://localhost:8081",
+                        "https://*.vercel.app"
                 )
                 .withSockJS();
     }
