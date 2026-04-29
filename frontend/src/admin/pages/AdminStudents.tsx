@@ -44,7 +44,7 @@ const NOTIFICATION_TYPES: { value: NotificationType; label: string }[] = [
   { value: "PROMOTION", label: "Khuyến mãi" },
 ];
 
-const INPUT_CLS = "bg-[hsl(220,20%,18%)] border-[hsl(220,20%,28%)] text-white placeholder:text-[hsl(220,10%,45%)] focus:border-admin-primary focus:ring-admin-primary/20";
+const INPUT_CLS = "bg-white border-[hsl(220,15%,87%)] text-gray-800 placeholder:text-gray-400 focus:border-[#6366f1] transition-colors";
 const LABEL_CLS = "text-[hsl(220,10%,70%)] text-xs font-semibold uppercase tracking-wider";
 
 export default function AdminStudents() {
@@ -84,7 +84,7 @@ export default function AdminStudents() {
   });
 
   const { refreshAdmin } = useAdminAuth();
-  const itemsPerPage = 15;
+  const itemsPerPage = 10;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   const fetchStudents = async (
@@ -295,7 +295,7 @@ export default function AdminStudents() {
             <SelectTrigger className="w-full sm:w-40 bg-admin-accent border-admin-border text-admin-foreground">
               <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border-[hsl(220,15%,87%)] text-gray-800 shadow-lg">
               <SelectItem value="all">Tất cả</SelectItem>
               <SelectItem value="Active">Hoạt động</SelectItem>
               <SelectItem value="Inactive">Không hoạt động</SelectItem>
@@ -311,10 +311,10 @@ export default function AdminStudents() {
               <tr>
                 <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground">Học viên</th>
                 <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground hidden md:table-cell">Khoá học</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground hidden lg:table-cell">Chi tiêu</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground hidden sm:table-cell">Ngày tham gia</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground">Trạng thái</th>
-                <th className="text-right py-4 px-4 text-sm font-medium text-admin-muted-foreground">Hành động</th>
+                <th className="text-right py-4 px-4 text-sm font-medium text-admin-muted-foreground hidden lg:table-cell">Chi tiêu</th>
+                <th className="text-center py-4 px-4 text-sm font-medium text-admin-muted-foreground hidden sm:table-cell">Ngày tham gia</th>
+                <th className="text-center py-4 px-4 text-sm font-medium text-admin-muted-foreground">Trạng thái</th>
+                <th className="text-center py-4 px-4 text-sm font-medium text-admin-muted-foreground">Hành động</th>
               </tr>
             </thead>
             <tbody>
@@ -331,10 +331,10 @@ export default function AdminStudents() {
                       </div>
                     </td>
                     <td className="py-4 px-4 hidden md:table-cell"><div className="h-3 w-16 bg-admin-accent rounded" /></td>
-                    <td className="py-4 px-4 hidden lg:table-cell"><div className="h-3 w-20 bg-admin-accent rounded" /></td>
-                    <td className="py-4 px-4 hidden sm:table-cell"><div className="h-3 w-16 bg-admin-accent rounded" /></td>
-                    <td className="py-4 px-4"><div className="h-5 w-16 bg-admin-accent rounded-full" /></td>
-                    <td className="py-4 px-4"><div className="h-6 w-6 bg-admin-accent rounded ml-auto" /></td>
+                    <td className="py-4 px-4 hidden lg:table-cell"><div className="h-3 w-20 bg-admin-accent rounded ml-auto" /></td>
+                    <td className="py-4 px-4 hidden sm:table-cell"><div className="h-3 w-16 bg-admin-accent rounded mx-auto" /></td>
+                    <td className="py-4 px-4"><div className="h-5 w-16 bg-admin-accent rounded-full mx-auto" /></td>
+                    <td className="py-4 px-4"><div className="h-6 w-6 bg-admin-accent rounded mx-auto" /></td>
                   </tr>
                 ))
               ) : students.length === 0 ? (
@@ -357,15 +357,15 @@ export default function AdminStudents() {
                     <p className="text-sm text-admin-foreground">{student.enrolledCourses} đăng ký</p>
                     <p className="text-xs text-admin-muted-foreground">{student.completedCourses} hoàn thành</p>
                   </td>
-                  <td className="py-4 px-4 text-sm font-medium text-admin-foreground hidden lg:table-cell">{formatCurrency(student.totalSpent)}</td>
-                  <td className="py-4 px-4 text-sm text-admin-muted-foreground hidden sm:table-cell">{formatDate(student.joinedAt)}</td>
-                  <td className="py-4 px-4">
+                  <td className="py-4 px-4 text-sm font-medium text-admin-foreground hidden lg:table-cell text-right">{formatCurrency(student.totalSpent)}</td>
+                  <td className="py-4 px-4 text-sm text-admin-muted-foreground hidden sm:table-cell text-center">{formatDate(student.joinedAt)}</td>
+                  <td className="py-4 px-4 text-center">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${student.status === "Active" ? "bg-green-500/10 text-green-500" : "bg-gray-500/10 text-gray-400"}`}>
                       {student.status === "Active" ? "Hoạt động" : "Không hoạt động"}
                     </span>
                   </td>
                   <td className="py-4 px-4">
-                    <div className="flex items-center justify-end gap-1">
+                    <div className="flex items-center justify-center gap-1">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -404,7 +404,7 @@ export default function AdminStudents() {
 
       {/* Add Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="admin-dialog sm:max-w-md" style={{ background: '#0f1117', border: '1px solid #1e2230' }}>
+        <DialogContent className="admin-dialog sm:max-w-md">
           <DialogHeader>
             <DialogTitle style={{ color: '#f1f5f9' }}>Thêm học viên mới</DialogTitle>
             <DialogDescription style={{ color: '#64748b' }}>Nhập thông tin học viên mới vào form bên dưới</DialogDescription>
@@ -425,7 +425,7 @@ export default function AdminStudents() {
               <Label className={LABEL_CLS}>Vai trò</Label>
               <Select value={newStudent.role} onValueChange={v => setNewStudent({ ...newStudent, role: v as RoleType })}>
                 <SelectTrigger className={INPUT_CLS}><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-[hsl(220,20%,15%)] border-[hsl(220,20%,28%)] text-white z-[10000]">
+                <SelectContent className="bg-white border-[hsl(220,15%,87%)] text-gray-800 shadow-lg">
                   <SelectItem value={ROLE.USER}>Học viên</SelectItem>
                   <SelectItem value={ROLE.ADMIN}>Quản trị viên</SelectItem>
                 </SelectContent>
@@ -433,7 +433,7 @@ export default function AdminStudents() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} style={{ background: '#1e2230', border: '1px solid #2d3550', color: '#94a3b8' }}>Hủy</Button>
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} style={{ background: '#ffffff', border: '1px solid hsl(220,15%,80%)', color: '#374151' }}>Hủy</Button>
             <Button onClick={handleAddStudent} className="bg-admin-primary hover:bg-admin-primary/90">Thêm học viên</Button>
           </DialogFooter>
         </DialogContent>
@@ -441,20 +441,20 @@ export default function AdminStudents() {
 
       {/* View Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden [&::-webkit-scrollbar]:hidden" style={{ background: '#0f1117', border: '1px solid #1e2230' }}>
+        <DialogContent className="admin-dialog sm:max-w-lg p-0 gap-0 overflow-hidden [&::-webkit-scrollbar]:hidden">
           {selectedStudent && (
             <>
-              <div className="relative px-6 pt-6 pb-4" style={{ background: 'linear-gradient(135deg, #1a1f35 0%, #161b27 100%)', borderBottom: '1px solid #1e2230' }}>
+              <div className="relative px-6 pt-6 pb-4" style={{ background: 'hsl(220,15%,96%)', borderBottom: '1px solid hsl(220,15%,87%)' }}>
                 <div className="flex items-center gap-4">
                   <div className="relative">
                     <Avatar className="w-16 h-16 ring-2 ring-admin-primary/40">
                       <AvatarImage src={selectedStudent.avatar} />
                       <AvatarFallback className="bg-admin-primary text-white text-xl">{selectedStudent.name.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0f1117] ${selectedStudent.status === "Active" ? "bg-green-500" : "bg-gray-500"}`} />
+                    <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${selectedStudent.status === "Active" ? "bg-green-500" : "bg-gray-500"}`} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold" style={{ color: '#f1f5f9' }}>{selectedStudent.name}</h3>
+                    <h3 className="text-lg font-bold" style={{ color: '#64748b' }}>{selectedStudent.name}</h3>
                     <p className="text-sm flex items-center gap-1.5" style={{ color: '#64748b' }}>
                       <Mail className="w-3.5 h-3.5" />{selectedStudent.email}
                     </p>
@@ -478,9 +478,9 @@ export default function AdminStudents() {
                     { icon: BookOpen, label: "Khóa học đăng ký", value: selectedStudent.enrolledCourses, color: '#818cf8' },
                     { icon: Star, label: "Khóa học hoàn thành", value: selectedStudent.completedCourses, color: '#4ade80' },
                     { icon: null, label: "Tổng chi tiêu", value: formatCurrency(selectedStudent.totalSpent), color: '#fbbf24' },
-                    { icon: Calendar, label: "Ngày tham gia", value: formatDate(selectedStudent.joinedAt), color: '#94a3b8' },
+                    { icon: Calendar, label: "Ngày tham gia", value: formatDate(selectedStudent.joinedAt), color: '#6b7280' },
                   ].map(item => (
-                    <div key={item.label} className="rounded-xl p-3.5" style={{ background: 'linear-gradient(135deg, #161b27 0%, #1a2035 100%)', border: '1px solid #252d42' }}>
+                    <div key={item.label} className="rounded-xl p-3.5" style={{ background: 'hsl(220,15%,96%)', border: '1px solid hsl(220,15%,87%)' }}>
                       <p className="text-[11px] uppercase tracking-wider font-semibold mb-1" style={{ color: '#475569' }}>{item.label}</p>
                       <p className="text-sm font-bold" style={{ color: item.color }}>{item.value}</p>
                     </div>
@@ -490,9 +490,9 @@ export default function AdminStudents() {
               <div className="px-6 pb-5 flex justify-end">
                 <button onClick={() => setIsViewDialogOpen(false)}
                   className="px-5 py-2 rounded-lg text-sm font-medium transition-all"
-                  style={{ background: '#1e2230', border: '1px solid #2d3550', color: '#94a3b8' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#252d42'; (e.currentTarget as HTMLElement).style.color = '#f1f5f9'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#1e2230'; (e.currentTarget as HTMLElement).style.color = '#94a3b8'; }}>
+                  style={{ background: '#ffffff', border: '1px solid hsl(220,15%,80%)', color: '#374151' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'hsl(220,15%,92%)'; (e.currentTarget as HTMLElement).style.color = '#111827'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#ffffff'; (e.currentTarget as HTMLElement).style.color = '#374151'; }}>
                   Đóng
                 </button>
               </div>
@@ -503,8 +503,8 @@ export default function AdminStudents() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&::-webkit-scrollbar]:hidden" style={{ background: '#0f1117', border: '1px solid #1e2230' }}>
-          <div className="px-6 pt-5 pb-4" style={{ borderBottom: '1px solid #1e2230' }}>
+        <DialogContent className="admin-dialog sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&::-webkit-scrollbar]:hidden">
+          <div className="px-6 pt-5 pb-4" style={{ borderBottom: '1px solid hsl(220,15%,87%)' }}>
             <p className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: '#6366f1' }}>Chỉnh sửa học viên</p>
             <h3 className="text-xl font-bold" style={{ color: '#f1f5f9' }}>{selectedStudent?.name}</h3>
             <p className="text-sm mt-0.5" style={{ color: '#475569' }}>Cập nhật thông tin tài khoản</p>
@@ -525,7 +525,7 @@ export default function AdminStudents() {
                     if (file) { setAvatarFile(file); setAvatarPreview(URL.createObjectURL(file)); }
                     e.target.value = "";
                   }} />
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all w-fit" style={{ background: '#161b27', border: '1px solid #252d42', color: '#94a3b8' }}>
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all w-fit" style={{ background: 'hsl(220,15%,96%)', border: '1px solid hsl(220,15%,87%)', color: '#6b7280' }}>
                     <Upload className="w-4 h-4" />
                     {avatarFile ? avatarFile.name : "Chọn ảnh mới"}
                   </div>
@@ -541,7 +541,7 @@ export default function AdminStudents() {
               </div>
               <div className="col-span-2 space-y-1.5">
                 <Label className={LABEL_CLS}>Email</Label>
-                <div className="px-3 py-2 rounded-lg text-sm" style={{ background: '#161b27', border: '1px solid #1e2a3a', color: '#475569' }}>
+                <div className="px-3 py-2 rounded-lg text-sm" style={{ background: 'hsl(220,15%,96%)', border: '1px solid hsl(220,15%,87%)', color: '#374151' }}>
                   {selectedStudent?.email}
                 </div>
               </div>
@@ -564,7 +564,7 @@ export default function AdminStudents() {
                 <Label className={LABEL_CLS}>Vai trò</Label>
                 <Select value={editStudent.role} onValueChange={v => setEditStudent({ ...editStudent, role: v as RoleType })}>
                   <SelectTrigger className={INPUT_CLS}><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-[hsl(220,20%,15%)] border-[hsl(220,20%,28%)] text-white z-[10000]">
+                  <SelectContent className="bg-white border-[hsl(220,15%,87%)] text-gray-800 shadow-lg">
                     <SelectItem value={ROLE.USER}>Học viên</SelectItem>
                     <SelectItem value={ROLE.ADMIN}>Quản trị viên</SelectItem>
                   </SelectContent>
@@ -574,9 +574,9 @@ export default function AdminStudents() {
             <div className="flex justify-end gap-3 pt-1">
               <button onClick={() => setIsEditDialogOpen(false)}
                 className="px-5 py-2 rounded-lg text-sm font-medium"
-                style={{ background: '#1e2230', border: '1px solid #2d3550', color: '#94a3b8' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#252d42'; (e.currentTarget as HTMLElement).style.color = '#f1f5f9'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#1e2230'; (e.currentTarget as HTMLElement).style.color = '#94a3b8'; }}>
+                style={{ background: '#ffffff', border: '1px solid hsl(220,15%,80%)', color: '#374151' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'hsl(220,15%,92%)'; (e.currentTarget as HTMLElement).style.color = '#111827'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#ffffff'; (e.currentTarget as HTMLElement).style.color = '#374151'; }}>
                 Hủy
               </button>
               <button onClick={handleEditStudent}
@@ -593,11 +593,11 @@ export default function AdminStudents() {
 
       {/* Notification Dialog */}
       <Dialog open={isNotifDialogOpen} onOpenChange={setIsNotifDialogOpen}>
-        <DialogContent className="admin-dialog sm:max-w-lg" style={{ background: '#0f1117', border: '1px solid #1e2230' }}>
+        <DialogContent className="admin-dialog sm:max-w-lg">
           <DialogHeader>
             <DialogTitle style={{ color: '#f1f5f9' }}>Gửi thông báo</DialogTitle>
             <DialogDescription style={{ color: '#64748b' }}>
-              Gửi đến: <span className="font-medium text-white">{selectedStudent?.name}</span> ({selectedStudent?.email})
+              Gửi đến: <span className="font-medium text-gray-800">{selectedStudent?.name}</span> ({selectedStudent?.email})
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -605,7 +605,7 @@ export default function AdminStudents() {
               <Label className={LABEL_CLS}>Loại thông báo</Label>
               <Select value={notifContent.type} onValueChange={v => setNotifContent({ ...notifContent, type: v as NotificationType })}>
                 <SelectTrigger className={INPUT_CLS}><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-[hsl(220,20%,15%)] border-[hsl(220,20%,28%)] text-white z-[10000]">
+                <SelectContent className="bg-white border-[hsl(220,15%,87%)] text-gray-800 shadow-lg">
                   {NOTIFICATION_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -622,7 +622,7 @@ export default function AdminStudents() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsNotifDialogOpen(false)} disabled={isSending} style={{ background: '#1e2230', border: '1px solid #2d3550', color: '#94a3b8' }}>Hủy</Button>
+            <Button variant="outline" onClick={() => setIsNotifDialogOpen(false)} disabled={isSending} style={{ background: '#ffffff', border: '1px solid hsl(220,15%,80%)', color: '#374151' }}>Hủy</Button>
             <Button onClick={handleSendNotification} disabled={isSending} className="bg-admin-primary hover:bg-admin-primary/90">
               <Mail className="w-4 h-4 mr-2" />{isSending ? "Đang gửi..." : "Gửi thông báo"}
             </Button>
@@ -640,7 +640,7 @@ export default function AdminStudents() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]">Hủy</AlertDialogCancel>
+            <AlertDialogCancel className="border-[hsl(220,15%,87%)] text-gray-700 hover:bg-[hsl(220,15%,95%)]">Hủy</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700 text-white">Xóa</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -41,7 +41,7 @@
 
     --radius: 0.5rem;
 
-    /* Custom Udemy-like tokens */
+    
     --udemy-purple: 280 85% 58%;
     --udemy-purple-dark: 280 85% 45%;
     --udemy-purple-light: 280 60% 95%;
@@ -105,18 +105,18 @@
     --sidebar-ring: 280 85% 60%;
   }
 
-  /* Admin Theme */
+  
   .admin-theme {
-    --admin-background: 220 20% 10%;
-    --admin-foreground: 0 0% 95%;
-    --admin-card: 220 20% 13%;
-    --admin-accent: 220 20% 22%;
-    --admin-muted-foreground: 220 10% 60%;
-    --admin-border: 220 20% 25%;
-    --admin-primary: 263 70% 58%;
-    --admin-sidebar: 220 20% 8%;
-    --admin-popover: 220 25% 18%;
-    --admin-popover-foreground: 0 0% 98%;
+    --admin-background: 220 20% 97%;      
+    --admin-foreground: 220 15% 16%;      
+    --admin-card: 0 0% 100%;             
+    --admin-accent: 220 15% 93%;         
+    --admin-muted-foreground: 220 10% 50%; 
+    --admin-border: 220 15% 87%;         
+    --admin-primary: 263 70% 58%;        
+    --admin-sidebar: 220 20% 100%;       
+    --admin-popover: 0 0% 100%;
+    --admin-popover-foreground: 220 15% 16%;
   }
 }
 
@@ -129,24 +129,38 @@ body:has(.admin-theme) [role="dialog"],
 body:has(.admin-theme) [role="dialog"] *,
 body:has(.admin-theme) [role="alertdialog"],
 body:has(.admin-theme) [role="alertdialog"] * {
-  --background: 220 25% 18%;
-  --foreground: 0 0% 98%;
-  --popover: 220 25% 18%;
-  --popover-foreground: 0 0% 98%;
-  --card: 220 20% 13%;
-  --card-foreground: 0 0% 98%;
-  --muted: 220 20% 22%;
-  --muted-foreground: 220 10% 60%;
-  --accent: 220 20% 25%;
-  --accent-foreground: 0 0% 98%;
-  --border: 220 20% 28%;
+  --background: 0 0% 100%;
+  --foreground: 220 15% 16%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 15% 16%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 15% 16%;
+  --muted: 220 15% 95%;
+  --muted-foreground: 220 10% 50%;
+  --accent: 220 15% 93%;
+  --accent-foreground: 220 15% 16%;
+  --border: 220 15% 87%;
+  --input: 220 15% 87%;
 }
 
-/* Admin dialog specific styling - force dark theme with better contrast */
+.admin-theme button[class*="border-input"],
+body:has(.admin-theme) [role="dialog"] button[class*="border"],
+body:has(.admin-theme) [role="alertdialog"] button[class*="border"] {
+  background-color: hsl(0, 0%, 100%);
+  color: hsl(220, 15%, 25%);
+}
+
+.admin-theme button[class*="border-input"]:hover,
+body:has(.admin-theme) [role="dialog"] button[class*="border"]:hover,
+body:has(.admin-theme) [role="alertdialog"] button[class*="border"]:hover {
+  background-color: hsl(220, 15%, 93%);
+  color: hsl(220, 15%, 16%);
+}
+
 .admin-dialog {
-  background-color: hsl(220, 25%, 14%) !important;
-  color: hsl(0, 0%, 98%) !important;
-  border-color: hsl(220, 20%, 30%) !important;
+  background-color: hsl(0, 0%, 100%) !important;
+  color: hsl(220, 15%, 16%) !important;
+  border-color: hsl(220, 15%, 87%) !important;
 }
 
 .admin-dialog * {
@@ -156,24 +170,23 @@ body:has(.admin-theme) [role="alertdialog"] * {
 .admin-dialog .text-muted-foreground,
 .admin-dialog [class*="DialogDescription"],
 .admin-dialog [class*="AlertDialogDescription"] {
-  color: hsl(220, 10%, 65%) !important;
+  color: hsl(220, 10%, 50%) !important;
 }
 
-/* Info boxes within admin dialogs - better contrast */
 .admin-dialog-info-box {
-  background-color: hsl(220, 20%, 22%) !important;
-  border: 1px solid hsl(220, 20%, 32%) !important;
+  background-color: hsl(220, 15%, 96%) !important;
+  border: 1px solid hsl(220, 15%, 87%) !important;
   border-radius: 0.5rem;
   padding: 1rem;
 }
 
 .admin-dialog-info-box .label {
-  color: hsl(220, 10%, 60%);
+  color: hsl(220, 10%, 50%);
   font-size: 0.75rem;
 }
 
 .admin-dialog-info-box .value {
-  color: hsl(0, 0%, 98%);
+  color: hsl(220, 15%, 16%);
   font-weight: 500;
 }
 
@@ -191,6 +204,7 @@ body:has(.admin-theme) [role="alertdialog"] * {
 }
 .bg-admin-primary {
   background-color: hsl(var(--admin-primary));
+  color: hsl(0, 0%, 100%);
 }
 .text-admin-foreground {
   color: hsl(var(--admin-foreground));
@@ -206,6 +220,70 @@ body:has(.admin-theme) [role="alertdialog"] * {
 }
 .shadow-admin-primary\/25 {
   --tw-shadow-color: hsl(var(--admin-primary) / 0.25);
+}
+
+.admin-theme aside {
+  box-shadow: 1px 0 0 0 hsl(220, 15%, 87%);
+}
+
+.admin-theme header {
+  box-shadow: 0 1px 3px 0 hsl(220, 20%, 88%);
+}
+
+.admin-theme [data-radix-popper-content-wrapper] [role="menu"],
+body:has(.admin-theme) [data-radix-popper-content-wrapper] [role="menu"] {
+  background-color: hsl(0, 0%, 100%);
+  border: 1px solid hsl(220, 15%, 87%);
+  box-shadow: 0 4px 16px -2px rgba(100, 110, 140, 0.18), 0 2px 6px -1px rgba(100, 110, 140, 0.1);
+  color: hsl(220, 15%, 16%);
+}
+
+.admin-theme [role="menuitem"]:hover,
+.admin-theme [role="menuitem"]:focus,
+body:has(.admin-theme) [role="menuitem"]:hover,
+body:has(.admin-theme) [role="menuitem"]:focus {
+  background-color: hsl(220, 15%, 95%);
+  color: hsl(220, 15%, 16%);
+}
+
+body:has(.admin-theme) [role="dialog"],
+body:has(.admin-theme) [role="alertdialog"] {
+  background-color: hsl(0, 0%, 100%);
+  border-color: hsl(220, 15%, 87%);
+  box-shadow: 0 8px 40px -4px rgba(100, 110, 140, 0.18), 0 2px 12px -2px rgba(100, 110, 140, 0.1);
+  color: hsl(220, 15%, 16%);
+}
+
+body:has(.admin-theme) [role="listbox"],
+body:has(.admin-theme) [data-radix-select-viewport] {
+  background-color: hsl(0, 0%, 100%);
+  border-color: hsl(220, 15%, 87%);
+  color: hsl(220, 15%, 16%);
+}
+
+body:has(.admin-theme) [role="option"]:hover,
+body:has(.admin-theme) [role="option"][data-highlighted] {
+  background-color: hsl(220, 15%, 95%);
+  color: hsl(220, 15%, 16%);
+}
+
+.admin-theme table tbody tr:hover {
+  background-color: hsl(220, 15%, 97%);
+}
+
+.admin-theme input,
+.admin-theme textarea,
+.admin-theme select {
+  background-color: hsl(0, 0%, 100%);
+  border-color: hsl(220, 15%, 87%);
+  color: hsl(220, 15%, 16%);
+}
+
+.admin-theme input:focus,
+.admin-theme textarea:focus,
+.admin-theme select:focus {
+  border-color: hsl(263, 70%, 58%);
+  box-shadow: 0 0 0 3px rgba(110, 60, 220, 0.12);
 }
 
 @layer base {
@@ -295,12 +373,12 @@ body:has(.admin-theme) [role="alertdialog"] * {
     @apply text-2xl font-bold text-foreground mb-6;
   }
 
-  /* ✅ Fix: container giữ nguyên, bỏ snap để scroll mượt hơn */
+  
   .carousel-container {
     @apply flex gap-4 overflow-x-auto pb-4 scrollbar-hide;
   }
 
-  /* ✅ Fix: thêm width cố định để tất cả card đồng nhất */
+  
   .carousel-item {
     @apply flex-none w-[280px];
   }
@@ -378,7 +456,7 @@ body:has(.admin-theme) [role="alertdialog"] * {
     overflow: hidden;
   }
 
-  /* ===== Auth Buttons ===== */
+  
   .btn-login {
     position: relative;
     display: inline-flex;

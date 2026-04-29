@@ -76,7 +76,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 space-y-2 overflow-y-auto max-h-[calc(100vh-10rem)]">
+        <nav className="p-4 space-y-2 overflow-y-auto h-[calc(100vh-4rem)]">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path, item.exact);

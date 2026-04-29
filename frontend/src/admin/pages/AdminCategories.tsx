@@ -64,7 +64,7 @@ export default function AdminCategories() {
   });
   const itemsPerPage = 10;
 
-  // Server-side filtered & paginated
+  
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const paginatedCategories = categories;
 
@@ -77,7 +77,7 @@ export default function AdminCategories() {
         search: searchQuery || undefined,
       });
 
-      // categoryService returns ApiPagination<Category>
+      
       setCategories(res.result);
       setTotalItems(res.meta.total);
     } catch (err) {
@@ -89,7 +89,7 @@ export default function AdminCategories() {
 
   useEffect(() => {
     fetchCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [currentPage]);
 
   useEffect(() => {
@@ -98,7 +98,7 @@ export default function AdminCategories() {
       fetchCategories();
     }, 350);
     return () => clearTimeout(delay);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [searchQuery]);
 
   const handleAddCategory = () => {
@@ -199,16 +199,16 @@ export default function AdminCategories() {
             setFormData({ name: '', description: '', icon: '💻' });
             setIsAddDialogOpen(true);
           }} 
-          className="bg-admin-primary hover:bg-admin-primary/90"
+          className="bg-admin-primary hover:bg-admin-primary/90 text-white"
         >
           <Plus className="w-4 h-4 mr-2" />
           Thêm danh mục mới
         </Button>
       </div>
 
-      {/* Search */}
+      {}
       <div className="bg-admin-card border border-admin-border rounded-xl p-4">
-        <div className="relative max-w-md">
+        <div className="relative max-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted-foreground" />
           <Input
             placeholder="Tìm danh mục..."
@@ -234,7 +234,7 @@ export default function AdminCategories() {
                 setFormData({ name: '', description: '', icon: '💻' });
                 setIsAddDialogOpen(true);
               }}
-              className="bg-admin-primary hover:bg-admin-primary/90"
+              className="bg-admin-primary hover:bg-admin-primary/90 text-white"
             >
               <Plus className="w-4 h-4 mr-2" />
               Thêm danh mục đầu tiên
@@ -243,22 +243,22 @@ export default function AdminCategories() {
         </div>
       ) : (
         <>
-          {/* Desktop Table */}
+          {}
           <div className="bg-admin-card border border-admin-border rounded-xl overflow-hidden hidden md:block">
             <table className="w-full">
               <thead className="bg-admin-accent">
                 <tr>
-                  <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground">STT</th>
+                  <th className="text-center py-4 px-4 text-sm font-medium text-admin-muted-foreground w-16">STT</th>
                   <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground">Tên danh mục</th>
-                  <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground">Slug</th>
-                  <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground">Số khóa học</th>
-                  <th className="text-right py-4 px-4 text-sm font-medium text-admin-muted-foreground">Hành động</th>
+                  <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground hidden md:table-cell">Slug</th>
+                  <th className="text-center py-4 px-4 text-sm font-medium text-admin-muted-foreground">Số khóa học</th>
+                  <th className="text-center py-4 px-4 text-sm font-medium text-admin-muted-foreground">Hành động</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedCategories.map((category, index) => (
                   <tr key={category._id} className="border-t border-admin-border hover:bg-admin-accent/50">
-                    <td className="py-4 px-4 text-sm text-admin-muted-foreground">
+                    <td className="py-4 px-4 text-sm text-admin-muted-foreground text-center">
                       {(currentPage - 1) * itemsPerPage + index + 1}
                     </td>
                     <td className="py-4 px-4">
@@ -272,10 +272,10 @@ export default function AdminCategories() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-sm text-admin-muted-foreground font-mono">{category.slug}</td>
-                    <td className="py-4 px-4 text-sm text-admin-foreground">{category.totalCourses}</td>
+                    <td className="py-4 px-4 text-sm text-admin-muted-foreground font-mono hidden md:table-cell">{category.slug}</td>
+                    <td className="py-4 px-4 text-sm text-admin-foreground text-center">{category.totalCourses}</td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center justify-end">
+                      <div className="flex items-center justify-center">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -307,7 +307,7 @@ export default function AdminCategories() {
               </tbody>
             </table>
 
-            {/* Pagination */}
+            {}
             <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-admin-border gap-4">
               <p className="text-sm text-admin-muted-foreground">
                 Hiển thị {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} / {totalItems}
@@ -335,7 +335,7 @@ export default function AdminCategories() {
             </div>
           </div>
 
-          {/* Mobile Cards */}
+          {}
           <div className="space-y-4 md:hidden">
             {paginatedCategories.map((category, index) => (
               <div key={category._id} className="bg-admin-card border border-admin-border rounded-xl p-4">
@@ -382,7 +382,7 @@ export default function AdminCategories() {
               </div>
             ))}
 
-            {/* Mobile Pagination */}
+            {}
             <div className="flex items-center justify-between p-4 bg-admin-card border border-admin-border rounded-xl">
               <p className="text-sm text-admin-muted-foreground">
                 {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} / {totalItems}
@@ -412,40 +412,40 @@ export default function AdminCategories() {
         </>
       )}
 
-      {/* View Dialog */}
+      {}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="bg-[hsl(220,25%,14%)] border-[hsl(220,20%,30%)] sm:max-w-md">
+        <DialogContent className="bg-white border-[hsl(220,15%,87%)] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white">Chi tiết danh mục</DialogTitle>
+            <DialogTitle className="text-gray-800">Chi tiết danh mục</DialogTitle>
           </DialogHeader>
           {selectedCategory && (
             <div className="space-y-4 py-4">
               <div className="flex items-center gap-4">
                 <span className="text-5xl">{selectedCategory.icon}</span>
                 <div>
-                  <h3 className="text-xl font-semibold text-white">{selectedCategory.name}</h3>
-                  <p className="text-sm text-slate-400 font-mono">{selectedCategory.slug}</p>
+                  <h3 className="text-xl font-semibold text-gray-800">{selectedCategory.name}</h3>
+                  <p className="text-sm text-gray-500 font-mono">{selectedCategory.slug}</p>
                 </div>
               </div>
-              <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
-                <p className="text-xs text-slate-400 mb-1">Mô tả</p>
-                <p className="text-white">{selectedCategory.description || 'Chưa có mô tả'}</p>
+              <div className="bg-[hsl(220,15%,96%)] border border-[hsl(220,15%,87%)] p-4 rounded-lg">
+                <p className="text-xs text-gray-500 mb-1">Mô tả</p>
+                <p className="text-gray-800">{selectedCategory.description || 'Chưa có mô tả'}</p>
               </div>
-              <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
-                <p className="text-xs text-slate-400 mb-1">Số khóa học</p>
-                <p className="text-white font-semibold">{selectedCategory.totalCourses} khóa học</p>
+              <div className="bg-[hsl(220,15%,96%)] border border-[hsl(220,15%,87%)] p-4 rounded-lg">
+                <p className="text-xs text-gray-500 mb-1">Số khóa học</p>
+                <p className="text-gray-800">{selectedCategory.totalCourses} khóa học</p>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)} className="border-slate-600 text-white hover:bg-slate-700">
+            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)} className="border border-[hsl(220,15%,80%)] text-gray-700 bg-white hover:bg-[hsl(220,15%,93%)] hover:text-gray-900 shadow-sm">
               Đóng
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Add Dialog */}
+      {}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="admin-dialog sm:max-w-md">
           <DialogHeader>
@@ -461,7 +461,7 @@ export default function AdminCategories() {
                 placeholder="Ví dụ: Lập trình Web"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
+                className="bg-white border-[hsl(220,15%,87%)] text-gray-800"
               />
             </div>
             <div className="space-y-2">
@@ -470,7 +470,7 @@ export default function AdminCategories() {
                 placeholder="Mô tả về danh mục này..."
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white resize-none"
+                className="bg-white border-[hsl(220,15%,87%)] text-gray-800 resize-none"
                 rows={3}
               />
             </div>
@@ -485,7 +485,7 @@ export default function AdminCategories() {
                     className={`w-10 h-10 text-xl rounded-lg border transition-all ${
                       formData.icon === icon
                         ? 'border-primary bg-primary/20'
-                        : 'border-[hsl(220,20%,28%)] hover:border-primary/50'
+                        : 'border-[hsl(220,15%,87%)] hover:border-primary/50'
                     }`}
                   >
                     {icon}
@@ -495,17 +495,17 @@ export default function AdminCategories() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]">
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="border border-[hsl(220,15%,80%)] text-gray-700 bg-white hover:bg-[hsl(220,15%,93%)] hover:text-gray-900 shadow-sm">
               Hủy
             </Button>
-            <Button onClick={handleAddCategory} className="bg-admin-primary hover:bg-admin-primary/90">
+            <Button onClick={handleAddCategory} className="bg-admin-primary hover:bg-admin-primary/90 text-white">
               Lưu
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
+      {}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="admin-dialog sm:max-w-md">
           <DialogHeader>
@@ -521,7 +521,7 @@ export default function AdminCategories() {
                 placeholder="Ví dụ: Lập trình Web"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
+                className="bg-white border-[hsl(220,15%,87%)] text-gray-800"
               />
             </div>
             <div className="space-y-2">
@@ -530,7 +530,7 @@ export default function AdminCategories() {
                 placeholder="Mô tả về danh mục này..."
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white resize-none"
+                className="bg-white border-[hsl(220,15%,87%)] text-gray-800 resize-none"
                 rows={3}
               />
             </div>
@@ -545,7 +545,7 @@ export default function AdminCategories() {
                     className={`w-10 h-10 text-xl rounded-lg border transition-all ${
                       formData.icon === icon
                         ? 'border-primary bg-primary/20'
-                        : 'border-[hsl(220,20%,28%)] hover:border-primary/50'
+                        : 'border-[hsl(220,15%,87%)] hover:border-primary/50'
                     }`}
                   >
                     {icon}
@@ -555,17 +555,17 @@ export default function AdminCategories() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="border border-[hsl(220,15%,80%)] text-gray-700 bg-white hover:bg-[hsl(220,15%,93%)] hover:text-gray-900 shadow-sm">
               Hủy
             </Button>
-            <Button onClick={handleEditCategory} className="bg-admin-primary hover:bg-admin-primary/90">
+            <Button onClick={handleEditCategory} className="bg-admin-primary hover:bg-admin-primary/90 text-white">
               Lưu
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
+      {}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="admin-dialog">
           <AlertDialogHeader>
@@ -576,7 +576,7 @@ export default function AdminCategories() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]">Hủy</AlertDialogCancel>
+            <AlertDialogCancel className="border-[hsl(220,15%,87%)] text-gray-700 bg-white hover:bg-[hsl(220,15%,93%)] hover:text-gray-900">Hủy</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700 text-white">
               Xóa
             </AlertDialogAction>

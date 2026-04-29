@@ -219,7 +219,7 @@ const showCountEnd = Math.min(currentPage * itemsPerPage, totalItems);
             <SelectTrigger className="w-full md:w-48 bg-admin-accent border-admin-border text-admin-foreground">
               <SelectValue placeholder="Danh mục" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border-[hsl(220,15%,87%)] text-gray-800 shadow-lg">
               <SelectItem value="all">Tất cả danh mục</SelectItem>
               {categories.map(cat => (
                 <SelectItem key={cat._id} value={cat.name}>{cat.name}</SelectItem>
@@ -230,7 +230,7 @@ const showCountEnd = Math.min(currentPage * itemsPerPage, totalItems);
             <SelectTrigger className="w-full md:w-40 bg-admin-accent border-admin-border text-admin-foreground">
               <SelectValue placeholder="Cấp độ" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border-[hsl(220,15%,87%)] text-gray-800 shadow-lg">
               <SelectItem value="all">Tất cả</SelectItem>
               {/* ✅ Dùng enum đúng của backend */}
               <SelectItem value="BASIC">Cơ bản</SelectItem>
@@ -259,10 +259,10 @@ const showCountEnd = Math.min(currentPage * itemsPerPage, totalItems);
               <tr>
                 <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground">Khoá học</th>
                 <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground hidden lg:table-cell">Danh mục</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground">Giá</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground hidden md:table-cell">Học viên</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-admin-muted-foreground hidden sm:table-cell">Cấp độ</th>
-                <th className="text-right py-4 px-4 text-sm font-medium text-admin-muted-foreground">Hành động</th>
+                <th className="text-right py-4 px-4 text-sm font-medium text-admin-muted-foreground min-w-[140px]">Giá</th>
+                <th className="text-center py-4 px-4 text-sm font-medium text-admin-muted-foreground hidden md:table-cell min-w-[100px]">Học viên</th>
+                <th className="text-center py-4 px-4 text-sm font-medium text-admin-muted-foreground hidden sm:table-cell">Cấp độ</th>
+                <th className="text-center py-4 px-4 text-sm font-medium text-admin-muted-foreground">Hành động</th>
               </tr>
             </thead>
             <tbody>
@@ -297,7 +297,7 @@ const showCountEnd = Math.min(currentPage * itemsPerPage, totalItems);
                     <td className="py-4 px-4 text-sm text-admin-muted-foreground hidden lg:table-cell">
                       {course.category || course.categoryName || '—'}
                     </td>
-                    <td className="py-4 px-4">
+                    <td className="py-4 px-4 text-right">
                       <div>
                         <p className="text-sm font-medium text-admin-foreground">
                           {formatCurrency(course.discountPrice || course.price || 0)}
@@ -309,15 +309,15 @@ const showCountEnd = Math.min(currentPage * itemsPerPage, totalItems);
                         )}
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-sm text-admin-foreground hidden md:table-cell">
+                    <td className="py-4 px-4 text-sm text-admin-foreground hidden md:table-cell text-center">
                       {(course.students || course.totalStudents || 0).toLocaleString()}
                     </td>
-                    <td className="py-4 px-4 hidden sm:table-cell">
+                    <td className="py-4 px-4 hidden sm:table-cell text-center">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getLevelClass(course.level)}`}>
                         {getLevelLabel(course.level)}
                       </span>
                     </td>
-                    <td className="py-4 px-4 text-right">
+                    <td className="py-4 px-4 text-center">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -383,12 +383,12 @@ const showCountEnd = Math.min(currentPage * itemsPerPage, totalItems);
       {/* View Course Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={(open) => { setIsViewDialogOpen(open); if (!open) setSelectedCourse(null); }}>
         <DialogContent
-          className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-          style={{ background: '#0f1117', border: '1px solid #1e2230' }}
+          className="admin-dialog sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          
         >
           {/* Loading skeleton */}
           {loadingDetail && !selectedCourse && (
-            <div className="flex items-center justify-center h-64" style={{ color: '#475569' }}>
+            <div className="flex items-center justify-center h-64" style={{ color: '#6b7280' }}>
               <svg className="animate-spin w-6 h-6 mr-2" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
@@ -400,18 +400,18 @@ const showCountEnd = Math.min(currentPage * itemsPerPage, totalItems);
           {selectedCourse && (
             <>
               {/* Banner / Thumbnail full-width */}
-              <div className="relative w-full h-52 overflow-hidden rounded-t-xl">
+              <div className="relative w-full h-56 overflow-hidden rounded-t-xl">
                 <img
                   src={selectedCourse.banner || selectedCourse.thumbnail || PLACEHOLDER_IMG}
                   alt={selectedCourse.title}
                   className="w-full h-full object-cover"
                   onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMG; }}
                 />
-                {/* gradient overlay phía dưới ảnh */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0f1117] via-transparent to-transparent" />
+                {/* gradient overlay phía dưới ảnh - mờ dần tự nhiên */}
+                <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-white via-white/20 to-transparent" />
                 {/* loading spinner overlay khi đang fetch detail */}
                 {loadingDetail && (
-                  <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(15,17,23,0.5)' }}>
+                  <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.6)' }}>
                     <svg className="animate-spin w-8 h-8" fill="none" viewBox="0 0 24 24" style={{ color: '#6366f1' }}>
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
@@ -430,11 +430,11 @@ const showCountEnd = Math.min(currentPage * itemsPerPage, totalItems);
                   >
                     Chi tiết khóa học
                   </p>
-                  <h3 className="text-xl font-bold leading-snug" style={{ color: '#f1f5f9' }}>
+                  <h3 className="text-xl font-bold leading-snug" style={{ color: '#111827' }}>
                     {selectedCourse.title}
                   </h3>
                   {(selectedCourse.smallDescription || selectedCourse.subtitle) && (
-                    <p className="text-sm mt-1" style={{ color: '#94a3b8' }}>
+                    <p className="text-sm mt-1" style={{ color: '#6b7280' }}>
                       {selectedCourse.smallDescription || selectedCourse.subtitle}
                     </p>
                   )}
@@ -451,14 +451,14 @@ const showCountEnd = Math.min(currentPage * itemsPerPage, totalItems);
                       style={{
                         border: '1px solid',
                         borderColor:
-                          selectedCourse.level === 'ADVANCED' ? 'rgba(248,113,113,0.4)' :
-                          selectedCourse.level === 'INTERMEDIATE' ? 'rgba(251,191,36,0.4)' : 'rgba(74,222,128,0.4)',
+                          selectedCourse.level === 'ADVANCED' ? 'rgba(220,38,38,0.3)' :
+                          selectedCourse.level === 'INTERMEDIATE' ? 'rgba(202,138,4,0.3)' : 'rgba(22,163,74,0.3)',
                         background:
-                          selectedCourse.level === 'ADVANCED' ? 'rgba(248,113,113,0.1)' :
-                          selectedCourse.level === 'INTERMEDIATE' ? 'rgba(251,191,36,0.1)' : 'rgba(74,222,128,0.1)',
+                          selectedCourse.level === 'ADVANCED' ? 'rgba(220,38,38,0.08)' :
+                          selectedCourse.level === 'INTERMEDIATE' ? 'rgba(202,138,4,0.08)' : 'rgba(22,163,74,0.08)',
                         color:
-                          selectedCourse.level === 'ADVANCED' ? '#f87171' :
-                          selectedCourse.level === 'INTERMEDIATE' ? '#fbbf24' : '#4ade80',
+                          selectedCourse.level === 'ADVANCED' ? '#dc2626' :
+                          selectedCourse.level === 'INTERMEDIATE' ? '#ca8a04' : '#16a34a',
                       }}
                     >
                       {getLevelLabel(selectedCourse.level)}
@@ -467,9 +467,9 @@ const showCountEnd = Math.min(currentPage * itemsPerPage, totalItems);
                       <span
                         className="text-xs px-2.5 py-1 rounded-full font-medium"
                         style={{
-                          background: 'rgba(139,92,246,0.12)',
-                          border: '1px solid rgba(139,92,246,0.35)',
-                          color: '#c4b5fd',
+                          background: 'rgba(99,102,241,0.1)',
+                          border: '1px solid rgba(99,102,241,0.3)',
+                          color: '#6366f1',
                         }}
                       >
                         ✨ Nổi bật
@@ -479,9 +479,9 @@ const showCountEnd = Math.min(currentPage * itemsPerPage, totalItems);
                       <span
                         className="text-xs px-2.5 py-1 rounded-full font-medium"
                         style={{
-                          background: 'rgba(234,179,8,0.12)',
-                          border: '1px solid rgba(234,179,8,0.35)',
-                          color: '#fde68a',
+                          background: 'rgba(202,138,4,0.08)',
+                          border: '1px solid rgba(202,138,4,0.3)',
+                          color: '#b45309',
                         }}
                       >
                         🔥 Bán chạy
@@ -494,12 +494,12 @@ const showCountEnd = Math.min(currentPage * itemsPerPage, totalItems);
                 {selectedCourse.description && (
                   <div
                     className="rounded-xl p-4"
-                    style={{ background: '#161b27', border: '1px solid #1e2a3a' }}
+                    style={{ background: 'hsl(220,15%,96%)', border: '1px solid hsl(220,15%,87%)' }}
                   >
-                    <p className="text-[11px] uppercase tracking-wider font-semibold mb-2" style={{ color: '#475569' }}>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold mb-2" style={{ color: '#6b7280' }}>
                       Mô tả
                     </p>
-                    <p className="text-sm leading-relaxed line-clamp-3" style={{ color: '#cbd5e1' }}>
+                    <p className="text-sm leading-relaxed line-clamp-3" style={{ color: '#374151' }}>
                       {selectedCourse.description}
                     </p>
                   </div>
@@ -542,19 +542,19 @@ const showCountEnd = Math.min(currentPage * itemsPerPage, totalItems);
                       key={stat.label}
                       className="rounded-xl p-3.5"
                       style={{
-                        background: 'linear-gradient(135deg, #161b27 0%, #1a2035 100%)',
-                        border: '1px solid #252d42',
+                        background: 'hsl(220,15%,96%)',
+                        border: '1px solid hsl(220,15%,87%)',
                       }}
                     >
                       <div className="flex items-center gap-1.5 mb-1.5">
                         <span className="text-sm">{stat.icon}</span>
-                        <p className="text-[11px] uppercase tracking-wider font-semibold" style={{ color: '#475569' }}>
+                        <p className="text-[11px] uppercase tracking-wider font-semibold" style={{ color: '#6b7280' }}>
                           {stat.label}
                         </p>
                       </div>
                       <p
                         className={`text-sm font-semibold ${(stat as any).strikethrough ? 'line-through' : ''}`}
-                        style={{ color: (stat as any).green ? '#4ade80' : '#e2e8f0' }}
+                        style={{ color: (stat as any).green ? '#16a34a' : '#111827' }}
                       >
                         {stat.value}
                       </p>
@@ -567,9 +567,9 @@ const showCountEnd = Math.min(currentPage * itemsPerPage, totalItems);
                   <button
                     onClick={() => setIsViewDialogOpen(false)}
                     className="px-5 py-2 rounded-lg text-sm font-medium transition-all"
-                    style={{ background: '#1e2230', border: '1px solid #2d3550', color: '#94a3b8' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#252d42'; (e.currentTarget as HTMLButtonElement).style.color = '#f1f5f9'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#1e2230'; (e.currentTarget as HTMLButtonElement).style.color = '#94a3b8'; }}
+                    style={{ background: '#ffffff', border: '1px solid hsl(220,15%,80%)', color: '#374151' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'hsl(220,15%,92%)'; (e.currentTarget as HTMLButtonElement).style.color = '#111827'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#ffffff'; (e.currentTarget as HTMLButtonElement).style.color = '#374151'; }}
                   >
                     Đóng
                   </button>
