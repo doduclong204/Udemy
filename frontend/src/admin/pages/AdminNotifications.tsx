@@ -32,6 +32,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -63,15 +70,15 @@ const formatDateTime = (dateString: string | null | undefined) => {
 };
 
 const INPUT_CLASS =
-  "bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white placeholder:text-slate-500";
+  "bg-white border-[hsl(220,15%,87%)] text-gray-800 placeholder:text-gray-400 focus:border-[#6366f1] transition-colors";
 const BTN_CANCEL =
-  "border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]";
+  "border-[hsl(220,15%,80%)] text-gray-700 hover:bg-[hsl(220,15%,95%)]";
 const DROPDOWN_BG =
-  "bg-[hsl(220,25%,12%)] border border-[hsl(220,20%,28%)] rounded-lg shadow-xl z-[200]";
+  "bg-white border border-[hsl(220,15%,87%)] rounded-xl shadow-lg z-[9999]";
 const ITEM_BASE =
-  "w-full text-left px-3 py-2 text-sm transition-colors cursor-pointer";
-const ITEM_DEFAULT = "text-slate-300 hover:bg-[hsl(220,20%,25%)]";
-const ITEM_SEL = "bg-admin-primary/20 text-white";
+  "w-full text-left px-3 py-2.5 text-sm transition-colors cursor-pointer rounded-lg";
+const ITEM_DEFAULT = "text-gray-600 hover:bg-[hsl(220,15%,95%)] hover:text-gray-900";
+const ITEM_SEL = "bg-[#6366f1]/10 text-[#6366f1] font-medium";
 
 const isQuestionNotif = (n: NotificationResponse) =>
   n.relatedType === "QUESTION" || n.relatedType === "COURSE_QUESTION";
@@ -183,15 +190,15 @@ function CustomSelect<T extends string>({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`w-full flex items-center justify-between rounded-md border px-3 py-2 text-sm ${INPUT_CLASS}`}
+        className={`w-full flex items-center justify-between rounded-lg border px-3 py-2.5 text-sm ${INPUT_CLASS}`}
       >
         <span>{selected?.label}</span>
         <ChevronDown
-          className={`w-3.5 h-3.5 text-slate-500 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`w-3.5 h-3.5 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
         />
       </button>
       {open && (
-        <div className={`absolute top-full mt-1 w-full ${DROPDOWN_BG}`}>
+        <div className={`absolute top-full mt-1.5 w-full p-1 ${DROPDOWN_BG}`}>
           {options.map((opt) => (
             <button
               key={opt.value}
@@ -275,7 +282,7 @@ function NotificationFormDialog({
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="admin-dialog sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-white">
+          <DialogTitle className="text-gray-800">
             {isEdit ? "Chỉnh sửa thông báo" : "Tạo thông báo mới"}
           </DialogTitle>
           <DialogDescription className="text-slate-400">
@@ -287,7 +294,7 @@ function NotificationFormDialog({
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label className="text-white">
+            <Label className="text-gray-800">
               Tiêu đề <span className="text-red-400">*</span>
             </Label>
             <Input
@@ -298,7 +305,7 @@ function NotificationFormDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-white">
+            <Label className="text-gray-800">
               Nội dung <span className="text-red-400">*</span>
             </Label>
             <Textarea
@@ -311,7 +318,7 @@ function NotificationFormDialog({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-white">Loại thông báo</Label>
+              <Label className="text-gray-800">Loại thông báo</Label>
               <CustomSelect<NotificationType>
                 value={form.type}
                 onChange={(v) => set("type", v)}
@@ -319,7 +326,7 @@ function NotificationFormDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-white">Đối tượng</Label>
+              <Label className="text-gray-800">Đối tượng</Label>
               <CustomSelect<NotificationTarget>
                 value={form.targetType}
                 onChange={(v) => set("targetType", v)}
@@ -599,16 +606,20 @@ export default function AdminNotifications() {
               className="pl-10 bg-admin-accent border-admin-border text-admin-foreground"
             />
           </div>
-          <div className="relative w-full sm:w-44">
-            <CustomSelect<NotificationStatus | "all">
+          <div className="w-full sm:w-44">
+            <Select
               value={statusFilter}
-              onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
-              options={[
-                { value: "all", label: "Tất cả" },
-                { value: "SENT", label: "Đã gửi" },
-                { value: "DRAFT", label: "Bản nháp" },
-              ]}
-            />
+              onValueChange={(v) => { setStatusFilter(v as NotificationStatus | "all"); setCurrentPage(1); }}
+            >
+              <SelectTrigger className="bg-admin-accent border-admin-border text-admin-foreground">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-[hsl(220,15%,87%)] text-gray-800 shadow-lg">
+                <SelectItem value="all">Tất cả</SelectItem>
+                <SelectItem value="SENT">Đã gửi</SelectItem>
+                <SelectItem value="DRAFT">Bản nháp</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
@@ -635,7 +646,7 @@ export default function AdminNotifications() {
                     <th
                       key={h}
                       className={`py-4 px-4 text-sm font-medium text-admin-muted-foreground
-                        ${i === 5 ? "text-right" : "text-left"}
+                        ${i === 5 ? "text-center" : i === 1 || i === 3 || i === 4 ? "text-center" : "text-left"}
                         ${i === 1 ? "hidden md:table-cell" : ""}
                         ${i === 2 ? "hidden lg:table-cell" : ""}
                         ${i === 3 ? "hidden sm:table-cell" : ""}
@@ -663,7 +674,7 @@ export default function AdminNotifications() {
                           <p className="text-xs text-admin-muted-foreground mt-1">{formatDateTime(n.createdAt)}</p>
                         </div>
                       </td>
-                      <td className="py-4 px-4 hidden md:table-cell">
+                      <td className="py-4 px-4 hidden md:table-cell text-center">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${TYPE_COLORS[n.type]}`}>
                           {TYPE_LABELS[n.type]}
                         </span>
@@ -671,7 +682,7 @@ export default function AdminNotifications() {
                       <td className="py-4 px-4 hidden lg:table-cell">
                         <TargetCell n={n} />
                       </td>
-                      <td className="py-4 px-4 hidden sm:table-cell">
+                      <td className="py-4 px-4 hidden sm:table-cell text-center">
                         {isQuestionNotif(n) ? (
                           answeredMap[n.relatedId ?? ""] ? (
                             <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-500/10 text-green-400">
@@ -688,7 +699,7 @@ export default function AdminNotifications() {
                           </span>
                         )}
                       </td>
-                      <td className="py-4 px-4 hidden lg:table-cell">
+                      <td className="py-4 px-4 hidden lg:table-cell text-center">
                         <StatsCell n={n} />
                       </td>
                       <td className="py-4 px-4">
@@ -797,17 +808,17 @@ export default function AdminNotifications() {
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="admin-dialog sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-white">Chi tiết thông báo</DialogTitle>
+            <DialogTitle className="text-gray-800">Chi tiết thông báo</DialogTitle>
           </DialogHeader>
           {selected && (
             <div className="space-y-4 py-4">
-              <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
+              <div className="bg-[hsl(220,15%,96%)] border border-[hsl(220,15%,87%)] p-4 rounded-lg">
                 <p className="text-xs text-slate-400 mb-1">Tiêu đề</p>
-                <p className="text-white text-lg font-semibold">{selected.title}</p>
+                <p className="text-gray-900 text-lg font-semibold">{selected.title}</p>
               </div>
-              <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
+              <div className="bg-[hsl(220,15%,96%)] border border-[hsl(220,15%,87%)] p-4 rounded-lg">
                 <p className="text-xs text-slate-400 mb-1">Nội dung</p>
-                <p className="text-white">{selected.message}</p>
+                <p className="text-gray-800">{selected.message}</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {[
@@ -828,23 +839,23 @@ export default function AdminNotifications() {
                   },
                   { label: "Ngày tạo", value: formatDateTime(selected.createdAt) },
                 ].map((f) => (
-                  <div key={f.label} className="bg-slate-700/50 border border-slate-600/50 p-3 rounded-lg">
+                  <div key={f.label} className="bg-[hsl(220,15%,96%)] border border-[hsl(220,15%,87%)] p-3 rounded-lg">
                     <p className="text-xs text-slate-400 mb-1">{f.label}</p>
-                    <p className="text-sm text-white font-medium">{f.value}</p>
+                    <p className="text-sm text-gray-800 font-medium">{f.value}</p>
                   </div>
                 ))}
               </div>
 
               {!isQuestionNotif(selected) && selected.status === "SENT" && selected.totalSent > 0 && (
-                <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
+                <div className="bg-[hsl(220,15%,96%)] border border-[hsl(220,15%,87%)] p-4 rounded-lg">
                   <p className="text-xs text-slate-400 mb-2">Thống kê</p>
                   <div className="flex justify-between mb-2">
                     <span className="text-slate-400 text-sm">Đã đọc</span>
-                    <span className="text-white font-semibold text-sm">
+                    <span className="text-gray-800 font-semibold text-sm">
                       {(selected.totalRead ?? 0).toLocaleString()} / {selected.totalSent.toLocaleString()}
                     </span>
                   </div>
-                  <div className="w-full bg-slate-600/50 rounded-full h-2">
+                  <div className="w-full bg-[hsl(220,15%,87%)] rounded-full h-2">
                     <div
                       className="bg-admin-primary h-2 rounded-full"
                       style={{ width: `${((selected.totalRead ?? 0) / selected.totalSent) * 100}%` }}
@@ -875,7 +886,7 @@ export default function AdminNotifications() {
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent className="admin-dialog">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Xác nhận xóa thông báo</AlertDialogTitle>
+            <AlertDialogTitle className="text-gray-800">Xác nhận xóa thông báo</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-400">
               Bạn có chắc chắn muốn xóa thông báo "{selected?.title}"? Hành động này không thể hoàn tác.
             </AlertDialogDescription>

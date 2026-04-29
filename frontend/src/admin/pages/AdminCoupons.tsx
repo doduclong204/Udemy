@@ -109,7 +109,7 @@ export default function AdminCoupons() {
 
   useEffect(() => {
     fetchCoupons();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [currentPage, statusFilter]);
 
   useEffect(() => {
@@ -118,7 +118,7 @@ export default function AdminCoupons() {
       fetchCoupons();
     }, 350);
     return () => clearTimeout(delay);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [searchQuery]);
 
   const handleCopyCode = (code: string) => {
@@ -266,10 +266,10 @@ export default function AdminCoupons() {
         </Button>
       </div>
 
-      {/* Search & Filter */}
+      {}
       <div className="bg-admin-card border border-admin-border rounded-xl p-4">
         <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 max-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted-foreground" />
             <Input
               placeholder="Tìm mã giảm giá..."
@@ -282,7 +282,7 @@ export default function AdminCoupons() {
             <SelectTrigger className="w-full sm:w-48 bg-admin-accent border-admin-border text-admin-foreground">
               <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border-[hsl(220,15%,87%)] text-gray-800 shadow-lg">
               <SelectItem value="all">Tất cả trạng thái</SelectItem>
               <SelectItem value="ACTIVE">Hoạt động</SelectItem>
               <SelectItem value="EXPIRED">Hết hạn</SelectItem>
@@ -292,7 +292,7 @@ export default function AdminCoupons() {
         </div>
       </div>
 
-      {/* Cards Grid */}
+      {}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {paginatedCoupons.map((coupon) => (
           <div
@@ -407,7 +407,7 @@ export default function AdminCoupons() {
         ))}
       </div>
 
-      {/* Pagination */}
+      {}
       {paginatedCoupons.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-admin-card border border-admin-border rounded-xl gap-4">
           <p className="text-sm text-admin-muted-foreground">
@@ -437,33 +437,33 @@ export default function AdminCoupons() {
         </div>
       )}
 
-      {/* View Dialog */}
+      {}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="bg-[hsl(220,25%,14%)] border-[hsl(220,20%,30%)] sm:max-w-md">
+        <DialogContent className="bg-white border-[hsl(220,15%,87%)] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white">
+            <DialogTitle className="text-gray-800">
               Chi tiết mã giảm giá
             </DialogTitle>
           </DialogHeader>
           {selectedCoupon && (
             <div className="space-y-4 py-4">
-              <div className="text-center p-4 bg-slate-700/50 border border-slate-600/50 rounded-lg border-dashed">
+              <div className="text-center p-4 bg-[hsl(220,15%,96%)] border border-[hsl(220,15%,87%)] rounded-lg border-dashed">
                 <p className="text-3xl font-bold text-admin-primary">
                   {selectedCoupon.code}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">Mức giảm</p>
-                  <p className="text-white text-lg font-semibold">
+                <div className="bg-[hsl(220,15%,96%)] border border-[hsl(220,15%,87%)] p-4 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">Mức giảm</p>
+                  <p className="text-gray-800">
                     {selectedCoupon.discountType === "percentage"
                       ? `${selectedCoupon.discountValue}%`
                       : formatCurrency(selectedCoupon.discountValue)}
                   </p>
                 </div>
-                <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">Loại</p>
-                  <p className="text-white">
+                <div className="bg-[hsl(220,15%,96%)] border border-[hsl(220,15%,87%)] p-4 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">Loại</p>
+                  <p className="text-gray-800">
                     {selectedCoupon.discountType === "percentage"
                       ? "Phần trăm"
                       : "Số tiền cố định"}
@@ -471,23 +471,23 @@ export default function AdminCoupons() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">Đã sử dụng</p>
-                  <p className="text-white">
+                <div className="bg-[hsl(220,15%,96%)] border border-[hsl(220,15%,87%)] p-4 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">Đã sử dụng</p>
+                  <p className="text-gray-800">
                     {selectedCoupon.usedCount} / {selectedCoupon.maxUsage}
                   </p>
                 </div>
-                <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">Đơn tối thiểu</p>
-                  <p className="text-white">
+                <div className="bg-[hsl(220,15%,96%)] border border-[hsl(220,15%,87%)] p-4 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">Đơn tối thiểu</p>
+                  <p className="text-gray-800">
                     {formatCurrency(selectedCoupon.minOrderAmount)}
                   </p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">Hết hạn</p>
-                  <p className="text-white">
+                <div className="bg-[hsl(220,15%,96%)] border border-[hsl(220,15%,87%)] p-4 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">Hết hạn</p>
+                  <p className="text-gray-800">
                     {selectedCoupon.expiresAt
                       ? new Date(selectedCoupon.expiresAt).toLocaleString(
                           "vi-VN",
@@ -496,15 +496,15 @@ export default function AdminCoupons() {
                       : "—"}
                   </p>
                 </div>
-                <div className="bg-slate-700/50 border border-slate-600/50 p-4 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">Trạng thái</p>
+                <div className="bg-[hsl(220,15%,96%)] border border-[hsl(220,15%,87%)] p-4 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">Trạng thái</p>
                   <p
                     className={`font-medium ${
                       selectedCoupon.couponStatus === CouponStatus.ACTIVE
                         ? "text-green-400"
                         : selectedCoupon.couponStatus === CouponStatus.EXPIRED
                           ? "text-red-400"
-                          : "text-slate-400"
+                          : "text-gray-400"
                     }`}
                   >
                     {getStatusDisplay(selectedCoupon.couponStatus)}
@@ -517,7 +517,7 @@ export default function AdminCoupons() {
             <Button
               variant="outline"
               onClick={() => setIsViewDialogOpen(false)}
-              className="border-slate-600 text-white hover:bg-slate-700"
+              className="border-[hsl(220,15%,87%)] text-gray-700 bg-white hover:bg-[hsl(220,15%,93%)] hover:text-gray-900"
             >
               Đóng
             </Button>
@@ -525,7 +525,7 @@ export default function AdminCoupons() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Dialog */}
+      {}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="admin-dialog sm:max-w-md">
           <DialogHeader>
@@ -541,7 +541,7 @@ export default function AdminCoupons() {
                   setFormData({ ...formData, code: e.target.value })
                 }
                 placeholder="VD: SUMMER25"
-                className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white uppercase"
+                className="mt-1.5 bg-white border-[hsl(220,15%,87%)] text-gray-800 uppercase"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -554,7 +554,7 @@ export default function AdminCoupons() {
                     setFormData({ ...formData, discountValue: e.target.value })
                   }
                   placeholder="VD: 25"
-                  className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
+                  className="mt-1.5 bg-white border-[hsl(220,15%,87%)] text-gray-800"
                 />
               </div>
               <div>
@@ -565,10 +565,10 @@ export default function AdminCoupons() {
                     setFormData({ ...formData, discountType: value })
                   }
                 >
-                  <SelectTrigger className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white">
+                  <SelectTrigger className="mt-1.5 bg-white border-[hsl(220,15%,87%)] text-gray-800">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white border-[hsl(220,15%,87%)] text-gray-800 shadow-lg">
                     <SelectItem value="percentage">Phần trăm (%)</SelectItem>
                     <SelectItem value="fixed">Số tiền cố định (VNĐ)</SelectItem>
                   </SelectContent>
@@ -585,7 +585,7 @@ export default function AdminCoupons() {
                     setFormData({ ...formData, maxUsage: e.target.value })
                   }
                   placeholder="VD: 100"
-                  className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
+                  className="mt-1.5 bg-white border-[hsl(220,15%,87%)] text-gray-800"
                 />
               </div>
               <div>
@@ -597,7 +597,7 @@ export default function AdminCoupons() {
                     setFormData({ ...formData, minOrderAmount: e.target.value })
                   }
                   placeholder="VD: 500000"
-                  className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
+                  className="mt-1.5 bg-white border-[hsl(220,15%,87%)] text-gray-800"
                 />
               </div>
             </div>
@@ -609,7 +609,7 @@ export default function AdminCoupons() {
                 onChange={(e) =>
                   setFormData({ ...formData, expiresAt: e.target.value })
                 }
-                className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
+                className="mt-1.5 bg-white border-[hsl(220,15%,87%)] text-gray-800"
               />
             </div>
           </div>
@@ -617,7 +617,7 @@ export default function AdminCoupons() {
             <Button
               variant="outline"
               onClick={() => setIsAddDialogOpen(false)}
-              className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]"
+              className="border-[hsl(220,15%,87%)] text-gray-700 bg-white hover:bg-[hsl(220,15%,93%)] hover:text-gray-900"
             >
               Hủy
             </Button>
@@ -631,7 +631,7 @@ export default function AdminCoupons() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
+      {}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="admin-dialog sm:max-w-md">
           <DialogHeader>
@@ -649,7 +649,7 @@ export default function AdminCoupons() {
                   setFormData({ ...formData, code: e.target.value })
                 }
                 placeholder="VD: SUMMER25"
-                className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white uppercase"
+                className="mt-1.5 bg-white border-[hsl(220,15%,87%)] text-gray-800 uppercase"
                 readOnly
                 disabled
               />
@@ -664,7 +664,7 @@ export default function AdminCoupons() {
                     setFormData({ ...formData, discountValue: e.target.value })
                   }
                   placeholder="VD: 25"
-                  className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
+                  className="mt-1.5 bg-white border-[hsl(220,15%,87%)] text-gray-800"
                 />
               </div>
               <div>
@@ -675,10 +675,10 @@ export default function AdminCoupons() {
                     setFormData({ ...formData, discountType: value })
                   }
                 >
-                  <SelectTrigger className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white">
+                  <SelectTrigger className="mt-1.5 bg-white border-[hsl(220,15%,87%)] text-gray-800">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white border-[hsl(220,15%,87%)] text-gray-800 shadow-lg">
                     <SelectItem value="percentage">Phần trăm (%)</SelectItem>
                     <SelectItem value="fixed">Số tiền cố định (VNĐ)</SelectItem>
                   </SelectContent>
@@ -695,7 +695,7 @@ export default function AdminCoupons() {
                     setFormData({ ...formData, maxUsage: e.target.value })
                   }
                   placeholder="VD: 100"
-                  className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
+                  className="mt-1.5 bg-white border-[hsl(220,15%,87%)] text-gray-800"
                 />
               </div>
               <div>
@@ -707,7 +707,7 @@ export default function AdminCoupons() {
                     setFormData({ ...formData, minOrderAmount: e.target.value })
                   }
                   placeholder="VD: 500000"
-                  className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
+                  className="mt-1.5 bg-white border-[hsl(220,15%,87%)] text-gray-800"
                 />
               </div>
             </div>
@@ -719,7 +719,7 @@ export default function AdminCoupons() {
                 onChange={(e) =>
                   setFormData({ ...formData, expiresAt: e.target.value })
                 }
-                className="mt-1.5 bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white"
+                className="mt-1.5 bg-white border-[hsl(220,15%,87%)] text-gray-800"
               />
             </div>
           </div>
@@ -727,7 +727,7 @@ export default function AdminCoupons() {
             <Button
               variant="outline"
               onClick={() => setIsEditDialogOpen(false)}
-              className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]"
+              className="border-[hsl(220,15%,87%)] text-gray-700 bg-white hover:bg-[hsl(220,15%,93%)] hover:text-gray-900"
             >
               Hủy
             </Button>
@@ -741,7 +741,7 @@ export default function AdminCoupons() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
+      {}
       <AlertDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
@@ -755,7 +755,7 @@ export default function AdminCoupons() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]">
+            <AlertDialogCancel className="border-[hsl(220,15%,87%)] text-gray-700 bg-white hover:bg-[hsl(220,15%,93%)] hover:text-gray-900">
               Hủy
             </AlertDialogCancel>
             <AlertDialogAction

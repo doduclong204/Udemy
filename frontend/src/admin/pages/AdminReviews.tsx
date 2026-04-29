@@ -8,6 +8,13 @@ import { ReviewResponse, ReviewStats } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu, DropdownMenuContent,
@@ -26,12 +33,12 @@ import { toast } from 'sonner';
 // ── helpers ──────────────────────────────────────────────
 const formatDate = (s: string) => new Date(s).toLocaleDateString('vi-VN');
 
-const INPUT_CLASS = 'bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white placeholder:text-slate-500';
-const BTN_CANCEL  = 'border-[hsl(220,20%,28%)] text-white hover:bg-[hsl(220,20%,25%)]';
-const DROPDOWN_BG = 'bg-[hsl(220,25%,12%)] border border-[hsl(220,20%,28%)] rounded-lg shadow-xl z-[200]';
-const ITEM_BASE   = 'w-full text-left px-3 py-2 text-sm transition-colors cursor-pointer';
-const ITEM_DEF    = 'text-slate-300 hover:bg-[hsl(220,20%,25%)]';
-const ITEM_SEL    = 'bg-admin-primary/20 text-white';
+const INPUT_CLASS = 'bg-white border-[hsl(220,15%,87%)] text-gray-800 placeholder:text-gray-400 focus:border-[#6366f1] transition-colors';
+const BTN_CANCEL  = 'border-[hsl(220,15%,80%)] text-gray-700 hover:bg-[hsl(220,15%,95%)]';
+const DROPDOWN_BG = 'bg-white border border-[hsl(220,15%,87%)] rounded-xl shadow-lg z-[9999]';
+const ITEM_BASE   = 'w-full text-left px-3 py-2.5 text-sm transition-colors cursor-pointer rounded-lg';
+const ITEM_DEF    = 'text-gray-600 hover:bg-[hsl(220,15%,95%)] hover:text-gray-900';
+const ITEM_SEL    = 'bg-[#6366f1]/10 text-[#6366f1] font-medium';
 
 // ── CustomSelect ──────────────────────────────────────────
 function CustomSelect<T extends string>({
@@ -56,13 +63,13 @@ function CustomSelect<T extends string>({
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className={`w-full flex items-center justify-between rounded-md border px-3 py-2 text-sm ${INPUT_CLASS}`}
+        className={`w-full flex items-center justify-between rounded-lg border px-3 py-2.5 text-sm ${INPUT_CLASS}`}
       >
         <span>{selected?.label}</span>
-        <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className={`absolute top-full mt-1 w-full ${DROPDOWN_BG}`}>
+        <div className={`absolute top-full mt-1.5 w-full p-1 ${DROPDOWN_BG}`}>
           {options.map(opt => (
             <button
               key={opt.value}
@@ -261,18 +268,19 @@ export default function AdminReviews() {
             />
           </div>
           <div className="w-full sm:w-40">
-            <CustomSelect<string>
-              value={ratingFilter}
-              onChange={v => { setRatingFilter(v); setCurrentPage(1); }}
-              options={[
-                { value: 'all', label: 'Tất cả sao' },
-                { value: '5', label: '5 sao' },
-                { value: '4', label: '4 sao' },
-                { value: '3', label: '3 sao' },
-                { value: '2', label: '2 sao' },
-                { value: '1', label: '1 sao' },
-              ]}
-            />
+            <Select value={ratingFilter} onValueChange={v => { setRatingFilter(v); setCurrentPage(1); }}>
+              <SelectTrigger className="bg-admin-accent border-admin-border text-admin-foreground">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-[hsl(220,15%,87%)] text-gray-800 shadow-lg">
+                <SelectItem value="all">Tất cả sao</SelectItem>
+                <SelectItem value="5">5 sao</SelectItem>
+                <SelectItem value="4">4 sao</SelectItem>
+                <SelectItem value="3">3 sao</SelectItem>
+                <SelectItem value="2">2 sao</SelectItem>
+                <SelectItem value="1">1 sao</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
@@ -388,7 +396,7 @@ export default function AdminReviews() {
           </DialogHeader>
           {selected && (
             <div className="py-2 space-y-4">
-              <div className="p-3 bg-slate-700/50 border border-slate-600/50 rounded-lg">
+              <div className="p-3 bg-[hsl(220,15%,96%)] border border-[hsl(220,15%,87%)] rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-sm font-medium text-white">{selected.user.name}</span>
                   <Stars rating={selected.rating} />

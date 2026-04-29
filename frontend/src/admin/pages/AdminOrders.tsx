@@ -70,6 +70,15 @@ const formatCurrency = (value: number) =>
 const formatDateTime = (dateString: string) =>
   new Date(dateString).toLocaleString("vi-VN");
 
+/** Rút gọn mã đơn: lấy prefix + 4 ký tự cuối. VD: "ORD-17724108" → "ORD-7041" */
+const shortOrderCode = (code: string) => {
+  const dashIdx = code.indexOf("-");
+  if (dashIdx === -1) return code.slice(-4);
+  const prefix = code.slice(0, dashIdx);
+  const suffix = code.slice(-4);
+  return `${prefix}-${suffix}`;
+};
+
 const STATUS_MAP: Record<OrderStatus, { label: string; className: string }> = {
   COMPLETED: {
     label: "Hoàn thành",
@@ -97,28 +106,28 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 };
 
 const INPUT_CLASS =
-  "bg-[hsl(220,20%,22%)] border-[hsl(220,20%,28%)] text-white placeholder:text-slate-500 focus:border-[#6366f1] transition-colors";
+  "bg-white border-[hsl(220,15%,87%)] text-gray-800 placeholder:text-gray-400 focus:border-[#6366f1] transition-colors";
 const DROPDOWN_BG =
-  "bg-[hsl(220,25%,10%)] border border-[hsl(220,20%,22%)] rounded-xl shadow-2xl";
+  "bg-white border border-[hsl(220,15%,87%)] rounded-xl shadow-lg";
 const ITEM_BASE =
   "w-full text-left px-3 py-2.5 text-sm transition-colors cursor-pointer rounded-lg";
 const ITEM_DEFAULT =
-  "text-slate-300 hover:bg-[hsl(220,20%,20%)] hover:text-white";
-const ITEM_SELECTED = "bg-[#6366f1]/20 text-white font-medium";
+  "text-gray-600 hover:bg-[hsl(220,15%,95%)] hover:text-gray-900";
+const ITEM_SELECTED = "bg-[#6366f1]/10 text-[#6366f1] font-medium";
 
 const DETAIL_BLOCK_STYLE = {
-  background: "#161b27",
-  border: "1px solid #1e2a3a",
+  background: "hsl(220,15%,96%)",
+  border: "1px solid hsl(220,15%,87%)",
 };
 const STAT_CARD_STYLE = {
-  background: "linear-gradient(135deg,#161b27 0%,#1a2035 100%)",
-  border: "1px solid #252d42",
+  background: "hsl(220,15%,96%)",
+  border: "1px solid hsl(220,15%,87%)",
 };
 
 const dialogBtnSecondary: React.CSSProperties = {
-  background: "#1e2230",
-  border: "1px solid #2d3550",
-  color: "#94a3b8",
+  background: "#ffffff",
+  border: "1px solid hsl(220,15%,80%)",
+  color: "#374151",
 };
 const dialogBtnPrimary: React.CSSProperties = {
   background: "#6366f1",
@@ -169,9 +178,9 @@ function StudentCombobox({ students, value, onChange }: StudentComboboxProps) {
       <div
         className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 cursor-text ${INPUT_CLASS}`}
       >
-        <Search className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+        <Search className="w-3.5 h-3.5 text-gray-500 shrink-0" />
         <input
-          className="flex-1 bg-transparent text-sm text-white placeholder:text-slate-500 outline-none min-w-0"
+          className="flex-1 bg-transparent text-sm text-gray-800 placeholder:text-gray-400 outline-none min-w-0"
           placeholder={
             selected ? selected.name : "Nhập tên hoặc email để tìm..."
           }
@@ -192,7 +201,7 @@ function StudentCombobox({ students, value, onChange }: StudentComboboxProps) {
           style={{ maxHeight: "10rem", zIndex: 9999 }}
         >
           {filtered.length === 0 ? (
-            <p className="px-3 py-4 text-sm text-slate-500 text-center">
+            <p className="px-3 py-4 text-sm text-gray-500 text-center">
               Không tìm thấy học viên
             </p>
           ) : (
@@ -206,7 +215,7 @@ function StudentCombobox({ students, value, onChange }: StudentComboboxProps) {
                 >
                   <div className="min-w-0">
                     <p className="font-medium truncate">{s.name}</p>
-                    <p className="text-xs text-slate-400 truncate">{s.email}</p>
+                    <p className="text-xs text-gray-500 truncate">{s.email}</p>
                   </div>
                   {value === s.id && (
                     <span className="text-[#6366f1] text-xs shrink-0">✓</span>
@@ -218,7 +227,7 @@ function StudentCombobox({ students, value, onChange }: StudentComboboxProps) {
                   s.name.toLowerCase().includes(query.toLowerCase()) ||
                   s.email.toLowerCase().includes(query.toLowerCase()),
               ).length > 3 && (
-                <p className="px-3 py-2 text-xs text-slate-500 text-center border-t border-[hsl(220,20%,22%)] mt-1 pt-2">
+                <p className="px-3 py-2 text-xs text-gray-500 text-center border-t border-[hsl(220,15%,87%)] mt-1 pt-2">
                   Nhập cụ thể hơn để thu hẹp kết quả
                 </p>
               )}
@@ -268,9 +277,9 @@ function CourseCombobox({
         className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 cursor-text ${INPUT_CLASS}`}
         onClick={() => setOpen(true)}
       >
-        <Search className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+        <Search className="w-3.5 h-3.5 text-gray-500 shrink-0" />
         <input
-          className="flex-1 bg-transparent text-sm text-white placeholder:text-slate-500 outline-none"
+          className="flex-1 bg-transparent text-sm text-gray-800 placeholder:text-gray-400 outline-none"
           placeholder="Nhập tên khóa học để tìm..."
           value={query}
           onChange={(e) => {
@@ -280,7 +289,7 @@ function CourseCombobox({
           onFocus={() => setOpen(true)}
         />
         <ChevronDown
-          className={`w-3.5 h-3.5 text-slate-500 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`w-3.5 h-3.5 text-gray-500 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
         />
       </div>
 
@@ -290,7 +299,7 @@ function CourseCombobox({
           style={{ maxHeight: "10rem", zIndex: 9999 }}
         >
           {filtered.length === 0 ? (
-            <p className="px-3 py-4 text-sm text-slate-500 text-center">
+            <p className="px-3 py-4 text-sm text-gray-500 text-center">
               Không tìm thấy khóa học
             </p>
           ) : (
@@ -307,19 +316,19 @@ function CourseCombobox({
                   >
                     <span
                       className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center text-[10px] transition-colors
-                        ${isSelected ? "bg-[#6366f1] border-[#6366f1] text-white" : "border-slate-500"}`}
+                        ${isSelected ? "bg-[#6366f1] border-[#6366f1] text-white" : "border-[hsl(220,15%,87%)]"}`}
                     >
                       {isSelected && "✓"}
                     </span>
                     <span className="flex-1 truncate">{c.title}</span>
-                    <span className="text-xs text-slate-400 shrink-0">
+                    <span className="text-xs text-gray-500 shrink-0">
                       {c.price !== undefined ? formatCurrency(c.price) : ""}
                     </span>
                   </button>
                 );
               })}
               {allFiltered.length > 3 && (
-                <p className="px-3 py-2 text-xs text-slate-500 text-center border-t border-[hsl(220,20%,22%)] mt-1 pt-2">
+                <p className="px-3 py-2 text-xs text-gray-500 text-center border-t border-[hsl(220,15%,87%)] mt-1 pt-2">
                   Nhập cụ thể hơn để thu hẹp kết quả
                 </p>
               )}
@@ -339,14 +348,14 @@ function CourseCombobox({
                 style={{
                   background: "rgba(99,102,241,0.15)",
                   border: "1px solid rgba(99,102,241,0.35)",
-                  color: "#818cf8",
+                  color: "#5b21b6",
                 }}
               >
                 <span>{c.title}</span>
                 <button
                   type="button"
                   onMouseDown={() => onToggle(id)}
-                  className="hover:text-white shrink-0 ml-0.5"
+                  className="hover:text-gray-900 shrink-0 ml-0.5"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -396,7 +405,7 @@ function StatusSelect({
       >
         <span>{selected?.label}</span>
         <ChevronDown
-          className={`w-3.5 h-3.5 text-slate-500 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`w-3.5 h-3.5 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
         />
       </button>
       {open && (
@@ -460,7 +469,7 @@ function PaymentSelect({
       >
         <span>{selected?.label}</span>
         <ChevronDown
-          className={`w-3.5 h-3.5 text-slate-500 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`w-3.5 h-3.5 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
         />
       </button>
       {open && (
@@ -554,7 +563,7 @@ export default function AdminOrders() {
 
   useEffect(() => {
     fetchOrders(currentPage, searchQuery, statusFilter);
-  }, [currentPage]); // eslint-disable-line
+  }, [currentPage]); 
 
   useEffect(() => {
     if (!isMounted.current) {
@@ -566,7 +575,7 @@ export default function AdminOrders() {
       fetchOrders(1, searchQuery, statusFilter);
     }, 350);
     return () => clearTimeout(t);
-  }, [searchQuery, statusFilter]); // eslint-disable-line
+  }, [searchQuery, statusFilter]); 
 
   const openAddDialog = async () => {
     setIsAddDialogOpen(true);
@@ -728,7 +737,7 @@ export default function AdminOrders() {
         <div className="flex gap-2">
           <Button
             onClick={openAddDialog}
-            className="bg-admin-primary hover:bg-admin-primary/90"
+            className="bg-admin-primary hover:bg-admin-primary/90 text-white"
           >
             <Plus className="w-4 h-4 mr-2" />
             Thêm đơn hàng
@@ -819,7 +828,7 @@ export default function AdminOrders() {
             <SelectTrigger className="w-full sm:w-48 bg-admin-accent border-admin-border text-admin-foreground">
               <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border-[hsl(220,15%,87%)] text-gray-800 shadow-lg">
               <SelectItem value="all">Tất cả</SelectItem>
               <SelectItem value="COMPLETED">Hoàn thành</SelectItem>
               <SelectItem value="PENDING">Đang xử lý</SelectItem>
@@ -835,25 +844,23 @@ export default function AdminOrders() {
           <table className="w-full">
             <thead className="bg-admin-accent">
               <tr>
-                {[
-                  "Mã đơn",
-                  "Học viên",
-                  "Khoá học",
-                  "Số tiền",
-                  "Thanh toán",
-                  "Trạng thái",
-                  "Ngày tạo",
-                  "Hành động",
-                ].map((h, i) => (
+                {(
+                  [
+                    { label: "Mã đơn",     align: "text-left",   hide: "" },
+                    { label: "Học viên",   align: "text-left",   hide: "" },
+                    { label: "Khoá học",   align: "text-left",   hide: "hidden lg:table-cell" },
+                    { label: "Số tiền",    align: "text-right",  hide: "" },
+                    { label: "Thanh toán", align: "text-center", hide: "hidden md:table-cell" },
+                    { label: "Trạng thái", align: "text-center", hide: "" },
+                    { label: "Ngày tạo",   align: "text-center", hide: "hidden sm:table-cell" },
+                    { label: "Hành động", align: "text-center", hide: "" },
+                  ] as { label: string; align: string; hide: string }[]
+                ).map(({ label, align, hide }) => (
                   <th
-                    key={h}
-                    className={`py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-admin-muted-foreground
-                      ${i === 7 ? "text-right" : "text-left"}
-                      ${i === 2 ? "hidden lg:table-cell" : ""}
-                      ${i === 4 ? "hidden md:table-cell" : ""}
-                      ${i === 6 ? "hidden sm:table-cell" : ""}`}
+                    key={label}
+                    className={`py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-admin-muted-foreground whitespace-nowrap ${align} ${hide}`}
                   >
-                    {h}
+                    {label}
                   </th>
                 ))}
               </tr>
@@ -906,10 +913,11 @@ export default function AdminOrders() {
                     >
                       <td className="py-4 px-4">
                         <span
-                          className="text-sm font-mono font-medium"
-                          style={{ color: "#818cf8" }}
+                          className="text-sm font-mono font-medium cursor-default"
+                          style={{ color: "#5b21b6" }}
+                          title={order.orderCode}
                         >
-                          {order.orderCode}
+                          {shortOrderCode(order.orderCode)}
                         </span>
                       </td>
                       <td className="py-4 px-4">
@@ -929,7 +937,7 @@ export default function AdminOrders() {
                           ))}
                         </div>
                       </td>
-                      <td className="py-4 px-4">
+                      <td className="py-4 px-4 text-right">
                         <p className="text-sm font-semibold text-admin-foreground">
                           {formatCurrency(order.finalAmount)}
                         </p>
@@ -939,24 +947,24 @@ export default function AdminOrders() {
                           </p>
                         )}
                       </td>
-                      <td className="py-4 px-4 hidden md:table-cell">
+                      <td className="py-4 px-4 hidden md:table-cell text-center">
                         <span className="text-xs px-2.5 py-1 rounded-full bg-admin-accent text-admin-muted-foreground border border-admin-border">
                           {PAYMENT_METHOD_LABELS[order.paymentMethod] ??
                             order.paymentMethod}
                         </span>
                       </td>
-                      <td className="py-4 px-4">
+                      <td className="py-4 px-4 text-center">
                         <span
                           className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${status?.className}`}
                         >
                           {status?.label ?? order.paymentStatus}
                         </span>
                       </td>
-                      <td className="py-4 px-4 text-xs text-admin-muted-foreground hidden sm:table-cell whitespace-nowrap">
+                      <td className="py-4 px-4 text-xs text-admin-muted-foreground hidden sm:table-cell whitespace-nowrap text-center">
                         {formatDateTime(order.createdAt)}
                       </td>
-                      <td className="py-4 px-4">
-                        <div className="flex justify-end">
+                      <td className="py-4 px-4 text-center">
+                        <div className="flex justify-center">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -1045,26 +1053,20 @@ export default function AdminOrders() {
         }}
       >
         <DialogContent
-          className="sm:max-w-lg p-0 gap-0"
-          style={{
-            background: "#0f1117",
-            border: "1px solid #1e2230",
-            overflow: "visible",
-          }}
+          className="sm:max-w-lg p-0 gap-0 bg-white border border-[hsl(220,15%,87%)]"
         >
-          <div className="px-6 pt-6 pb-4 border-b border-[#1e2230]">
+          <div className="px-6 pt-6 pb-4 border-b border-[hsl(220,15%,87%)]">
             <p
               className="text-[11px] font-semibold uppercase tracking-widest mb-1"
               style={{ color: "#6366f1" }}
             >
               Đơn hàng mới
             </p>
-            <DialogTitle className="text-xl font-bold text-white">
+            <DialogTitle className="text-xl font-bold text-gray-800">
               Thêm đơn hàng thủ công
             </DialogTitle>
             <DialogDescription
-              className="text-sm mt-1"
-              style={{ color: "#94a3b8" }}
+              className="text-sm mt-1 text-gray-500"
             >
               Tạo đơn hàng cho học viên không qua cổng thanh toán
             </DialogDescription>
@@ -1072,8 +1074,7 @@ export default function AdminOrders() {
 
           {loadingLookup ? (
             <div
-              className="flex items-center justify-center py-16"
-              style={{ color: "#475569" }}
+              className="flex items-center justify-center py-16 text-gray-500"
             >
               <svg
                 className="animate-spin w-5 h-5 mr-2"
@@ -1099,7 +1100,7 @@ export default function AdminOrders() {
           ) : (
             <div className="px-6 py-5 space-y-5">
               <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Học viên <span className="text-red-400">*</span>
                 </Label>
                 <StudentCombobox
@@ -1109,7 +1110,7 @@ export default function AdminOrders() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Khóa học <span className="text-red-400">*</span>
                 </Label>
                 <CourseCombobox
@@ -1120,7 +1121,7 @@ export default function AdminOrders() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                     Mã giảm giá
                   </Label>
                   <input
@@ -1133,7 +1134,7 @@ export default function AdminOrders() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                     Phương thức
                   </Label>
                   <PaymentSelect
@@ -1153,8 +1154,7 @@ export default function AdminOrders() {
                 setIsAddDialogOpen(false);
                 resetAddForm();
               }}
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:brightness-125"
-              style={dialogBtnSecondary}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white border border-[hsl(220,15%,80%)] text-gray-700 hover:bg-[hsl(220,15%,93%)] hover:text-gray-900 hover:border-[hsl(220,15%,70%)]"
             >
               Hủy
             </button>
@@ -1172,12 +1172,11 @@ export default function AdminOrders() {
 
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent
-          className="sm:max-w-lg p-0 gap-0 overflow-hidden"
-          style={{ background: "#0f1117", border: "1px solid #1e2230" }}
+          className="sm:max-w-lg p-0 gap-0 overflow-hidden bg-white border border-[hsl(220,15%,87%)]"
         >
           {selectedOrder && (
             <>
-              <div className="px-6 pt-6 pb-4 border-b border-[#1e2230]">
+              <div className="px-6 pt-6 pb-4 border-b border-[hsl(220,15%,87%)]">
                 <p
                   className="text-[11px] font-semibold uppercase tracking-widest mb-2"
                   style={{ color: "#6366f1" }}
@@ -1187,7 +1186,7 @@ export default function AdminOrders() {
                 <div className="flex items-center justify-between">
                   <span
                     className="text-xl font-bold font-mono"
-                    style={{ color: "#818cf8" }}
+                    style={{ color: "#5b21b6" }}
                   >
                     {selectedOrder.orderCode}
                   </span>
@@ -1205,8 +1204,7 @@ export default function AdminOrders() {
                   style={DETAIL_BLOCK_STYLE}
                 >
                   <p
-                    className="text-[11px] uppercase tracking-wider font-semibold mb-3"
-                    style={{ color: "#475569" }}
+                    className="text-[11px] uppercase tracking-wider font-semibold mb-3 text-gray-500"
                   >
                     🎬 Khóa học
                   </p>
@@ -1215,7 +1213,7 @@ export default function AdminOrders() {
                       key={item._id}
                       className="flex items-center justify-between"
                     >
-                      <p className="text-sm text-slate-300">
+                      <p className="text-sm text-gray-600">
                         {item.courseName}
                       </p>
                       <p className="text-sm font-semibold text-green-400">
@@ -1231,19 +1229,19 @@ export default function AdminOrders() {
                       label: "Tổng tiền",
                       value: formatCurrency(selectedOrder.totalAmount),
                       icon: "💰",
-                      color: "#e2e8f0",
+                      color: "#374151",
                     },
                     {
                       label: "Giảm giá",
                       value: `-${formatCurrency(selectedOrder.discountAmount)}`,
                       icon: "🏷️",
-                      color: "#4ade80",
+                      color: "#16a34a",
                     },
                     {
                       label: "Thực trả",
                       value: formatCurrency(selectedOrder.finalAmount),
                       icon: "💸",
-                      color: "#818cf8",
+                      color: "#5b21b6",
                     },
                   ].map((f) => (
                     <div
@@ -1253,8 +1251,7 @@ export default function AdminOrders() {
                     >
                       <p className="text-lg mb-1">{f.icon}</p>
                       <p
-                        className="text-[11px] uppercase tracking-wider font-semibold mb-1"
-                        style={{ color: "#475569" }}
+                        className="text-[11px] uppercase tracking-wider font-semibold mb-1 text-gray-500"
                       >
                         {f.label}
                       </p>
@@ -1291,13 +1288,12 @@ export default function AdminOrders() {
                       <div className="flex items-center gap-1.5 mb-1">
                         <span className="text-sm">{f.icon}</span>
                         <p
-                          className="text-[11px] uppercase tracking-wider font-semibold"
-                          style={{ color: "#475569" }}
+                          className="text-[11px] uppercase tracking-wider font-semibold text-gray-500"
                         >
                           {f.label}
                         </p>
                       </div>
-                      <p className="text-sm font-medium text-slate-200">
+                      <p className="text-sm font-medium text-gray-700">
                         {f.value}
                       </p>
                     </div>
@@ -1308,13 +1304,12 @@ export default function AdminOrders() {
                   <div className="flex items-center gap-1.5 mb-1">
                     <span className="text-sm">👤</span>
                     <p
-                      className="text-[11px] uppercase tracking-wider font-semibold"
-                      style={{ color: "#475569" }}
+                      className="text-[11px] uppercase tracking-wider font-semibold text-gray-500"
                     >
                       Người tạo
                     </p>
                   </div>
-                  <p className="text-sm font-medium text-slate-200">
+                  <p className="text-sm font-medium text-gray-700">
                     {selectedOrder.createdBy}
                   </p>
                 </div>
@@ -1323,8 +1318,7 @@ export default function AdminOrders() {
               <div className="px-6 pb-6 flex justify-end">
                 <button
                   onClick={() => setIsViewDialogOpen(false)}
-                  className="px-5 py-2 rounded-lg text-sm font-medium transition-all hover:brightness-125"
-                  style={dialogBtnSecondary}
+                  className="px-5 py-2 rounded-lg text-sm font-medium transition-all bg-white border border-[hsl(220,15%,80%)] text-gray-700 hover:bg-[hsl(220,15%,93%)] hover:text-gray-900 hover:border-[hsl(220,15%,70%)]"
                 >
                   Đóng
                 </button>
@@ -1336,26 +1330,21 @@ export default function AdminOrders() {
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent
-          className="sm:max-w-md p-0 gap-0"
-          style={{
-            background: "#0f1117",
-            border: "1px solid #1e2230",
-            overflow: "visible",
-          }}
+          className="sm:max-w-md p-0 gap-0 bg-white border border-[hsl(220,15%,87%)]"
         >
-          <div className="px-6 pt-6 pb-4 border-b border-[#1e2230]">
+          <div className="px-6 pt-6 pb-4 border-b border-[hsl(220,15%,87%)]">
             <p
               className="text-[11px] font-semibold uppercase tracking-widest mb-1"
               style={{ color: "#6366f1" }}
             >
               Chỉnh sửa
             </p>
-            <DialogTitle className="text-xl font-bold text-white">
+            <DialogTitle className="text-xl font-bold text-gray-800">
               Cập nhật đơn hàng
             </DialogTitle>
             <DialogDescription
               className="text-sm mt-1 font-mono"
-              style={{ color: "#818cf8" }}
+              style={{ color: "#5b21b6" }}
             >
               {selectedOrder?.orderCode}
             </DialogDescription>
@@ -1363,7 +1352,7 @@ export default function AdminOrders() {
 
           <div className="px-6 py-5 space-y-4">
             <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                 Trạng thái
               </Label>
               <StatusSelect
@@ -1372,7 +1361,7 @@ export default function AdminOrders() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                 Phương thức thanh toán
               </Label>
               <PaymentSelect
@@ -1385,8 +1374,7 @@ export default function AdminOrders() {
           <div className="px-6 pb-6 flex justify-end gap-3">
             <button
               onClick={() => setIsEditDialogOpen(false)}
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:brightness-125"
-              style={dialogBtnSecondary}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white border border-[hsl(220,15%,80%)] text-gray-700 hover:bg-[hsl(220,15%,93%)] hover:text-gray-900 hover:border-[hsl(220,15%,70%)]"
             >
               Hủy
             </button>
@@ -1406,18 +1394,17 @@ export default function AdminOrders() {
         onOpenChange={setIsDeleteDialogOpen}
       >
         <AlertDialogContent
-          className="p-0 gap-0 overflow-hidden sm:max-w-md"
-          style={{ background: "#0f1117", border: "1px solid #1e2230" }}
+          className="p-0 gap-0 overflow-hidden sm:max-w-md bg-white border border-[hsl(220,15%,87%)]"
         >
-          <AlertDialogHeader className="px-6 pt-6 pb-4 border-b border-[#1e2230]">
-            <AlertDialogTitle className="text-white text-lg font-bold">
+          <AlertDialogHeader className="px-6 pt-6 pb-4 border-b border-[hsl(220,15%,87%)]">
+            <AlertDialogTitle className="text-gray-800 text-lg font-bold">
               Xác nhận xóa đơn hàng
             </AlertDialogTitle>
-            <AlertDialogDescription style={{ color: "#94a3b8" }}>
+            <AlertDialogDescription className="text-gray-500">
               Bạn có chắc muốn xóa đơn hàng{" "}
               <span
                 className="font-mono font-semibold"
-                style={{ color: "#818cf8" }}
+                style={{ color: "#5b21b6" }}
               >
                 {selectedOrder?.orderCode}
               </span>
@@ -1427,7 +1414,7 @@ export default function AdminOrders() {
           <AlertDialogFooter className="px-6 py-4 flex justify-end gap-3">
             <AlertDialogCancel
               style={dialogBtnSecondary}
-              className="border-0 hover:brightness-125 transition-all"
+              className="border hover:bg-[hsl(220,15%,93%)] hover:text-gray-900 hover:border-[hsl(220,15%,70%)] transition-all"
             >
               Hủy
             </AlertDialogCancel>

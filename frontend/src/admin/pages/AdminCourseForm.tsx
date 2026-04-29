@@ -1011,7 +1011,7 @@ export default function AdminCourseForm() {
                   <SelectTrigger className="mt-1.5 bg-admin-accent border-admin-border text-admin-foreground">
                     <SelectValue placeholder="Chọn danh mục" />
                   </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={4}>
+                  <SelectContent position="popper" sideOffset={4} className="bg-white border-[hsl(220,15%,87%)] text-gray-800 shadow-lg">
                     {categories.map((cat) => (
                       <SelectItem key={cat._id} value={cat._id}>
                         {cat.name}
@@ -1031,7 +1031,7 @@ export default function AdminCourseForm() {
                   <SelectTrigger className="mt-1.5 bg-admin-accent border-admin-border text-admin-foreground">
                     <SelectValue placeholder="Chọn trình độ" />
                   </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={4}>
+                  <SelectContent position="popper" sideOffset={4} className="bg-white border-[hsl(220,15%,87%)] text-gray-800 shadow-lg">
                     <SelectItem value="BASIC">Cơ bản</SelectItem>
                     <SelectItem value="INTERMEDIATE">Trung cấp</SelectItem>
                     <SelectItem value="ADVANCED">Nâng cao</SelectItem>

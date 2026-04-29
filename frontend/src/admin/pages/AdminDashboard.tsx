@@ -983,7 +983,7 @@ const compareRange = useMemo(
                       Khóa học
                     </th>
                     <th className="text-left py-2 px-2 text-xs font-medium text-admin-muted-foreground hidden sm:table-cell">
-                      HV
+                      Số học viên
                     </th>
                     <th className="text-left py-2 px-2 text-xs font-medium text-admin-muted-foreground">
                       Doanh thu
@@ -1053,7 +1053,7 @@ const compareRange = useMemo(
                       Số tiền
                     </th>
                     <th className="text-left py-2 px-2 text-xs font-medium text-admin-muted-foreground">
-                      TT
+                      Trạng thái
                     </th>
                   </tr>
                 </thead>
