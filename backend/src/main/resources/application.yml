@@ -30,18 +30,28 @@ spring:
         dialect: org.hibernate.dialect.MySQL8Dialect
   mail:
     host: smtp.gmail.com
-    port: 465
+    port: 587
     username: ${MAIL_USERNAME}
     password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
           auth: true
-          ssl:
-            enable: true
           starttls:
-            enable: false
-
+            enable: true
+#  mail:
+#    host: smtp.gmail.com
+#    port: 465
+#    username: ${MAIL_USERNAME}
+#    password: ${MAIL_PASSWORD}
+#    properties:
+#      mail:
+#        smtp:
+#          auth: true
+#          ssl:
+#            enable: true
+#          starttls:
+#            enable: false
 auth:
   jwt:
     base64-secret-access: ${JWT_SECRET_ACCESS}
@@ -75,7 +85,7 @@ vnpay:
   hash-secret: ${VNPAY_HASH_SECRET}
   url: ${VNPAY_URL}
   return-url: ${VNPAY_RETURN_URL}
-  frontend-url: http://localhost:8081
+  frontend-url: ${VNPAY_FRONTEND_URL:http://localhost:8081}
 
 gemini:
   api-key: ${GEMINI_API_KEY}
