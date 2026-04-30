@@ -13,6 +13,10 @@ import java.util.List;
 
 @Repository
 public interface UserNotificationRepository extends JpaRepository<UserNotification, String>, JpaSpecificationExecutor<UserNotification> {
+    @Modifying
+    @Transactional
+    void deleteByUserId(String userId);
+
     long countByNotificationId(String notificationId);
     long countByNotificationIdAndReadTrue(String notificationId);
     long countByUserIdAndReadFalse(String userId);

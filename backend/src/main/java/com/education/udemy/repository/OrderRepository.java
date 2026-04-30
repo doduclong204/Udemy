@@ -3,9 +3,11 @@ package com.education.udemy.repository;
 import com.education.udemy.entity.Order;
 import com.education.udemy.enums.OrderStatus;
 import com.education.udemy.enums.PaymentMethod;
+import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -136,4 +138,8 @@ public interface OrderRepository extends JpaRepository<Order, String>, JpaSpecif
             @Param("from") Instant from,
             @Param("to") Instant to,
             Pageable pageable);
+
+    @Modifying
+    @Transactional
+    void deleteByUserId(String userId);
 }

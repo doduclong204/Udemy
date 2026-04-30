@@ -1,5 +1,7 @@
 package com.education.udemy.repository;
 
+import jakarta.transaction.Transactional;
+import org.springframework.data.jpa.repository.Modifying;
 import com.education.udemy.entity.Enrollment;
 import com.education.udemy.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,4 +21,8 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, String>,
     List<User> findUsersByCourseId(@Param("courseId") String courseId);
 
     List<Enrollment> findByCourseId(String courseId);
+
+    @Modifying
+    @Transactional
+    void deleteByUserId(String userId);
 }
