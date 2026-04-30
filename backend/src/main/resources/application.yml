@@ -30,15 +30,17 @@ spring:
         dialect: org.hibernate.dialect.MySQL8Dialect
   mail:
     host: smtp.gmail.com
-    port: 587
+    port: 465
     username: ${MAIL_USERNAME}
     password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
           auth: true
-          starttls:
+          ssl:
             enable: true
+          starttls:
+            enable: false
 
 auth:
   jwt:
