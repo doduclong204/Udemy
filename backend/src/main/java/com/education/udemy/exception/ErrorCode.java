@@ -34,6 +34,7 @@ public enum ErrorCode {
     // USER
     USER_EXISTED(409, "User existed", HttpStatus.CONFLICT),
     USER_NOT_EXISTED(404, "User not existed", HttpStatus.NOT_FOUND),
+    USER_HAS_COURSES(400, "Cannot delete user because they are an instructor with active courses", HttpStatus.BAD_REQUEST),
     USERNAME_INVALID(400, "Username must be at least {min} characters", HttpStatus.BAD_REQUEST),
     INVALID_PASSWORD(400, "Password must be at least {min} characters", HttpStatus.BAD_REQUEST),
     PASSWORD_INCORRECT(400, "Current password is incorrect", HttpStatus.BAD_REQUEST),

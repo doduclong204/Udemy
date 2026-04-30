@@ -1,5 +1,7 @@
 package com.education.udemy.repository;
 
+import jakarta.transaction.Transactional;
+import org.springframework.data.jpa.repository.Modifying;
 import com.education.udemy.entity.Course;
 import com.education.udemy.entity.Review;
 import com.education.udemy.entity.User;
@@ -23,4 +25,8 @@ public interface ReviewRepository extends JpaRepository<Review, String>, JpaSpec
 
     @Query("SELECT r.rating, COUNT(r) FROM reviews r WHERE r.reviewStatus = true GROUP BY r.rating")
     List<Object[]> countGroupByRating();
+
+    @Modifying
+    @Transactional
+    void deleteByUserId(String userId);
 }

@@ -22,7 +22,16 @@ import com.education.udemy.entity.User;
 import com.education.udemy.exception.AppException;
 import com.education.udemy.exception.ErrorCode;
 import com.education.udemy.mapper.UserMapper;
+import com.education.udemy.repository.UserNotificationRepository;
 import com.education.udemy.repository.UserRepository;
+import com.education.udemy.repository.CartRepository;
+import com.education.udemy.repository.EnrollmentRepository;
+import com.education.udemy.repository.OrderRepository;
+import com.education.udemy.repository.ReviewRepository;
+import com.education.udemy.repository.WishlistRepository;
+import com.education.udemy.repository.LectureNoteRepository;
+import com.education.udemy.repository.CourseQuestionRepository;
+import com.education.udemy.repository.CourseAnswerRepository;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +44,15 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class UserService {
     UserRepository userRepository;
+    UserNotificationRepository userNotificationRepository;
+    CartRepository cartRepository;
+    EnrollmentRepository enrollmentRepository;
+    OrderRepository orderRepository;
+    ReviewRepository reviewRepository;
+    WishlistRepository wishlistRepository;
+    LectureNoteRepository lectureNoteRepository;
+    CourseQuestionRepository courseQuestionRepository;
+    CourseAnswerRepository courseAnswerRepository;
     UserMapper userMapper;
     PasswordEncoder passwordEncoder;
     NotificationService notificationService;
@@ -117,10 +135,30 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
+    @Transactional
     public void delete(String userId) {
-        log.info("Delete a user");
+        log.info("Delete a user: {}", userId);
         User user = this.userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        if (user.getCourses() != null && !user.getCourses().isEmpty()) {
+            throw new AppException(ErrorCode.USER_HAS_COURSES);
+        }
+
+        courseQuestionRepository.setUserNullByUserId(userId);
+        courseAnswerRepository.setUserNullByUserId(userId);
+
+        userNotificationRepository.deleteByUserId(userId);
+        lectureNoteRepository.deleteByUserId(userId);
+        reviewRepository.deleteByUserId(userId);
+        wishlistRepository.deleteByUserId(userId);
+
+        orderRepository.deleteByUserId(userId);
+
+        enrollmentRepository.deleteByUserId(userId);
+
+        cartRepository.deleteByUserId(userId);
+
         this.userRepository.delete(user);
     }
 
