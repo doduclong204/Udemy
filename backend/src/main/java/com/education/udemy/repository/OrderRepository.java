@@ -42,14 +42,21 @@ public interface OrderRepository extends JpaRepository<Order, String>, JpaSpecif
     );
 
     @Query("""
-        SELECT COUNT(oi) > 0 FROM orders o 
-        JOIN o.orderItems oi 
-        WHERE o.user.id = :userId 
-        AND oi.course.id = :courseId 
+        SELECT COUNT(oi) > 0 FROM orders o
+        JOIN o.orderItems oi
+        WHERE o.user.id = :userId
+        AND oi.course.id = :courseId
         AND o.paymentStatus IN ('PENDING', 'COMPLETED')
         """)
     boolean existsActiveOrderForUserAndCourse(@Param("userId") String userId, @Param("courseId") String courseId);
 
+    @Query("""
+        SELECT COUNT(o) > 0 FROM orders o
+        WHERE o.user.id = :userId
+        AND o.coupon.code = :couponCode
+        AND o.paymentStatus = 'COMPLETED'
+        """)
+    boolean hasUserUsedCoupon(@Param("userId") String userId, @Param("couponCode") String couponCode);
 
     @Query("""
         SELECT COALESCE(SUM(o.finalAmount), 0)

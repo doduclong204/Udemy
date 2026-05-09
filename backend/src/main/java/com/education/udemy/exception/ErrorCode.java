@@ -53,14 +53,15 @@ public enum ErrorCode {
     // LECTURE NOTE
     LECTURE_NOTE_NOT_FOUND(404, "Lecture note not found", HttpStatus.NOT_FOUND),
     LECTURE_NOTE_NOT_OWNED(403, "You do not have permission to modify this note", HttpStatus.FORBIDDEN),
-
     INVALID_LECTURE_NOTE_TIME(400, "Note timestamp cannot exceed video duration", HttpStatus.BAD_REQUEST),
-    //QA
+
+    // QA
     QUESTION_NOT_FOUND(404, "Question not found", HttpStatus.NOT_FOUND),
     ANSWER_NOT_FOUND(404, "Answer not found", HttpStatus.NOT_FOUND),
 
     // LECTURE & PROGRESS
     LECTURE_NOT_FOUND(404, "Lecture not found", HttpStatus.NOT_FOUND),
+
     // TAG
     TAG_NOT_FOUND(404, "Tag not found", HttpStatus.NOT_FOUND),
     INVALID_TAG_NAME(400, "Tag name is invalid", HttpStatus.BAD_REQUEST),
@@ -72,7 +73,6 @@ public enum ErrorCode {
     EXPORT_FAILED(9999, "Lỗi khi xuất file dữ liệu", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_SIGNATURE(400, "Invalid payment signature", HttpStatus.BAD_REQUEST),
 
-
     // ROLE & PERMISSION
     ROLE_NOT_EXISTED(404, "Role not existed", HttpStatus.NOT_FOUND),
     PERMISSION_NOT_EXISTED(404, "Permission not existed", HttpStatus.NOT_FOUND),
@@ -82,10 +82,11 @@ public enum ErrorCode {
     CART_NOT_FOUND(404, "Cart not found", HttpStatus.NOT_FOUND),
     CART_ITEM_NOT_FOUND(404, "Cart item not found", HttpStatus.NOT_FOUND),
     COURSE_ALREADY_IN_CART(409, "Course already exists in cart", HttpStatus.CONFLICT),
+
     // NOTIFICATION
     NOTIFICATION_NOT_FOUND(404, "Notification not found", HttpStatus.NOT_FOUND),
     NOTIFICATION_SEND_FAILED(400, "Failed to send notification", HttpStatus.BAD_REQUEST),
-    NOTIFICATION_ALREADY_SENT(400, "Notification has already been sent",  HttpStatus.BAD_REQUEST),
+    NOTIFICATION_ALREADY_SENT(400, "Notification has already been sent", HttpStatus.BAD_REQUEST),
 
     // WISHLIST
     WISHLIST_EXISTED(409, "Course is already in your wishlist", HttpStatus.CONFLICT),
@@ -106,11 +107,11 @@ public enum ErrorCode {
     COUPON_EXISTED(409, "Coupon code already exists", HttpStatus.CONFLICT),
     COUPON_NOT_FOUND(404, "Coupon not found", HttpStatus.NOT_FOUND),
     COUPON_HAS_ORDERS(400, "Cannot delete coupon because it has been used in orders", HttpStatus.BAD_REQUEST),
-
     COUPON_EXPIRED(400, "Coupon has expired", HttpStatus.BAD_REQUEST),
     COUPON_INACTIVE(400, "Coupon is currently inactive", HttpStatus.BAD_REQUEST),
     COUPON_OUT_OF_STOCK(400, "Coupon has reached its maximum usage limit", HttpStatus.BAD_REQUEST),
     COUPON_MIN_AMOUNT_NOT_REACHED(400, "Order amount is below the minimum required for this coupon", HttpStatus.BAD_REQUEST),
+    COUPON_ALREADY_USED(400, "You have already used this coupon", HttpStatus.BAD_REQUEST),
 
     // VALIDATE GENERAL
     INVALID_PHONE_NUMBER(400, "Phone number is invalid", HttpStatus.BAD_REQUEST),

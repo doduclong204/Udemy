@@ -28,7 +28,7 @@ export default function Cart() {
     if (!code) return;
     setCouponLoading(true);
     try {
-      const discount = await couponService.calculateDiscount(code, totalSalePrice);
+      const discount = await couponService.validateCoupon(code, totalSalePrice);
       setCouponDiscount(discount);
       setAppliedCode(code);
       toast.success(`Áp dụng mã "${code}" thành công! Giảm ${formatCurrency(discount)}`);
@@ -57,14 +57,17 @@ export default function Cart() {
     if (code && !appliedCode) {
       setCouponLoading(true);
       try {
-        const discount = await couponService.calculateDiscount(code, totalSalePrice);
+        const discount = await couponService.validateCoupon(code, totalSalePrice);
         finalCouponDiscount = discount;
         finalAppliedCode = code;
         setCouponDiscount(discount);
         setAppliedCode(code);
         toast.success(`Đã áp dụng mã "${code}"!`);
-      } catch {
-        toast.error('Mã giảm giá không hợp lệ, tiếp tục đặt hàng không có mã.');
+      } catch (err: any) {
+        const msg = err?.response?.data?.message || 'Mã giảm giá không hợp lệ';
+        toast.error(msg);
+        setCouponLoading(false);
+        return;
       } finally {
         setCouponLoading(false);
       }
@@ -126,7 +129,6 @@ export default function Cart() {
 
             <div className="lg:col-span-1">
               <div className="sticky top-20 bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-                {/* Coupon input */}
                 <div className="p-4 border-b border-border bg-muted/30">
                   <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
                     <Tag className="w-4 h-4 text-primary" /> Mã giảm giá
@@ -167,7 +169,6 @@ export default function Cart() {
                   )}
                 </div>
 
-                {/* Price breakdown */}
                 <div className="p-4 space-y-2.5 border-b border-border">
                   <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Tạm tính</span>
@@ -187,7 +188,6 @@ export default function Cart() {
                   )}
                 </div>
 
-                {/* Total + CTA */}
                 <div className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-base">Tổng cộng</span>

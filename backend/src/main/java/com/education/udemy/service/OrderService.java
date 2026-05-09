@@ -88,7 +88,8 @@ public class OrderService {
         if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
             appliedCoupon = couponRepository.findByCode(request.getCouponCode())
                     .orElseThrow(() -> new AppException(ErrorCode.COUPON_NOT_FOUND));
-            discountAmount = couponService.calculateDiscount(request.getCouponCode(), totalAmount);
+            discountAmount = couponService.applyAndIncrementCoupon(
+                    request.getCouponCode(), totalAmount, targetUser.getId());
         }
         BigDecimal finalAmount = totalAmount.subtract(discountAmount);
 
@@ -98,7 +99,7 @@ public class OrderService {
                 .discountAmount(discountAmount)
                 .finalAmount(finalAmount)
                 .paymentMethod(request.getPaymentMethod())
-                .paymentStatus(OrderStatus.PENDING)
+                .paymentStatus(OrderStatus.COMPLETED)
                 .user(targetUser)
                 .coupon(appliedCoupon)
                 .build();
@@ -115,9 +116,9 @@ public class OrderService {
         order.setOrderItems(orderItems);
         Order savedOrder = orderRepository.save(order);
 
-        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
-            couponService.updateCouponUsage(request.getCouponCode());
-        }
+        savedOrder.getOrderItems().forEach(item ->
+                enrollmentService.internalEnroll(savedOrder.getUser(), item.getCourse().getId())
+        );
 
         return orderMapper.toOrderResponse(savedOrder);
     }
@@ -153,7 +154,8 @@ public class OrderService {
         if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
             appliedCoupon = couponRepository.findByCode(request.getCouponCode())
                     .orElseThrow(() -> new AppException(ErrorCode.COUPON_NOT_FOUND));
-            discountAmount = couponService.calculateDiscount(request.getCouponCode(), totalAmount);
+            discountAmount = couponService.validateAndPreview(
+                    request.getCouponCode(), totalAmount, currentUser.getId());
         }
         BigDecimal finalAmount = totalAmount.subtract(discountAmount);
 
@@ -178,13 +180,7 @@ public class OrderService {
         ).toList();
 
         order.setOrderItems(orderItems);
-        Order savedOrder = orderRepository.save(order);
-
-        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
-            couponService.updateCouponUsage(request.getCouponCode());
-        }
-
-        return orderMapper.toOrderResponse(savedOrder);
+        return orderMapper.toOrderResponse(orderRepository.save(order));
     }
 
     public String createVnpayPaymentUrl(String orderId, String ipAddr) throws Exception {
@@ -206,10 +202,18 @@ public class OrderService {
         Order order = orderRepository.findByOrderCode(orderCode)
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
 
+        if (order.getPaymentStatus() == OrderStatus.COMPLETED) {
+            return true;
+        }
+
         if ("00".equals(responseCode)) {
             order.setPaymentStatus(OrderStatus.COMPLETED);
             order.setPaymentMethod(PaymentMethod.VNPAY);
             orderRepository.save(order);
+
+            if (order.getCoupon() != null) {
+                couponService.incrementCouponUsage(order.getCoupon().getCode());
+            }
 
             if (order.getOrderItems() != null) {
                 order.getOrderItems().forEach(item ->
@@ -262,6 +266,10 @@ public class OrderService {
         Order savedOrder = orderRepository.saveAndFlush(order);
 
         if (oldStatus != OrderStatus.COMPLETED && savedOrder.getPaymentStatus() == OrderStatus.COMPLETED) {
+            if (savedOrder.getCoupon() != null) {
+                couponService.incrementCouponUsage(savedOrder.getCoupon().getCode());
+            }
+
             if (savedOrder.getOrderItems() != null) {
                 savedOrder.getOrderItems().forEach(item ->
                         enrollmentService.internalEnroll(savedOrder.getUser(), item.getCourse().getId())

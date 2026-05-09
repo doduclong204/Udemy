@@ -22,7 +22,7 @@ public interface CartMapper {
     @Mapping(target = "rating", source = "course.rating")
     @Mapping(target = "totalReviews", source = "course.ratingCount")
     @Mapping(target = "originalPrice", source = "course.price")
-    @Mapping(target = "salePrice", source = "course.discountPrice")
+    @Mapping(target = "salePrice", source = "course.effectivePrice")
     CartItemResponse toCartItemResponse(CartItem cartItem);
 
     default CartResponse toCartResponse(Cart cart) {
@@ -37,7 +37,7 @@ public interface CartMapper {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalSale = items.stream()
-                .map(item -> item.getSalePrice() != null ? item.getSalePrice() : BigDecimal.ZERO)
+                .map(item -> item.getSalePrice() != null ? item.getSalePrice() : item.getOriginalPrice())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalDiscount = totalOriginal.subtract(totalSale);
