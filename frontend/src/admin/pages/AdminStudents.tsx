@@ -21,10 +21,7 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import DeleteConfirmDialog from "@/admin/components/DeleteConfirmDialog";
 import { ROLE, RoleType } from "@/constant/common.constant";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { toast } from "sonner";
@@ -630,21 +627,14 @@ export default function AdminStudents() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="admin-dialog">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa học viên</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa học viên "{selectedStudent?.name}"? Hành động này không thể hoàn tác.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-[hsl(220,15%,87%)] text-gray-700 hover:bg-[hsl(220,15%,95%)]">Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700 text-white">Xóa</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="Xác nhận xóa học viên"
+        description="Bạn có chắc chắn muốn xóa học viên này?"
+        itemName={selectedStudent?.name}
+      />
     </div>
   );
 }

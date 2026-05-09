@@ -23,11 +23,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel,
-  AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import DeleteConfirmDialog from '@/admin/components/DeleteConfirmDialog';
 import { toast } from 'sonner';
 
 // ── helpers ──────────────────────────────────────────────
@@ -427,23 +423,15 @@ export default function AdminReviews() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog */}
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent className="admin-dialog">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Xác nhận xoá đánh giá</AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-400">
-              Bạn có chắc muốn xoá đánh giá của <span className="text-white font-medium">{selected?.user.name}</span>? Hành động này không thể hoàn tác.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className={BTN_CANCEL}>Huỷ</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white">
-              Xoá
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        onConfirm={handleDelete}
+        title="Xác nhận xoá đánh giá"
+        description="Bạn có chắc muốn xoá đánh giá này?"
+        itemName={selected?.user?.name ? `Đánh giá của ${selected.user.name}` : undefined}
+        confirmLabel="Xoá"
+      />
     </div>
   );
 }

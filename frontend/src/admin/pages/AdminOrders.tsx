@@ -48,16 +48,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import DeleteConfirmDialog from "@/admin/components/DeleteConfirmDialog";
 import { toast } from "sonner";
 
 const formatCurrency = (value: number) =>
@@ -1389,44 +1380,15 @@ export default function AdminOrders() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog
+      <DeleteConfirmDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
-      >
-        <AlertDialogContent
-          className="p-0 gap-0 overflow-hidden sm:max-w-md bg-white border border-[hsl(220,15%,87%)]"
-        >
-          <AlertDialogHeader className="px-6 pt-6 pb-4 border-b border-[hsl(220,15%,87%)]">
-            <AlertDialogTitle className="text-gray-800 text-lg font-bold">
-              Xác nhận xóa đơn hàng
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-500">
-              Bạn có chắc muốn xóa đơn hàng{" "}
-              <span
-                className="font-mono font-semibold"
-                style={{ color: "#5b21b6" }}
-              >
-                {selectedOrder?.orderCode}
-              </span>
-              ? Hành động này không thể hoàn tác.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="px-6 py-4 flex justify-end gap-3">
-            <AlertDialogCancel
-              style={dialogBtnSecondary}
-              className="border hover:bg-[hsl(220,15%,93%)] hover:text-gray-900 hover:border-[hsl(220,15%,70%)] transition-all"
-            >
-              Hủy
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-red-600 hover:bg-red-700 text-white font-medium"
-            >
-              Xóa đơn hàng
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onConfirm={handleDeleteConfirm}
+        title="Xác nhận xóa đơn hàng"
+        description="Bạn có chắc muốn xóa đơn hàng này?"
+        itemName={selectedOrder?.orderCode ? `#${selectedOrder.orderCode}` : undefined}
+        confirmLabel="Xóa đơn hàng"
+      />
     </div>
   );
 }

@@ -52,16 +52,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import DeleteConfirmDialog from "@/admin/components/DeleteConfirmDialog";
 import { toast } from "sonner";
 
 const formatDateTime = (dateString: string | null | undefined) => {
@@ -883,22 +874,14 @@ export default function AdminNotifications() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <AlertDialogContent className="admin-dialog">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-gray-800">Xác nhận xóa thông báo</AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-400">
-              Bạn có chắc chắn muốn xóa thông báo "{selected?.title}"? Hành động này không thể hoàn tác.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className={BTN_CANCEL}>Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700 text-white">
-              Xóa
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        onConfirm={handleDeleteConfirm}
+        title="Xác nhận xóa thông báo"
+        description="Bạn có chắc chắn muốn xóa thông báo này?"
+        itemName={selected?.title}
+      />
     </div>
   );
 }
