@@ -142,8 +142,8 @@ function BankTransferPanel({ order }: { order: OrderResponse }) {
   };
 
   const bank = {
-    name: 'Vietcombank',
-    accountNumber: '1234567890',
+    name: 'VietinBank',
+    accountNumber: '102877669065',
     accountName: 'CONG TY TNHH EDU PLATFORM',
     branch: 'Chi nhánh Hà Nội',
     amount: order.finalAmount,

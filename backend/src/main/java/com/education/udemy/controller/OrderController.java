@@ -81,6 +81,12 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getAllOrders(spec, pageable));
     }
 
+    @GetMapping("/by-code/{orderCode}")
+    @ApiMessage("Get order by code success")
+    public ResponseEntity<OrderResponse> getDetailByOrderCode(@PathVariable String orderCode) {
+        return ResponseEntity.ok(orderService.getDetailByOrderCode(orderCode));
+    }
+
     @GetMapping("/{id}")
     @ApiMessage("Get order detail success")
     public ResponseEntity<OrderResponse> getDetail(@PathVariable String id) {

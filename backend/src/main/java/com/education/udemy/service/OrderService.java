@@ -228,6 +228,12 @@ public class OrderService {
         }
     }
 
+    public OrderResponse getDetailByOrderCode(String orderCode) {
+        return orderRepository.findByOrderCode(orderCode)
+                .map(orderMapper::toOrderResponse)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+    }
+
     public OrderResponse getDetail(String id) {
         return orderRepository.findById(id)
                 .map(orderMapper::toOrderResponse)

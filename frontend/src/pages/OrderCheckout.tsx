@@ -62,7 +62,7 @@ const PAYMENT_METHODS: {
   },
   {
     value: 'BANK_TRANSFER',
-    label: 'Chuyển khoản ngân hàng (Hiện tại chưa có sẵn)',
+    label: 'Chuyển khoản ngân hàng',
     desc: 'Chuyển khoản thủ công — xác nhận trong 1–2 giờ làm việc',
     color: '#185FA5',
     border: '#85B7EB',
