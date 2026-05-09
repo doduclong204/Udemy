@@ -31,7 +31,7 @@ public class SecurityConfiguration {
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            CustomAuthenticationEntryPoint customAuthenticationEntryPoint) throws Exception {
 
-        String[] whileList = {
+        String[] whiteList = {
                 "/", "/auth/login", "/auth/refresh", "/auth/register",
                 "/auth/register/send-otp",
                 "/auth/verify-otp",
@@ -46,6 +46,7 @@ public class SecurityConfiguration {
                 "/ws/**",
                 "/ws/info/**"
         };
+
         http
                 .csrf(c -> c.disable())
                 .cors(Customizer.withDefaults())
@@ -54,12 +55,13 @@ public class SecurityConfiguration {
                         authz -> authz
                                 .requestMatchers("/admin/**").hasAuthority("ADMIN")
                                 .requestMatchers("/dashboard/**").hasAuthority("ADMIN")
+                                .requestMatchers(HttpMethod.POST, "/users").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/products/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/categories/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/settings/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/courses/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/tags/**").permitAll()
-                                .requestMatchers(whileList).permitAll()
+                                .requestMatchers(whiteList).permitAll()
                                 .requestMatchers("/sse/**").authenticated()
                                 .anyRequest().authenticated())
                 .oauth2ResourceServer((oauth2) -> oauth2.jwt(Customizer.withDefaults())

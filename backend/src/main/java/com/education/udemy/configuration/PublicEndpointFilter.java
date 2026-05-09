@@ -24,7 +24,7 @@ public class PublicEndpointFilter extends OncePerRequestFilter {
         if (handler instanceof HandlerMethod) {
             HandlerMethod handlerMethod = (HandlerMethod) handler;
             if (handlerMethod.getMethodAnnotation(PublicEndpoint.class) != null) {
-                filterChain.doFilter(request, response); // Bỏ qua bảo mật
+                filterChain.doFilter(request, response);
                 return;
             }
         }
