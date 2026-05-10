@@ -380,7 +380,7 @@ body:has(.admin-theme) [role="option"][data-highlighted] {
 
   
   .carousel-item {
-    @apply flex-none w-[280px];
+    @apply flex-none;
   }
 }
 

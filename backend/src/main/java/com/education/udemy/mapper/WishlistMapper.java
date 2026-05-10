@@ -12,7 +12,7 @@ public interface WishlistMapper {
     @Mapping(source = "course.id", target = "courseId")
     @Mapping(source = "course.title", target = "title")
     @Mapping(source = "course.thumbnail", target = "thumbnail")
-    @Mapping(source = "course.discountPrice", target = "price")
+    @Mapping(source = "course.effectivePrice", target = "price")
     @Mapping(source = "course.price", target = "oldPrice")
     WishlistResponse toWishlistResponse(Wishlist wishlist);
 

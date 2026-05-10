@@ -33,6 +33,7 @@ public class Enrollment extends BaseEntity{
     EnrollmentStatus status;
 
     Instant enrolledAt;
+    Instant lastWatchedAt;
     Instant completedAt;
     Instant expiresAt;
 

@@ -39,13 +39,19 @@ public class ProcessService {
         boolean wasCompleted = Boolean.TRUE.equals(progress.getCompleted());
 
         processMapper.updateProcess(progress, request);
-        progress.setLastWatchedAt(Instant.now());
+
+        Instant now = Instant.now();
+        progress.setLastWatchedAt(now);
 
         if (Boolean.TRUE.equals(request.getCompleted()) && progress.getCompletedAt() == null) {
-            progress.setCompletedAt(Instant.now());
+            progress.setCompletedAt(now);
         }
 
         progress = progressRepository.save(progress);
+
+        Enrollment enrollment = progress.getEnrollment();
+        enrollment.setLastWatchedAt(now);
+        enrollmentRepository.save(enrollment);
 
         if (!wasCompleted && Boolean.TRUE.equals(progress.getCompleted())) {
             updateOverallEnrollmentProgress(enrollmentId);
