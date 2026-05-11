@@ -4,10 +4,11 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { Rating } from '@/components/Rating';
-import { Trash2, Tag, ShoppingBag, X, Check } from 'lucide-react';
+import { Trash2, Tag, ShoppingBag, X, Check, Percent, DollarSign } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import couponService from '@/services/couponService';
 import { toast } from 'sonner';
+import type { Coupon } from '@/types';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
@@ -36,6 +37,7 @@ export default function Cart() {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCode, setAppliedCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponInfo, setCouponInfo] = useState<Pick<Coupon, 'discountType' | 'discountValue'> | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
 
   const allSelected = items.length > 0 && selectedIds.size === items.length;
@@ -66,6 +68,7 @@ export default function Cart() {
     setAppliedCode('');
     setCouponDiscount(0);
     setCouponCode('');
+    setCouponInfo(null);
   };
 
   const toggleSelectAll = () => {
@@ -96,15 +99,25 @@ export default function Cart() {
     if (!code) return;
     setCouponLoading(true);
     try {
-      const discount = await couponService.validateCoupon(code, selectedSalePrice);
+      const [discount, coupon] = await Promise.all([
+        couponService.validateCoupon(code, selectedSalePrice),
+        couponService.getCouponByCode(code),
+      ]);
       setCouponDiscount(discount);
       setAppliedCode(code);
-      toast.success(`Áp dụng mã "${code}" thành công! Giảm ${formatCurrency(discount)}`);
+      setCouponInfo({ discountType: coupon.discountType.toUpperCase(), discountValue: coupon.discountValue });
+
+      const label =
+        coupon.discountType === 'PERCENTAGE'
+          ? `${coupon.discountValue}%`
+          : formatCurrency(coupon.discountValue);
+      toast.success(`Áp dụng mã "${code}" thành công! Giảm ${label}`);
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Mã giảm giá không hợp lệ hoặc đã hết hạn';
       toast.error(msg);
       setCouponDiscount(0);
       setAppliedCode('');
+      setCouponInfo(null);
     } finally {
       setCouponLoading(false);
     }
@@ -123,11 +136,15 @@ export default function Cart() {
       const code = couponCode.trim().toUpperCase();
       setCouponLoading(true);
       try {
-        const discount = await couponService.validateCoupon(code, selectedSalePrice);
+        const [discount, coupon] = await Promise.all([
+          couponService.validateCoupon(code, selectedSalePrice),
+          couponService.getCouponByCode(code),
+        ]);
         finalCouponDiscount = discount;
         finalAppliedCode = code;
         setCouponDiscount(discount);
         setAppliedCode(code);
+        setCouponInfo({ discountType: coupon.discountType.toUpperCase(), discountValue: coupon.discountValue });
         toast.success(`Đã áp dụng mã "${code}"!`);
       } catch (err: any) {
         const msg = err?.response?.data?.message || 'Mã giảm giá không hợp lệ';
@@ -239,16 +256,20 @@ export default function Cart() {
                   </p>
                   {appliedCode ? (
                     <div className="flex items-center justify-between px-3 py-2.5 bg-green-50 border border-green-300 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
                         <span className="text-sm font-semibold text-green-700">{appliedCode}</span>
-                        <span className="text-xs text-green-600 bg-green-100 px-1.5 py-0.5 rounded font-medium">
-                          -{formatCurrency(couponDiscount)}
-                        </span>
+                        {couponInfo && (
+                          <span className="text-xs text-green-700 bg-green-100 px-1.5 py-0.5 rounded font-medium">
+                            {couponInfo.discountType === 'PERCENTAGE'
+                              ? `Giảm ${couponInfo.discountValue}% = ${formatCurrency(couponDiscount)}`
+                              : `Giảm ${formatCurrency(couponInfo.discountValue)}`}
+                          </span>
+                        )}
                       </div>
                       <button
                         onClick={resetCoupon}
-                        className="text-slate-400 hover:text-red-500 transition-colors p-0.5 rounded"
+                        className="text-slate-400 hover:text-red-500 transition-colors p-0.5 rounded flex-shrink-0"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>

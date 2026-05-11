@@ -87,6 +87,13 @@ const couponService = {
     );
     return response.data.data;
   },
+
+  getCouponByCode: async (code: string): Promise<Coupon> => {
+    const response = await axiosInstance.get<ApiResponse<Coupon>>(
+      `${API_ENDPOINTS.COUPONS?.BASE || "/coupons"}/by-code/${code}`
+    );
+    return response.data.data;
+  },
 };
 
 export default couponService;
