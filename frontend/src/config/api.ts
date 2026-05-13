@@ -1,14 +1,23 @@
-import axios from 'axios';
+import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import { Store } from '@reduxjs/toolkit';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+interface RetryConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
 
-const axiosInstance = axios.create({
+interface QueueItem {
+  resolve: (token: string) => void;
+  reject: (error: unknown) => void;
+}
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+
+const axiosInstance: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 30_000,
   withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
   paramsSerializer: (params) => {
     const parts: string[] = [];
     Object.entries(params).forEach(([key, value]) => {
@@ -16,16 +25,47 @@ const axiosInstance = axios.create({
       if (key === 'sort') {
         parts.push(`${key}=${value}`);
       } else if (key === 'filter') {
-        parts.push(`${key}=${encodeURIComponent(value)}`);
+        parts.push(`${key}=${encodeURIComponent(value as string)}`);
       } else if (Array.isArray(value)) {
-        value.forEach((v) => parts.push(`${key}=${encodeURIComponent(v)}`));
+        (value as unknown[]).forEach((v) =>
+          parts.push(`${key}=${encodeURIComponent(String(v))}`)
+        );
       } else {
-        parts.push(`${key}=${encodeURIComponent(value)}`);
+        parts.push(`${key}=${encodeURIComponent(String(value))}`);
       }
     });
     return parts.join('&');
   },
 });
+
+let isRefreshing = false;
+let pendingQueue: QueueItem[] = [];
+
+const drainQueue = (error: unknown, newToken: string | null) => {
+  pendingQueue.forEach(({ resolve, reject }) =>
+    error ? reject(error) : resolve(newToken!)
+  );
+  pendingQueue = [];
+};
+
+let _store: Store | null = null;
+
+export const setupAxios = (store: Store) => {
+  _store = store;
+};
+
+const dispatchIfReady = (action: Parameters<Store['dispatch']>[0]) => {
+  _store?.dispatch(action);
+};
+
+const forceLogout = () => {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('user');
+  import('@/redux/slices/authSlice').then(({ resetAuthState }) => {
+    dispatchIfReady(resetAuthState());
+  });
+  window.location.href = '/login';
+};
 
 axiosInstance.interceptors.request.use(
   (config) => {
@@ -35,61 +75,73 @@ axiosInstance.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error: AxiosError) => Promise.reject(error)
 );
 
 axiosInstance.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  (error) => {
-    const { response, config } = error;
+  (response) => response,
+  async (error: AxiosError) => {
+    const originalRequest = error.config as RetryConfig | undefined;
 
-    if (response) {
-      switch (response.status) {
-        case 401: {
-          const url: string = config?.url || '';
-          const isAuthEndpoint =
-            url.includes('/auth/account') ||
-            url.includes('/auth/me') ||
-            url.includes('/auth/refresh') ||
-            url.includes('/auth/login');
-
-          const isPublicPage =
-            window.location.pathname === '/' ||
-            window.location.pathname.startsWith('/course') ||
-            window.location.pathname.startsWith('/search') ||
-            window.location.pathname === '/login' ||
-            window.location.pathname === '/signup' ||
-            window.location.pathname === '/forgot-password';
-
-          if (!isAuthEndpoint && !isPublicPage) {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            localStorage.removeItem('user');
-            window.location.href = '/login';
-          }
-          break;
-        }
-        case 403:
-          console.error('Forbidden: Bạn không có quyền truy cập tài nguyên này');
-          break;
-        case 404:
-          console.error('Not Found: Tài nguyên không tồn tại');
-          break;
-        case 500:
-          console.error('Server Error: Đã xảy ra lỗi từ máy chủ');
-          break;
-        default:
-          console.error('Error:', response.data?.message || 'Đã xảy ra lỗi');
-      }
-    } else if (error.request) {
-      console.error('Network Error: Không thể kết nối đến máy chủ');
+    if (
+      error.response?.status !== 401 ||
+      !originalRequest ||
+      originalRequest._retry
+    ) {
+      return Promise.reject(error);
     }
 
-    return Promise.reject(error);
+    const skipUrls = ['/auth/login', '/auth/refresh', '/auth/register'];
+    const requestUrl = originalRequest.url ?? '';
+    if (skipUrls.some((u) => requestUrl.includes(u))) {
+      return Promise.reject(error);
+    }
+
+    originalRequest._retry = true;
+
+    if (isRefreshing) {
+      return new Promise<string>((resolve, reject) => {
+        pendingQueue.push({ resolve, reject });
+      })
+        .then((newToken) => {
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return axiosInstance(originalRequest);
+        })
+        .catch((err) => Promise.reject(err));
+    }
+
+    isRefreshing = true;
+
+    try {
+      const { data } = await axios.post(
+        `${API_BASE_URL}/auth/refresh`,
+        {},
+        { withCredentials: true }
+      );
+
+      const newAccessToken: string = data?.data?.access_token;
+      if (!newAccessToken) throw new Error('No access_token in refresh response');
+
+      localStorage.setItem('access_token', newAccessToken);
+
+      const newUser = data?.data?.user;
+      if (newUser) {
+        localStorage.setItem('user', JSON.stringify(newUser));
+        import('@/redux/slices/authSlice').then(({ setUser }) => {
+          dispatchIfReady(setUser(newUser));
+        });
+      }
+
+      drainQueue(null, newAccessToken);
+      originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+      return axiosInstance(originalRequest);
+    } catch (refreshError) {
+      drainQueue(refreshError, null);
+      forceLogout();
+      return Promise.reject(refreshError);
+    } finally {
+      isRefreshing = false;
+    }
   }
 );
 
