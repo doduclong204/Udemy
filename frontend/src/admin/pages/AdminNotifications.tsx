@@ -271,7 +271,7 @@ function NotificationFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="admin-dialog sm:max-w-lg">
+      <DialogContent className="admin-dialog admin-theme sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-gray-800">
             {isEdit ? "Chỉnh sửa thông báo" : "Tạo thông báo mới"}
@@ -344,7 +344,7 @@ function NotificationFormDialog({
           <Button
             type="button"
             onClick={() => onSubmit(form, true)}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-medium"
+            className="bg-admin-primary hover:bg-admin-primary/90 text-white"
             disabled={isLoading}
           >
             {isLoading ? "Đang xử lý..." : isEdit ? "Lưu thay đổi" : (
@@ -797,7 +797,7 @@ export default function AdminNotifications() {
       />
 
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="admin-dialog sm:max-w-lg">
+        <DialogContent className="admin-dialog admin-theme sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-gray-800">Chi tiết thông báo</DialogTitle>
           </DialogHeader>

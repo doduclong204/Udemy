@@ -374,8 +374,7 @@ const showCountEnd = Math.min(currentPage * itemsPerPage, totalItems);
       {/* View Course Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={(open) => { setIsViewDialogOpen(open); if (!open) setSelectedCourse(null); }}>
         <DialogContent
-          className="admin-dialog sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-          
+          className="admin-dialog admin-theme sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         >
           {/* Loading skeleton */}
           {loadingDetail && !selectedCourse && (

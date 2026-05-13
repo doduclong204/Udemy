@@ -384,7 +384,7 @@ export default function AdminReviews() {
 
       {/* Reply Dialog */}
       <Dialog open={replyOpen} onOpenChange={v => { if (!v) { setReplyOpen(false); setSelected(null); } }}>
-        <DialogContent className="admin-dialog sm:max-w-lg">
+        <DialogContent className="admin-dialog admin-theme sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-white">
               {selected?.adminReply ? 'Sửa phản hồi' : 'Phản hồi đánh giá'}
@@ -414,7 +414,7 @@ export default function AdminReviews() {
             </Button>
             <Button
               onClick={handleReply}
-              className="!bg-blue-600 hover:!bg-blue-500 text-white"
+              className="bg-admin-primary hover:bg-admin-primary/90 text-white"
               disabled={!replyText.trim() || isSubmitting}
             >
               {isSubmitting ? 'Đang gửi...' : 'Gửi phản hồi'}

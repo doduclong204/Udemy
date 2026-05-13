@@ -422,7 +422,7 @@ export default function AdminSettings() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="!bg-blue-600 hover:!bg-blue-500 text-white min-w-[140px]"
+              className="bg-admin-primary hover:bg-admin-primary/90 text-white"
             >
               {isLoading ? (
                 <>

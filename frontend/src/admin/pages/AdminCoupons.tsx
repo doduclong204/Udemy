@@ -430,7 +430,7 @@ export default function AdminCoupons() {
 
       {}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="bg-white border-[hsl(220,15%,87%)] sm:max-w-md">
+        <DialogContent className="admin-dialog admin-theme sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-gray-800">
               Chi tiết mã giảm giá
@@ -518,7 +518,7 @@ export default function AdminCoupons() {
 
       {}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="admin-dialog sm:max-w-md">
+        <DialogContent className="admin-dialog admin-theme sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Tạo mã giảm giá mới</DialogTitle>
             <DialogDescription>Nhập thông tin mã giảm giá</DialogDescription>
@@ -624,7 +624,7 @@ export default function AdminCoupons() {
 
       {}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="admin-dialog sm:max-w-md">
+        <DialogContent className="admin-dialog admin-theme sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Chỉnh sửa mã giảm giá</DialogTitle>
             <DialogDescription>

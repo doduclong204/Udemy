@@ -122,6 +122,8 @@ const dialogBtnSecondary: React.CSSProperties = {
 };
 const dialogBtnPrimary: React.CSSProperties = {
   background: "#6366f1",
+  color: "#ffffff",
+  border: "1px solid #818cf8",
 };
 
 interface StudentComboboxProps {
@@ -1044,7 +1046,7 @@ export default function AdminOrders() {
         }}
       >
         <DialogContent
-          className="sm:max-w-lg p-0 gap-0 bg-white border border-[hsl(220,15%,87%)]"
+          className="admin-dialog admin-theme sm:max-w-lg p-0 gap-0"
         >
           <div className="px-6 pt-6 pb-4 border-b border-[hsl(220,15%,87%)]">
             <p
@@ -1140,30 +1142,27 @@ export default function AdminOrders() {
           )}
 
           <div className="px-6 pb-6 flex justify-end gap-3">
-            <button
-              onClick={() => {
-                setIsAddDialogOpen(false);
-                resetAddForm();
-              }}
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white border border-[hsl(220,15%,80%)] text-gray-700 hover:bg-[hsl(220,15%,93%)] hover:text-gray-900 hover:border-[hsl(220,15%,70%)]"
+            <Button
+              variant="outline"
+              onClick={() => { setIsAddDialogOpen(false); resetAddForm(); }}
+              className="border-admin-border text-admin-foreground hover:bg-admin-accent"
             >
               Hủy
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleAddOrder}
               disabled={isAdding || loadingLookup}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-all hover:opacity-90 disabled:opacity-50"
-              style={dialogBtnPrimary}
+              className="bg-admin-primary hover:bg-admin-primary/90 text-white disabled:opacity-50"
             >
               {isAdding ? "Đang tạo..." : "Tạo đơn hàng"}
-            </button>
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent
-          className="sm:max-w-lg p-0 gap-0 overflow-hidden bg-white border border-[hsl(220,15%,87%)]"
+          className="admin-dialog admin-theme sm:max-w-lg p-0 gap-0 overflow-hidden"
         >
           {selectedOrder && (
             <>
@@ -1307,12 +1306,13 @@ export default function AdminOrders() {
               </div>
 
               <div className="px-6 pb-6 flex justify-end">
-                <button
+                <Button
+                  variant="outline"
                   onClick={() => setIsViewDialogOpen(false)}
-                  className="px-5 py-2 rounded-lg text-sm font-medium transition-all bg-white border border-[hsl(220,15%,80%)] text-gray-700 hover:bg-[hsl(220,15%,93%)] hover:text-gray-900 hover:border-[hsl(220,15%,70%)]"
+                  className="border-admin-border text-admin-foreground hover:bg-admin-accent"
                 >
                   Đóng
-                </button>
+                </Button>
               </div>
             </>
           )}
@@ -1321,7 +1321,7 @@ export default function AdminOrders() {
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent
-          className="sm:max-w-md p-0 gap-0 bg-white border border-[hsl(220,15%,87%)]"
+          className="admin-dialog admin-theme sm:max-w-md p-0 gap-0"
         >
           <div className="px-6 pt-6 pb-4 border-b border-[hsl(220,15%,87%)]">
             <p
@@ -1363,19 +1363,19 @@ export default function AdminOrders() {
           </div>
 
           <div className="px-6 pb-6 flex justify-end gap-3">
-            <button
+            <Button
+              variant="outline"
               onClick={() => setIsEditDialogOpen(false)}
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white border border-[hsl(220,15%,80%)] text-gray-700 hover:bg-[hsl(220,15%,93%)] hover:text-gray-900 hover:border-[hsl(220,15%,70%)]"
+              className="border-admin-border text-admin-foreground hover:bg-admin-accent"
             >
               Hủy
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleEditSave}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-all hover:opacity-90"
-              style={dialogBtnPrimary}
+              className="bg-admin-primary hover:bg-admin-primary/90 text-white"
             >
               Lưu thay đổi
-            </button>
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

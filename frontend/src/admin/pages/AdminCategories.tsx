@@ -405,7 +405,7 @@ export default function AdminCategories() {
 
       {}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="bg-white border-[hsl(220,15%,87%)] sm:max-w-md">
+        <DialogContent className="admin-dialog admin-theme sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-gray-800">Chi tiết danh mục</DialogTitle>
           </DialogHeader>
@@ -438,7 +438,7 @@ export default function AdminCategories() {
 
       {}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="admin-dialog sm:max-w-md">
+        <DialogContent className="admin-dialog admin-theme sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Thêm danh mục mới</DialogTitle>
             <DialogDescription>
@@ -498,7 +498,7 @@ export default function AdminCategories() {
 
       {}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="admin-dialog sm:max-w-md">
+        <DialogContent className="admin-dialog admin-theme sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Chỉnh sửa danh mục</DialogTitle>
             <DialogDescription>

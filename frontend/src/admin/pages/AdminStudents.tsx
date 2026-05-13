@@ -429,11 +429,11 @@ export default function AdminStudents() {
         if (!open) { setNewAvatarFile(null); setNewAvatarPreview(""); }
         setIsAddDialogOpen(open);
       }}>
-        <DialogContent className="admin-dialog sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&::-webkit-scrollbar]:hidden">
-          <div className="px-6 pt-5 pb-4" style={{ borderBottom: '1px solid hsl(220,15%,87%)' }}>
-            <p className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: '#6366f1' }}>Thêm mới</p>
-            <h3 className="text-xl font-bold" style={{ color: '#f1f5f9' }}>Thêm học viên mới</h3>
-            <p className="text-sm mt-0.5" style={{ color: '#475569' }}>Nhập thông tin học viên vào form bên dưới</p>
+        <DialogContent className="admin-dialog admin-theme sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&::-webkit-scrollbar]:hidden">
+          <div className="px-6 pt-5 pb-4 border-b border-admin-border">
+            <p className="text-[11px] font-semibold uppercase tracking-widest mb-1 text-admin-primary">Thêm mới</p>
+            <h3 className="text-xl font-bold text-admin-foreground">Thêm học viên mới</h3>
+            <p className="text-sm mt-0.5 text-admin-muted-foreground">Nhập thông tin học viên vào form bên dưới</p>
           </div>
           <div className="px-6 py-5 space-y-5">
             {/* Avatar */}
@@ -454,12 +454,12 @@ export default function AdminStudents() {
                     if (file) { setNewAvatarFile(file); setNewAvatarPreview(URL.createObjectURL(file)); }
                     e.target.value = "";
                   }} />
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all w-fit" style={{ background: 'hsl(220,15%,96%)', border: '1px solid hsl(220,15%,87%)', color: '#6b7280' }}>
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all w-fit bg-admin-accent border border-admin-border text-admin-muted-foreground hover:text-admin-foreground">
                     <Upload className="w-4 h-4" />
                     {newAvatarFile ? newAvatarFile.name : "Chọn ảnh"}
                   </div>
                 </label>
-                {newAvatarFile && <p className="text-xs mt-1.5" style={{ color: '#4ade80' }}>✓ Đã chọn ảnh</p>}
+                {newAvatarFile && <p className="text-xs mt-1.5 text-green-600">✓ Đã chọn ảnh</p>}
               </div>
             </div>
 
@@ -507,20 +507,12 @@ export default function AdminStudents() {
             </div>
 
             <div className="flex justify-end gap-3 pt-1">
-              <button onClick={() => { setNewAvatarFile(null); setNewAvatarPreview(""); setIsAddDialogOpen(false); }}
-                className="px-5 py-2 rounded-lg text-sm font-medium"
-                style={{ background: '#ffffff', border: '1px solid hsl(220,15%,80%)', color: '#374151' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'hsl(220,15%,92%)'; (e.currentTarget as HTMLElement).style.color = '#111827'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#ffffff'; (e.currentTarget as HTMLElement).style.color = '#374151'; }}>
+              <Button variant="outline" onClick={() => { setNewAvatarFile(null); setNewAvatarPreview(""); setIsAddDialogOpen(false); }} className="border-admin-border text-admin-foreground hover:bg-admin-accent">
                 Hủy
-              </button>
-              <button onClick={handleAddStudent}
-                className="px-5 py-2 rounded-lg text-sm font-semibold transition-all"
-                style={{ background: '#6366f1', color: '#fff', border: '1px solid #818cf8' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#4f46e5'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#6366f1'; }}>
+              </Button>
+              <Button onClick={handleAddStudent} className="bg-admin-primary hover:bg-admin-primary/90 text-white">
                 Thêm học viên
-              </button>
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -528,60 +520,88 @@ export default function AdminStudents() {
 
       {/* View Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="admin-dialog sm:max-w-lg p-0 gap-0 overflow-hidden [&::-webkit-scrollbar]:hidden">
+        <DialogContent className="admin-dialog admin-theme sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&::-webkit-scrollbar]:hidden">
           {selectedStudent && (
             <>
-              <div className="relative px-6 pt-6 pb-4" style={{ background: 'hsl(220,15%,96%)', borderBottom: '1px solid hsl(220,15%,87%)' }}>
+              {/* Header */}
+              <div className="px-6 pt-5 pb-4 border-b border-admin-border">
+                <p className="text-[11px] font-semibold uppercase tracking-widest mb-3 text-admin-primary">Chi tiết học viên</p>
                 <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <Avatar className="w-16 h-16 ring-2 ring-admin-primary/40">
+                  <div className="relative shrink-0">
+                    <Avatar className="w-20 h-20 ring-2 ring-admin-primary/40">
                       <AvatarImage src={selectedStudent.avatar} />
-                      <AvatarFallback className="bg-admin-primary text-white text-xl">{selectedStudent.name.charAt(0)}</AvatarFallback>
+                      <AvatarFallback className="bg-admin-primary text-white text-2xl">{selectedStudent.name.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${selectedStudent.status === "Active" ? "bg-green-500" : "bg-gray-500"}`} />
+                    <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${selectedStudent.status === "Active" ? "bg-green-500" : "bg-gray-400"}`} />
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold" style={{ color: '#64748b' }}>{selectedStudent.name}</h3>
-                    <p className="text-sm flex items-center gap-1.5" style={{ color: '#64748b' }}>
-                      <Mail className="w-3.5 h-3.5" />{selectedStudent.email}
-                    </p>
-                    {(selectedStudent as any).phone && (
-                      <p className="text-sm flex items-center gap-1.5 mt-0.5" style={{ color: '#64748b' }}>
-                        <Phone className="w-3.5 h-3.5" />{(selectedStudent as any).phone}
-                      </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-xl font-bold text-admin-foreground">{selectedStudent.name}</h3>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${selectedStudent.status === "Active" ? "bg-green-100 text-green-700 border border-green-200" : "bg-gray-100 text-gray-500 border border-gray-200"}`}>
+                        {selectedStudent.status === "Active" ? "Đang hoạt động" : "Không hoạt động"}
+                      </span>
+                      <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-indigo-100 text-indigo-600 border border-indigo-200">
+                        {(selectedStudent as any).role === "ADMIN" ? "Quản trị viên" : "Học viên"}
+                      </span>
+                    </div>
+                    {(selectedStudent as any).bio && (
+                      <p className="mt-1.5 text-sm italic text-admin-muted-foreground">"{(selectedStudent as any).bio}"</p>
                     )}
                   </div>
-                  <span className={`ml-auto text-xs px-2.5 py-1 rounded-full font-medium ${selectedStudent.status === "Active" ? "bg-green-500/15 text-green-400 border border-green-500/30" : "bg-gray-500/15 text-gray-400 border border-gray-500/30"}`}>
-                    {selectedStudent.status === "Active" ? "Đang hoạt động" : "Không hoạt động"}
-                  </span>
-                </div>
-                {(selectedStudent as any).bio && (
-                  <p className="mt-3 text-sm italic" style={{ color: '#475569' }}>"{(selectedStudent as any).bio}"</p>
-                )}
-              </div>
-              <div className="px-6 py-4 space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { icon: BookOpen, label: "Khóa học đăng ký", value: selectedStudent.enrolledCourses, color: '#818cf8' },
-                    { icon: Star, label: "Khóa học hoàn thành", value: selectedStudent.completedCourses, color: '#4ade80' },
-                    { icon: null, label: "Tổng chi tiêu", value: formatCurrency(selectedStudent.totalSpent), color: '#fbbf24' },
-                    { icon: Calendar, label: "Ngày tham gia", value: formatDate(selectedStudent.joinedAt), color: '#6b7280' },
-                  ].map(item => (
-                    <div key={item.label} className="rounded-xl p-3.5" style={{ background: 'hsl(220,15%,96%)', border: '1px solid hsl(220,15%,87%)' }}>
-                      <p className="text-[11px] uppercase tracking-wider font-semibold mb-1" style={{ color: '#475569' }}>{item.label}</p>
-                      <p className="text-sm font-bold" style={{ color: item.color }}>{item.value}</p>
-                    </div>
-                  ))}
                 </div>
               </div>
-              <div className="px-6 pb-5 flex justify-end">
-                <button onClick={() => setIsViewDialogOpen(false)}
-                  className="px-5 py-2 rounded-lg text-sm font-medium transition-all"
-                  style={{ background: '#ffffff', border: '1px solid hsl(220,15%,80%)', color: '#374151' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'hsl(220,15%,92%)'; (e.currentTarget as HTMLElement).style.color = '#111827'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#ffffff'; (e.currentTarget as HTMLElement).style.color = '#374151'; }}>
+
+              <div className="px-6 py-5 space-y-5">
+                {/* Thông tin cá nhân */}
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest mb-3 text-admin-muted-foreground">Thông tin cá nhân</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { label: "Email", value: selectedStudent.email, icon: <Mail className="w-3.5 h-3.5" /> },
+                      { label: "Số điện thoại", value: (selectedStudent as any).phone || "—", icon: <Phone className="w-3.5 h-3.5" /> },
+                      { label: "Ngày sinh", value: (selectedStudent as any).dateOfBirth ? formatDate((selectedStudent as any).dateOfBirth) : "—", icon: <Calendar className="w-3.5 h-3.5" /> },
+                      { label: "Ngày tham gia", value: formatDate(selectedStudent.joinedAt), icon: <Calendar className="w-3.5 h-3.5" /> },
+                    ].map(item => (
+                      <div key={item.label} className="rounded-xl p-3.5 bg-admin-accent border border-admin-border">
+                        <p className="text-[11px] uppercase tracking-wider font-semibold mb-1.5 flex items-center gap-1.5 text-admin-muted-foreground">
+                          {item.icon}{item.label}
+                        </p>
+                        <p className={`text-sm font-medium break-all ${item.value === "—" ? "text-admin-muted-foreground" : "text-admin-foreground"}`}>
+                          {item.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Thống kê học tập */}
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest mb-3 text-admin-muted-foreground">Thống kê học tập</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { label: "Khóa học đăng ký", value: selectedStudent.enrolledCourses, colorCls: "text-indigo-500", icon: <BookOpen className="w-3.5 h-3.5" /> },
+                      { label: "Khóa học hoàn thành", value: selectedStudent.completedCourses, colorCls: "text-green-500", icon: <Star className="w-3.5 h-3.5" /> },
+                      { label: "Tổng chi tiêu", value: formatCurrency(selectedStudent.totalSpent), colorCls: "text-yellow-500", icon: null },
+                      { label: "Chưa hoàn thành", value: Math.max(0, selectedStudent.enrolledCourses - selectedStudent.completedCourses), colorCls: "text-red-500", icon: null },
+                    ].map(item => (
+                      <div key={item.label} className="rounded-xl p-3.5 bg-admin-accent border border-admin-border">
+                        <p className="text-[11px] uppercase tracking-wider font-semibold mb-1.5 flex items-center gap-1.5 text-admin-muted-foreground">
+                          {item.icon}{item.label}
+                        </p>
+                        <p className={`text-sm font-bold ${item.colorCls}`}>{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-6 pb-5 flex justify-end gap-3">
+                <Button onClick={() => { setIsViewDialogOpen(false); handleEditClick(selectedStudent); }} className="bg-admin-primary hover:bg-admin-primary/90 text-white">
+                  Chỉnh sửa
+                </Button>
+                <Button variant="outline" onClick={() => setIsViewDialogOpen(false)} className="border-admin-border text-admin-foreground hover:bg-admin-accent">
                   Đóng
-                </button>
+                </Button>
               </div>
             </>
           )}
@@ -590,11 +610,11 @@ export default function AdminStudents() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="admin-dialog sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&::-webkit-scrollbar]:hidden">
-          <div className="px-6 pt-5 pb-4" style={{ borderBottom: '1px solid hsl(220,15%,87%)' }}>
-            <p className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: '#6366f1' }}>Chỉnh sửa học viên</p>
-            <h3 className="text-xl font-bold" style={{ color: '#f1f5f9' }}>{selectedStudent?.name}</h3>
-            <p className="text-sm mt-0.5" style={{ color: '#475569' }}>Cập nhật thông tin tài khoản</p>
+        <DialogContent className="admin-dialog admin-theme sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&::-webkit-scrollbar]:hidden">
+          <div className="px-6 pt-5 pb-4 border-b border-admin-border">
+            <p className="text-[11px] font-semibold uppercase tracking-widest mb-1 text-admin-primary">Chỉnh sửa học viên</p>
+            <h3 className="text-xl font-bold text-admin-foreground">{selectedStudent?.name}</h3>
+            <p className="text-sm mt-0.5 text-admin-muted-foreground">Cập nhật thông tin tài khoản</p>
           </div>
           <div className="px-6 py-5 space-y-5">
             <div className="flex items-center gap-5">
@@ -612,12 +632,12 @@ export default function AdminStudents() {
                     if (file) { setAvatarFile(file); setAvatarPreview(URL.createObjectURL(file)); }
                     e.target.value = "";
                   }} />
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all w-fit" style={{ background: 'hsl(220,15%,96%)', border: '1px solid hsl(220,15%,87%)', color: '#6b7280' }}>
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all w-fit bg-admin-accent border border-admin-border text-admin-muted-foreground hover:text-admin-foreground">
                     <Upload className="w-4 h-4" />
                     {avatarFile ? avatarFile.name : "Chọn ảnh mới"}
                   </div>
                 </label>
-                {avatarFile && <p className="text-xs mt-1.5" style={{ color: '#4ade80' }}>✓ Đã chọn ảnh mới</p>}
+                {avatarFile && <p className="text-xs mt-1.5 text-green-600">✓ Đã chọn ảnh mới</p>}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -628,7 +648,7 @@ export default function AdminStudents() {
               </div>
               <div className="col-span-2 space-y-1.5">
                 <Label className={LABEL_CLS}>Email</Label>
-                <div className="px-3 py-2 rounded-lg text-sm" style={{ background: 'hsl(220,15%,96%)', border: '1px solid hsl(220,15%,87%)', color: '#374151' }}>
+                <div className="px-3 py-2 rounded-lg text-sm bg-admin-accent border border-admin-border text-admin-muted-foreground">
                   {selectedStudent?.email}
                 </div>
               </div>
@@ -659,20 +679,12 @@ export default function AdminStudents() {
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-1">
-              <button onClick={() => setIsEditDialogOpen(false)}
-                className="px-5 py-2 rounded-lg text-sm font-medium"
-                style={{ background: '#ffffff', border: '1px solid hsl(220,15%,80%)', color: '#374151' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'hsl(220,15%,92%)'; (e.currentTarget as HTMLElement).style.color = '#111827'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#ffffff'; (e.currentTarget as HTMLElement).style.color = '#374151'; }}>
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="border-admin-border text-admin-foreground hover:bg-admin-accent">
                 Hủy
-              </button>
-              <button onClick={handleEditStudent}
-                className="px-5 py-2 rounded-lg text-sm font-semibold transition-all"
-                style={{ background: '#6366f1', color: '#fff', border: '1px solid #818cf8' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#4f46e5'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#6366f1'; }}>
+              </Button>
+              <Button onClick={handleEditStudent} className="bg-admin-primary hover:bg-admin-primary/90 text-white">
                 Lưu thay đổi
-              </button>
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -680,11 +692,11 @@ export default function AdminStudents() {
 
       {/* Notification Dialog */}
       <Dialog open={isNotifDialogOpen} onOpenChange={setIsNotifDialogOpen}>
-        <DialogContent className="admin-dialog sm:max-w-lg">
+        <DialogContent className="admin-dialog admin-theme sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle style={{ color: '#f1f5f9' }}>Gửi thông báo</DialogTitle>
-            <DialogDescription style={{ color: '#64748b' }}>
-              Gửi đến: <span className="font-medium text-gray-800">{selectedStudent?.name}</span> ({selectedStudent?.email})
+            <DialogTitle className="text-admin-foreground">Gửi thông báo</DialogTitle>
+            <DialogDescription className="text-admin-muted-foreground">
+              Gửi đến: <span className="font-medium text-admin-foreground">{selectedStudent?.name}</span> ({selectedStudent?.email})
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -709,7 +721,7 @@ export default function AdminStudents() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsNotifDialogOpen(false)} disabled={isSending} style={{ background: '#ffffff', border: '1px solid hsl(220,15%,80%)', color: '#374151' }}>Hủy</Button>
+            <Button variant="outline" onClick={() => setIsNotifDialogOpen(false)} disabled={isSending} className="border-admin-border text-admin-foreground hover:bg-admin-accent">Hủy</Button>
             <Button onClick={handleSendNotification} disabled={isSending} className="bg-admin-primary hover:bg-admin-primary/90">
               <Mail className="w-4 h-4 mr-2" />{isSending ? "Đang gửi..." : "Gửi thông báo"}
             </Button>
