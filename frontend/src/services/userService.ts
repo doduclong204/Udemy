@@ -243,7 +243,8 @@ const userService = {
         `${API_ENDPOINTS.USERS.BASE}`,
         payload,
       );
-      return response.data?.data ?? response.data;
+      const raw = (response.data?.data ?? response.data) as any;
+      return { ...raw, id: raw._id ?? raw.id } as User;
     } catch (err: unknown) {
       const axiosErr = err as {
         response?: { data?: { message?: string; error?: string } };
@@ -269,7 +270,10 @@ const userService = {
       avatar?: string;
     }>,
   ): Promise<User> => {
-    const payload: UpdateUserPayload = { name: data.name };
+    const payload: UpdateUserPayload = {};
+    if (data.name !== undefined) {
+      payload.name = data.name;
+    }
     if (data.role) {
       payload.role = data.role.toString().toUpperCase();
     }
