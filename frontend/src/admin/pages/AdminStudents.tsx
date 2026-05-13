@@ -66,9 +66,15 @@ export default function AdminStudents() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const isMounted = useRef(false);
 
-  const [newStudent, setNewStudent] = useState<{ name: string; email: string; password: string; role: RoleType }>({
+  const [newStudent, setNewStudent] = useState<{
+    name: string; email: string; password: string; role: RoleType;
+    phone: string; bio: string; dateOfBirth: string; avatar: string;
+  }>({
     name: "", email: "", password: "", role: ROLE.USER,
+    phone: "", bio: "", dateOfBirth: "", avatar: "",
   });
+  const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
+  const [newAvatarPreview, setNewAvatarPreview] = useState<string>("");
 
   const [editStudent, setEditStudent] = useState<{
     name: string; role: RoleType; phone: string; bio: string; dateOfBirth: string; avatar: string;
@@ -128,8 +134,27 @@ export default function AdminStudents() {
       toast.error("Vui lòng điền đầy đủ thông tin!"); return;
     }
     try {
-      await userService.createUser({ name: newStudent.name, email: newStudent.email, password: newStudent.password, role: newStudent.role?.toString().toUpperCase() });
-      setNewStudent({ name: "", email: "", password: "", role: ROLE.USER });
+      const created = await userService.createUser({
+        name: newStudent.name, email: newStudent.email,
+        password: newStudent.password, role: newStudent.role?.toString().toUpperCase(),
+      });
+      // Upload avatar & update extra fields if provided
+      const hasExtra = newAvatarFile || newStudent.phone || newStudent.bio || newStudent.dateOfBirth;
+      if (hasExtra && created?.id) {
+        let avatarUrl = "";
+        if (newAvatarFile) {
+          avatarUrl = await uploadService.uploadImage(newAvatarFile);
+        }
+        await userService.updateUser(created.id, {
+          phone: newStudent.phone,
+          bio: newStudent.bio,
+          dateOfBirth: newStudent.dateOfBirth,
+          ...(avatarUrl ? { avatar: avatarUrl } : {}),
+        });
+      }
+      setNewStudent({ name: "", email: "", password: "", role: ROLE.USER, phone: "", bio: "", dateOfBirth: "", avatar: "" });
+      setNewAvatarFile(null);
+      setNewAvatarPreview("");
       setIsAddDialogOpen(false);
       toast.success("Thêm học viên thành công!");
       fetchStudents();
@@ -400,39 +425,104 @@ export default function AdminStudents() {
       </div>
 
       {/* Add Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="admin-dialog sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle style={{ color: '#f1f5f9' }}>Thêm học viên mới</DialogTitle>
-            <DialogDescription style={{ color: '#64748b' }}>Nhập thông tin học viên mới vào form bên dưới</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {[
-              { label: "Họ và tên", key: "name", type: "text", placeholder: "Nguyễn Văn A" },
-              { label: "Email", key: "email", type: "email", placeholder: "email@example.com" },
-              { label: "Mật khẩu", key: "password", type: "password", placeholder: "••••••••" },
-            ].map(f => (
-              <div key={f.key} className="space-y-1.5">
-                <Label className={LABEL_CLS}>{f.label}</Label>
-                <Input type={f.type} placeholder={f.placeholder} value={(newStudent as any)[f.key]}
-                  onChange={e => setNewStudent({ ...newStudent, [f.key]: e.target.value })} className={INPUT_CLS} />
+      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+        if (!open) { setNewAvatarFile(null); setNewAvatarPreview(""); }
+        setIsAddDialogOpen(open);
+      }}>
+        <DialogContent className="admin-dialog sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&::-webkit-scrollbar]:hidden">
+          <div className="px-6 pt-5 pb-4" style={{ borderBottom: '1px solid hsl(220,15%,87%)' }}>
+            <p className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: '#6366f1' }}>Thêm mới</p>
+            <h3 className="text-xl font-bold" style={{ color: '#f1f5f9' }}>Thêm học viên mới</h3>
+            <p className="text-sm mt-0.5" style={{ color: '#475569' }}>Nhập thông tin học viên vào form bên dưới</p>
+          </div>
+          <div className="px-6 py-5 space-y-5">
+            {/* Avatar */}
+            <div className="flex items-center gap-5">
+              <div className="relative shrink-0">
+                <Avatar className="w-20 h-20 ring-2 ring-admin-primary/30">
+                  <AvatarImage src={newAvatarPreview} />
+                  <AvatarFallback className="bg-admin-primary text-white text-2xl">
+                    {newStudent.name.charAt(0) || "?"}
+                  </AvatarFallback>
+                </Avatar>
               </div>
-            ))}
-            <div className="space-y-1.5">
-              <Label className={LABEL_CLS}>Vai trò</Label>
-              <Select value={newStudent.role} onValueChange={v => setNewStudent({ ...newStudent, role: v as RoleType })}>
-                <SelectTrigger className={INPUT_CLS}><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-white border-[hsl(220,15%,87%)] text-gray-800 shadow-lg">
-                  <SelectItem value={ROLE.USER}>Học viên</SelectItem>
-                  <SelectItem value={ROLE.ADMIN}>Quản trị viên</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex-1">
+                <p className={LABEL_CLS + " mb-2"}>Ảnh đại diện</p>
+                <label className="cursor-pointer">
+                  <input type="file" accept="image/*" className="hidden" onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) { setNewAvatarFile(file); setNewAvatarPreview(URL.createObjectURL(file)); }
+                    e.target.value = "";
+                  }} />
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all w-fit" style={{ background: 'hsl(220,15%,96%)', border: '1px solid hsl(220,15%,87%)', color: '#6b7280' }}>
+                    <Upload className="w-4 h-4" />
+                    {newAvatarFile ? newAvatarFile.name : "Chọn ảnh"}
+                  </div>
+                </label>
+                {newAvatarFile && <p className="text-xs mt-1.5" style={{ color: '#4ade80' }}>✓ Đã chọn ảnh</p>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 space-y-1.5">
+                <Label className={LABEL_CLS}>Họ và tên <span className="text-red-400">*</span></Label>
+                <Input placeholder="Nguyễn Văn A" value={newStudent.name}
+                  onChange={e => setNewStudent({ ...newStudent, name: e.target.value })} className={INPUT_CLS} />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label className={LABEL_CLS}>Email <span className="text-red-400">*</span></Label>
+                <Input type="email" placeholder="email@example.com" value={newStudent.email}
+                  onChange={e => setNewStudent({ ...newStudent, email: e.target.value })} className={INPUT_CLS} />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label className={LABEL_CLS}>Mật khẩu <span className="text-red-400">*</span></Label>
+                <Input type="password" placeholder="••••••••" value={newStudent.password}
+                  onChange={e => setNewStudent({ ...newStudent, password: e.target.value })} className={INPUT_CLS} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className={LABEL_CLS}>Số điện thoại</Label>
+                <Input placeholder="0912345678" value={newStudent.phone}
+                  onChange={e => setNewStudent({ ...newStudent, phone: e.target.value })} className={INPUT_CLS} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className={LABEL_CLS}>Ngày sinh</Label>
+                <Input type="date" value={newStudent.dateOfBirth}
+                  onChange={e => setNewStudent({ ...newStudent, dateOfBirth: e.target.value })} className={INPUT_CLS} />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label className={LABEL_CLS}>Bio</Label>
+                <Textarea placeholder="Giới thiệu bản thân..." value={newStudent.bio} rows={3}
+                  onChange={e => setNewStudent({ ...newStudent, bio: e.target.value })} className={INPUT_CLS + " resize-none"} />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label className={LABEL_CLS}>Vai trò</Label>
+                <Select value={newStudent.role} onValueChange={v => setNewStudent({ ...newStudent, role: v as RoleType })}>
+                  <SelectTrigger className={INPUT_CLS}><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white border-[hsl(220,15%,87%)] text-gray-800 shadow-lg">
+                    <SelectItem value={ROLE.USER}>Học viên</SelectItem>
+                    <SelectItem value={ROLE.ADMIN}>Quản trị viên</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-1">
+              <button onClick={() => { setNewAvatarFile(null); setNewAvatarPreview(""); setIsAddDialogOpen(false); }}
+                className="px-5 py-2 rounded-lg text-sm font-medium"
+                style={{ background: '#ffffff', border: '1px solid hsl(220,15%,80%)', color: '#374151' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'hsl(220,15%,92%)'; (e.currentTarget as HTMLElement).style.color = '#111827'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#ffffff'; (e.currentTarget as HTMLElement).style.color = '#374151'; }}>
+                Hủy
+              </button>
+              <button onClick={handleAddStudent}
+                className="px-5 py-2 rounded-lg text-sm font-semibold transition-all"
+                style={{ background: '#6366f1', color: '#fff', border: '1px solid #818cf8' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#4f46e5'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#6366f1'; }}>
+                Thêm học viên
+              </button>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} style={{ background: '#ffffff', border: '1px solid hsl(220,15%,80%)', color: '#374151' }}>Hủy</Button>
-            <Button onClick={handleAddStudent} className="bg-admin-primary hover:bg-admin-primary/90">Thêm học viên</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
