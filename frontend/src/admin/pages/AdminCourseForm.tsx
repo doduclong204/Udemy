@@ -73,7 +73,7 @@ interface UploadItem {
 const DEFAULT_SECTIONS: Section[] = [
   {
     id: "1",
-    title: "Phần 1: Giới thiệu",
+    title: "  Phần 1: Giới thiệu",
     lectures: [
       {
         id: "1-1",
@@ -925,7 +925,7 @@ export default function AdminCourseForm() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       {/* Upload overlay — portal vào document.body */}
       {isUploading && uploadItems.length > 0 && (
         <UploadOverlay

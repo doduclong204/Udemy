@@ -24,6 +24,7 @@ const enrollmentService = {
         params: {
           page: page,
           size: pageSize,
+          sort: params?.sort || 'enrolledAt,desc',
           filter: filters.length > 0 ? filters.join(' and ') : undefined,
         },
       }

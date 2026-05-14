@@ -153,6 +153,20 @@ function getCompareRange(
       ),
     };
   }
+
+  if (mode === "month") {
+    return {
+      from: new Date(range.from.getFullYear(), range.from.getMonth() - 1, 1, 0, 0, 0, 0),
+      to: new Date(range.from.getFullYear(), range.from.getMonth(), 0, 23, 59, 59, 999),
+    };
+  }
+  if (mode === "year") {
+    return {
+      from: new Date(range.from.getFullYear() - 1, 0, 1, 0, 0, 0, 0),
+      to: new Date(range.from.getFullYear() - 1, 11, 31, 23, 59, 59, 999),
+    };
+  }
+ 
   const dur = range.to.getTime() - range.from.getTime() + 1;
   return {
     from: new Date(range.from.getTime() - dur),

@@ -14,16 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import DeleteConfirmDialog from '@/admin/components/DeleteConfirmDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -414,7 +405,7 @@ export default function AdminCategories() {
 
       {}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="bg-white border-[hsl(220,15%,87%)] sm:max-w-md">
+        <DialogContent className="admin-dialog admin-theme sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-gray-800">Chi tiết danh mục</DialogTitle>
           </DialogHeader>
@@ -447,7 +438,7 @@ export default function AdminCategories() {
 
       {}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="admin-dialog sm:max-w-md">
+        <DialogContent className="admin-dialog admin-theme sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Thêm danh mục mới</DialogTitle>
             <DialogDescription>
@@ -507,7 +498,7 @@ export default function AdminCategories() {
 
       {}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="admin-dialog sm:max-w-md">
+        <DialogContent className="admin-dialog admin-theme sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Chỉnh sửa danh mục</DialogTitle>
             <DialogDescription>
@@ -565,24 +556,14 @@ export default function AdminCategories() {
         </DialogContent>
       </Dialog>
 
-      {}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="admin-dialog">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa danh mục</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa danh mục "{selectedCategory?.name}"? 
-              Các khóa học sẽ không bị xóa mà chỉ mất liên kết danh mục.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-[hsl(220,15%,87%)] text-gray-700 bg-white hover:bg-[hsl(220,15%,93%)] hover:text-gray-900">Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700 text-white">
-              Xóa
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="Xác nhận xóa danh mục"
+        description="Bạn có chắc chắn muốn xóa danh mục này?"
+        itemName={selectedCategory?.name}
+      />
     </div>
   );
 }

@@ -21,16 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import DeleteConfirmDialog from "@/admin/components/DeleteConfirmDialog";
 import {
   Select,
   SelectContent,
@@ -439,7 +430,7 @@ export default function AdminCoupons() {
 
       {}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="bg-white border-[hsl(220,15%,87%)] sm:max-w-md">
+        <DialogContent className="admin-dialog admin-theme sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-gray-800">
               Chi tiết mã giảm giá
@@ -527,7 +518,7 @@ export default function AdminCoupons() {
 
       {}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="admin-dialog sm:max-w-md">
+        <DialogContent className="admin-dialog admin-theme sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Tạo mã giảm giá mới</DialogTitle>
             <DialogDescription>Nhập thông tin mã giảm giá</DialogDescription>
@@ -633,7 +624,7 @@ export default function AdminCoupons() {
 
       {}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="admin-dialog sm:max-w-md">
+        <DialogContent className="admin-dialog admin-theme sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Chỉnh sửa mã giảm giá</DialogTitle>
             <DialogDescription>
@@ -741,32 +732,14 @@ export default function AdminCoupons() {
         </DialogContent>
       </Dialog>
 
-      {}
-      <AlertDialog
+      <DeleteConfirmDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
-      >
-        <AlertDialogContent className="admin-dialog">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa mã giảm giá</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa mã giảm giá "{selectedCoupon?.code}"?
-              Hành động này không thể hoàn tác.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-[hsl(220,15%,87%)] text-gray-700 bg-white hover:bg-[hsl(220,15%,93%)] hover:text-gray-900">
-              Hủy
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteCoupon}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Xóa
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onConfirm={handleDeleteCoupon}
+        title="Xác nhận xóa mã giảm giá"
+        description="Bạn có chắc chắn muốn xóa mã giảm giá này?"
+        itemName={selectedCoupon?.code}
+      />
     </div>
   );
 }

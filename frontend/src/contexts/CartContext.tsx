@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/redux/store';
 import cartService from '@/services/cartService';
+import enrollmentService from '@/services/enrollmentService';
 import type { CartItemResponse } from '@/types';
 
 interface CartContextType {
@@ -30,6 +31,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
 
+  const syncCart = (cartItems: CartItemResponse[]) => {
+    enrollmentService.getMyEnrollments({ pageSize: 100 })
+      .then((res) => {
+        const enrolledCourseIds = new Set(res.result.map((e) => e.courseId));
+        const toRemove = cartItems.filter((item) => enrolledCourseIds.has(item.courseId));
+        if (toRemove.length === 0) return;
+        Promise.all(toRemove.map((item) => cartService.removeFromCart(item.courseId)))
+          .then(() => {
+            setItems((prev) => prev.filter((item) => !enrolledCourseIds.has(item.courseId)));
+          })
+          .catch(() => {});
+      })
+      .catch(() => {});
+  };
+
   const fetchCart = () => {
     if (!isAuthenticated) return;
     setLoading(true);
@@ -41,6 +57,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setTotalSalePrice(cart.totalSalePrice);
         setTotalDiscount(cart.totalDiscount);
         setDiscountPercentage(cart.discountPercentage);
+        syncCart(cart.items);
       })
       .catch(() => {})
       .finally(() => setLoading(false));

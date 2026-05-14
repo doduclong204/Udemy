@@ -36,16 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import DeleteConfirmDialog from '@/admin/components/DeleteConfirmDialog';
 import { toast } from 'sonner';
 
 const formatCurrency = (value: number) => {
@@ -383,8 +374,7 @@ const showCountEnd = Math.min(currentPage * itemsPerPage, totalItems);
       {/* View Course Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={(open) => { setIsViewDialogOpen(open); if (!open) setSelectedCourse(null); }}>
         <DialogContent
-          className="admin-dialog sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-          
+          className="admin-dialog admin-theme sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         >
           {/* Loading skeleton */}
           {loadingDetail && !selectedCourse && (
@@ -581,26 +571,14 @@ const showCountEnd = Math.min(currentPage * itemsPerPage, totalItems);
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="bg-admin-card border-admin-border">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-admin-foreground">Xác nhận xóa khóa học</AlertDialogTitle>
-            <AlertDialogDescription className="text-admin-muted-foreground">
-              Bạn có chắc chắn muốn xóa khóa học "{selectedCourse?.title}"?
-              Hành động này không thể hoàn tác.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-admin-border text-admin-foreground hover:bg-admin-accent">Hủy</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Xóa
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="Xác nhận xóa khóa học"
+        description="Bạn có chắc chắn muốn xóa khóa học này?"
+        itemName={selectedCourse?.title}
+      />
     </div>
   );
 }

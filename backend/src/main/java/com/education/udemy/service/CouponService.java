@@ -5,11 +5,15 @@ import com.education.udemy.dto.request.coupon.CouponUpdateRequest;
 import com.education.udemy.dto.response.api.ApiPagination;
 import com.education.udemy.dto.response.coupon.CouponResponse;
 import com.education.udemy.entity.Coupon;
+import com.education.udemy.entity.User;
 import com.education.udemy.enums.CouponStatus;
 import com.education.udemy.exception.AppException;
 import com.education.udemy.exception.ErrorCode;
 import com.education.udemy.mapper.CouponMapper;
 import com.education.udemy.repository.CouponRepository;
+import com.education.udemy.repository.OrderRepository;
+import com.education.udemy.repository.UserRepository;
+import com.education.udemy.util.SecurityUtil;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -22,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
 
@@ -33,23 +38,15 @@ public class CouponService {
 
     CouponRepository couponRepository;
     CouponMapper couponMapper;
+    OrderRepository orderRepository;
+    UserRepository userRepository;
 
     @Scheduled(fixedRate = 60000)
     @Transactional
     public void autoExpireCoupons() {
-        List<Coupon> expiredCoupons = couponRepository.findAll().stream()
-                .filter(c -> c.getCouponStatus() == CouponStatus.ACTIVE
-                        && c.getExpiresAt() != null
-                        && c.getExpiresAt().isBefore(Instant.now()))
-                .toList();
-
-        expiredCoupons.forEach(c -> {
-            c.setCouponStatus(CouponStatus.EXPIRED);
-            log.info("Coupon {} auto-expired", c.getCode());
-        });
-
-        if (!expiredCoupons.isEmpty()) {
-            couponRepository.saveAll(expiredCoupons);
+        int count = couponRepository.bulkExpire(Instant.now());
+        if (count > 0) {
+            log.info("Auto-expired {} coupon(s)", count);
         }
     }
 
@@ -63,7 +60,6 @@ public class CouponService {
     }
 
     public ApiPagination<CouponResponse> getAllCoupons(Specification<Coupon> spec, Pageable pageable) {
-        log.info("Get all coupons with pagination");
         Page<Coupon> pageCoupon = couponRepository.findAll(spec, pageable);
         List<CouponResponse> listCoupon = pageCoupon.getContent().stream()
                 .map(couponMapper::toCouponResponse)
@@ -121,54 +117,93 @@ public class CouponService {
                 .orElseThrow(() -> new AppException(ErrorCode.COUPON_NOT_FOUND));
     }
 
+    @Transactional(readOnly = true)
     public BigDecimal calculateDiscount(String code, BigDecimal orderAmount) {
         Coupon coupon = couponRepository.findByCode(code)
                 .orElseThrow(() -> new AppException(ErrorCode.COUPON_NOT_FOUND));
+        validateCoupon(coupon, orderAmount);
+        return computeDiscount(coupon, orderAmount);
+    }
 
-        if (coupon.getCouponStatus() == CouponStatus.EXHAUSTED) {
-            throw new AppException(ErrorCode.COUPON_OUT_OF_STOCK);
-        }
+    @Transactional(readOnly = true)
+    public BigDecimal validateAndPreview(String code, BigDecimal orderAmount, String userId) {
+        Coupon coupon = couponRepository.findByCode(code)
+                .orElseThrow(() -> new AppException(ErrorCode.COUPON_NOT_FOUND));
+        validateCoupon(coupon, orderAmount);
+        checkUserNotUsed(code, userId);
+        return computeDiscount(coupon, orderAmount);
+    }
 
-        if (coupon.getCouponStatus() != CouponStatus.ACTIVE) {
-            throw new AppException(ErrorCode.COUPON_INACTIVE);
-        }
-
-        if (coupon.getExpiresAt() != null && coupon.getExpiresAt().isBefore(Instant.now())) {
-            throw new AppException(ErrorCode.COUPON_EXPIRED);
-        }
-
-        if (coupon.getMaxUsage() != null && coupon.getUsedCount() >= coupon.getMaxUsage()) {
-            throw new AppException(ErrorCode.COUPON_OUT_OF_STOCK);
-        }
-
-        if (orderAmount.compareTo(coupon.getMinOrderAmount()) < 0) {
-            throw new AppException(ErrorCode.COUPON_MIN_AMOUNT_NOT_REACHED);
-        }
-
-        BigDecimal discountAmount;
-        if ("PERCENTAGE".equalsIgnoreCase(coupon.getDiscountType())) {
-            discountAmount = orderAmount.multiply(coupon.getDiscountValue())
-                    .divide(new BigDecimal(100), 2, java.math.RoundingMode.HALF_UP);
-        } else {
-            discountAmount = coupon.getDiscountValue();
-        }
-
-        return discountAmount.compareTo(orderAmount) > 0 ? orderAmount : discountAmount;
+    @Transactional(readOnly = true)
+    public BigDecimal validateAndPreviewByEmail(String code, BigDecimal orderAmount) {
+        String email = SecurityUtil.getCurrentUserLogin()
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
+        User user = userRepository.findByUsername(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        return validateAndPreview(code, orderAmount, user.getId());
     }
 
     @Transactional
-    public void updateCouponUsage(String code) {
+    public BigDecimal applyAndIncrementCoupon(String code, BigDecimal orderAmount, String userId) {
         Coupon coupon = couponRepository.findByCode(code)
                 .orElseThrow(() -> new AppException(ErrorCode.COUPON_NOT_FOUND));
 
-        int newUsedCount = (coupon.getUsedCount() == null ? 0 : coupon.getUsedCount()) + 1;
-        coupon.setUsedCount(newUsedCount);
+        validateCoupon(coupon, orderAmount);
+        checkUserNotUsed(code, userId);
 
-        if (coupon.getMaxUsage() != null && newUsedCount >= coupon.getMaxUsage()) {
-            coupon.setCouponStatus(CouponStatus.EXHAUSTED);
-            log.info("Coupon {} is now EXHAUSTED due to max usage", code);
+        int updated = couponRepository.incrementUsedCount(code);
+        if (updated == 0) {
+            throw new AppException(ErrorCode.COUPON_OUT_OF_STOCK);
         }
 
-        couponRepository.save(coupon);
+        couponRepository.markExhaustedIfFull(code);
+        log.info("Coupon [{}] applied by user [{}]. usedCount incremented atomically.", code, userId);
+
+        return computeDiscount(coupon, orderAmount);
+    }
+
+    @Transactional
+    public void incrementCouponUsage(String code) {
+        int updated = couponRepository.incrementUsedCount(code);
+        if (updated == 0) {
+            throw new AppException(ErrorCode.COUPON_OUT_OF_STOCK);
+        }
+        couponRepository.markExhaustedIfFull(code);
+        log.info("Coupon [{}] usage incremented after payment completed.", code);
+    }
+
+    private void checkUserNotUsed(String code, String userId) {
+        if (userId != null && orderRepository.hasUserUsedCoupon(userId, code)) {
+            throw new AppException(ErrorCode.COUPON_ALREADY_USED);
+        }
+    }
+
+    private void validateCoupon(Coupon coupon, BigDecimal orderAmount) {
+        if (coupon.getCouponStatus() == CouponStatus.EXHAUSTED) {
+            throw new AppException(ErrorCode.COUPON_OUT_OF_STOCK);
+        }
+        if (coupon.getCouponStatus() != CouponStatus.ACTIVE) {
+            throw new AppException(ErrorCode.COUPON_INACTIVE);
+        }
+        if (coupon.getExpiresAt() != null && coupon.getExpiresAt().isBefore(Instant.now())) {
+            throw new AppException(ErrorCode.COUPON_EXPIRED);
+        }
+        if (coupon.getMaxUsage() != null && coupon.getUsedCount() >= coupon.getMaxUsage()) {
+            throw new AppException(ErrorCode.COUPON_OUT_OF_STOCK);
+        }
+        if (orderAmount.compareTo(coupon.getMinOrderAmount()) < 0) {
+            throw new AppException(ErrorCode.COUPON_MIN_AMOUNT_NOT_REACHED);
+        }
+    }
+
+    private BigDecimal computeDiscount(Coupon coupon, BigDecimal orderAmount) {
+        BigDecimal discountAmount;
+        if ("PERCENTAGE".equalsIgnoreCase(coupon.getDiscountType())) {
+            discountAmount = orderAmount.multiply(coupon.getDiscountValue())
+                    .divide(new BigDecimal(100), 2, RoundingMode.HALF_UP);
+        } else {
+            discountAmount = coupon.getDiscountValue();
+        }
+        return discountAmount.compareTo(orderAmount) > 0 ? orderAmount : discountAmount;
     }
 }

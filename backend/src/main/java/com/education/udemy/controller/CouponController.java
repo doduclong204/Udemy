@@ -23,6 +23,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+
 @RestController
 @RequestMapping("/coupons")
 @RequiredArgsConstructor
@@ -76,7 +78,13 @@ public class CouponController {
 
     @PostMapping("/calculate-discount")
     @ApiMessage("Calculate discount amount success")
-    public ResponseEntity<java.math.BigDecimal> calculateDiscount(@RequestBody @Valid CouponCheckRequest request) {
+    public ResponseEntity<BigDecimal> calculateDiscount(@RequestBody @Valid CouponCheckRequest request) {
         return ResponseEntity.ok(couponService.calculateDiscount(request.getCode(), request.getOrderAmount()));
+    }
+
+    @PostMapping("/validate")
+    @ApiMessage("Validate coupon success")
+    public ResponseEntity<BigDecimal> validateCoupon(@RequestBody @Valid CouponCheckRequest request) {
+        return ResponseEntity.ok(couponService.validateAndPreviewByEmail(request.getCode(), request.getOrderAmount()));
     }
 }

@@ -20,6 +20,7 @@ public class EnrollmentResponse {
     BigDecimal progress;
     String status;
     Instant enrolledAt;
+    Instant lastWatchedAt;
 
     String courseId;
     String courseTitle;

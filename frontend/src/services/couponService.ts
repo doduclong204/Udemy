@@ -10,9 +10,6 @@ import {
 } from "@/types";
 
 const couponService = {
-  /**
-   * Lấy danh sách coupons có phân trang và lọc
-   */
   getCoupons: async (params?: {
     page?: number;
     pageSize?: number;
@@ -22,86 +19,78 @@ const couponService = {
     const page = params?.page || 1;
     const pageSize = params?.pageSize || 10;
 
-    const response = await axiosInstance.get<
-      ApiResponse<ApiPagination<Coupon>>
-    >(API_ENDPOINTS.COUPONS?.BASE || "/coupons", {
-      params: {
-        // Spring Boot page tính từ 0
-        page: page,
-        size: pageSize,
-        // Cú pháp spring-filter: code ~ '*từ_khóa*'
-        filter: params?.search ? `code~'*${params.search}*'` : undefined,
-        status:
-          params?.status && params.status !== "all" ? params.status : undefined,
-      },
-    });
+    const response = await axiosInstance.get<ApiResponse<ApiPagination<Coupon>>>(
+      API_ENDPOINTS.COUPONS?.BASE || "/coupons",
+      {
+        params: {
+          page: page,
+          size: pageSize,
+          filter: params?.search ? `code~'*${params.search}*'` : undefined,
+          status:
+            params?.status && params.status !== "all" ? params.status : undefined,
+        },
+      }
+    );
 
-    // Trả về data.data vì cấu trúc là ApiResponse -> ApiPagination
     return response.data.data;
   },
 
-  /**
-   * Lấy chi tiết coupon theo ID
-   */
   getCouponById: async (id: string): Promise<Coupon> => {
     const response = await axiosInstance.get<ApiResponse<Coupon>>(
-      `${API_ENDPOINTS.COUPONS?.BASE || "/coupons"}/${id}`,
+      `${API_ENDPOINTS.COUPONS?.BASE || "/coupons"}/${id}`
     );
     return response.data.data;
   },
 
-  /**
-   * Tạo coupon mới (Admin)
-   */
   createCoupon: async (data: CreateCouponRequest): Promise<Coupon> => {
     const response = await axiosInstance.post<ApiResponse<Coupon>>(
       API_ENDPOINTS.COUPONS?.BASE || "/coupons",
-      data,
+      data
     );
     return response.data.data;
   },
 
-  /**
-   * Cập nhật coupon (Admin)
-   */
-  updateCoupon: async (
-    id: string,
-    data: UpdateCouponRequest,
-  ): Promise<Coupon> => {
+  updateCoupon: async (id: string, data: UpdateCouponRequest): Promise<Coupon> => {
     const response = await axiosInstance.put<ApiResponse<Coupon>>(
       `${API_ENDPOINTS.COUPONS?.BASE || "/coupons"}/${id}`,
-      data,
+      data
     );
     return response.data.data;
   },
 
-  /**
-   * Xóa coupon (Admin)
-   */
   deleteCoupon: async (id: string): Promise<void> => {
     await axiosInstance.delete(
-      `${API_ENDPOINTS.COUPONS?.BASE || "/coupons"}/${id}`,
+      `${API_ENDPOINTS.COUPONS?.BASE || "/coupons"}/${id}`
     );
   },
 
-  /**
-   * Kiểm tra mã coupon (Public)
-   */
   verifyCoupon: async (code: string, orderAmount: number): Promise<Coupon> => {
     const response = await axiosInstance.post<ApiResponse<Coupon>>(
       `${API_ENDPOINTS.COUPONS?.BASE || "/coupons"}/verify`,
-      { code, orderAmount },
+      { code, orderAmount }
     );
     return response.data.data;
   },
 
-  calculateDiscount: async (
-    code: string,
-    orderAmount: number,
-  ): Promise<number> => {
+  calculateDiscount: async (code: string, orderAmount: number): Promise<number> => {
     const response = await axiosInstance.post<ApiResponse<number>>(
       `${API_ENDPOINTS.COUPONS?.BASE || "/coupons"}/calculate-discount`,
-      { code, orderAmount },
+      { code, orderAmount }
+    );
+    return response.data.data;
+  },
+
+  validateCoupon: async (code: string, orderAmount: number): Promise<number> => {
+    const response = await axiosInstance.post<ApiResponse<number>>(
+      `${API_ENDPOINTS.COUPONS?.BASE || "/coupons"}/validate`,
+      { code, orderAmount }
+    );
+    return response.data.data;
+  },
+
+  getCouponByCode: async (code: string): Promise<Coupon> => {
+    const response = await axiosInstance.get<ApiResponse<Coupon>>(
+      `${API_ENDPOINTS.COUPONS?.BASE || "/coupons"}/by-code/${code}`
     );
     return response.data.data;
   },

@@ -63,9 +63,16 @@ public class AIChatController {
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(geminiRequest, headers);
 
             RestTemplate restTemplate = new RestTemplate();
-            ResponseEntity<Map> geminiResponse = restTemplate.postForEntity(url, request, Map.class);
+            ResponseEntity<Map> geminiResponse;
+            try {
+                geminiResponse = restTemplate.postForEntity(url, request, Map.class);
+            } catch (org.springframework.web.client.HttpClientErrorException | org.springframework.web.client.HttpServerErrorException ex) {
+                log.error("Gemini HTTP error {}: {}", ex.getStatusCode(), ex.getResponseBodyAsString());
+                throw new RuntimeException("Gemini API error: " + ex.getStatusCode());
+            }
 
             if (!geminiResponse.getStatusCode().is2xxSuccessful() || geminiResponse.getBody() == null) {
+                log.error("Gemini bad response: {}", geminiResponse.getBody());
                 throw new RuntimeException("Gemini API error");
             }
 

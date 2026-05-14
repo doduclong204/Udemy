@@ -74,7 +74,6 @@ public class AuthenticationService {
     NotificationService notificationService;
     ReviewRepository reviewRepository;
 
-
     @Value("${auth.jwt.refresh-token-validity-in-seconds}")
     @NonFinal
     long refreshTokenExpiration;
@@ -125,7 +124,7 @@ public class AuthenticationService {
 
         ResponseCookie resCookies = ResponseCookie
                 .from("refresh_token", refresh_token)
-                .httpOnly(false).secure(true).path("/")
+                .httpOnly(true).secure(true).path("/")
                 .maxAge(refreshTokenExpiration).build();
 
         return ResponseEntity.ok()
@@ -161,19 +160,28 @@ public class AuthenticationService {
 
     public ResponseEntity<Void> logout(String authorizationHeader)
             throws AppException, ParseException, JOSEException {
-        String username = SecurityUtil.getCurrentUserLogin().isPresent()
-                ? SecurityUtil.getCurrentUserLogin().get() : "";
-        if (username.equals("")) throw new AppException(ErrorCode.INVALID_ACCESSTOKEN);
-
-        User currentUserDB = this.userService.handleGetUserByUsername(username);
-        if (currentUserDB != null) this.userService.handleLogout(currentUserDB);
 
         String token = "";
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             token = authorizationHeader.substring(7);
         }
 
-        SignedJWT.parse(token);
+        if (token.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_ACCESSTOKEN);
+        }
+
+        SignedJWT signedJWT = SignedJWT.parse(token);
+        String username = signedJWT.getJWTClaimsSet().getSubject();
+
+        if (username == null || username.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_ACCESSTOKEN);
+        }
+
+        User currentUserDB = this.userService.handleGetUserByUsername(username);
+        if (currentUserDB != null) {
+            this.userService.handleLogout(currentUserDB);
+        }
+
         invalidatedTokenRepository.save(InvalidatedToken.builder().accessToken(token).build());
 
         ResponseCookie deleteSpringCookie = ResponseCookie
@@ -288,7 +296,7 @@ public class AuthenticationService {
 
         ResponseCookie resCookies = ResponseCookie
                 .from("refresh_token", refreshToken)
-                .httpOnly(false).secure(true).path("/")
+                .httpOnly(true).secure(true).path("/")
                 .maxAge(refreshTokenExpiration).build();
 
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -330,7 +338,7 @@ public class AuthenticationService {
 
         ResponseCookie resCookies = ResponseCookie
                 .from("refresh_token", refreshToken)
-                .httpOnly(false).secure(true).path("/")
+                .httpOnly(true).secure(true).path("/")
                 .maxAge(refreshTokenExpiration).build();
 
         return ResponseEntity.ok()
@@ -340,7 +348,8 @@ public class AuthenticationService {
 
     private SignedJWT verifyToken(String token, boolean isRefresh)
             throws JOSEException, ParseException {
-        JWSVerifier verifier = new MACVerifier(SIGNER_KEY_REFRESH.getBytes());
+        String signerKey = isRefresh ? SIGNER_KEY_REFRESH : SIGNER_KEY;
+        JWSVerifier verifier = new MACVerifier(signerKey.getBytes());
         SignedJWT signedJWT = SignedJWT.parse(token);
 
         Date expiryTime = isRefresh
@@ -350,10 +359,6 @@ public class AuthenticationService {
 
         signedJWT.verify(verifier);
         if (!expiryTime.after(new Date())) throw new AppException(ErrorCode.UNAUTHENTICATED);
-
-        String username = SecurityUtil.getCurrentUserLogin().isPresent()
-                ? SecurityUtil.getCurrentUserLogin().get() : "";
-        if (username.equals("")) throw new AppException(ErrorCode.UNAUTHENTICATED);
 
         return signedJWT;
     }

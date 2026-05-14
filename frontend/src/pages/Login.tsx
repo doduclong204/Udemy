@@ -20,10 +20,15 @@ export default function Login() {
   const location = useLocation();
 
   const searchParams = new URLSearchParams(location.search);
-  const redirectTo = searchParams.get("redirect") || "/";
+  const redirectTo = searchParams.get("redirect");
 
   const dispatch = useDispatch<AppDispatch>();
   const { loading, error } = useSelector((state: RootState) => state.auth);
+
+  const getRedirectPath = (role?: string): string => {
+    if (redirectTo) return redirectTo;
+    return role?.toUpperCase() === "ADMIN" ? "/admin" : "/";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +38,7 @@ export default function Login() {
         title: "Chào mừng trở lại!",
         description: "Bạn đã đăng nhập thành công.",
       });
-      navigate(redirectTo);
+      navigate(getRedirectPath(result.payload?.role));
     } else {
       toast({
         title: "Đăng nhập thất bại",
@@ -54,7 +59,7 @@ export default function Login() {
       );
       if (loginGoogleAsync.fulfilled.match(result)) {
         toast({ title: "Đăng nhập Google thành công!" });
-        navigate(redirectTo);
+        navigate(getRedirectPath(result.payload?.role));
       } else {
         toast({
           title: "Đăng nhập Google thất bại",
@@ -71,7 +76,7 @@ export default function Login() {
     const FACEBOOK_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID || "";
     const currentOrigin = window.location.origin;
 
-    sessionStorage.setItem("fb_redirect_after_login", redirectTo);
+    sessionStorage.setItem("fb_redirect_after_login", redirectTo ?? "/");
 
     const fbAuthUrl =
       `https://www.facebook.com/dialog/oauth` +

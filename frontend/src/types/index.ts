@@ -422,6 +422,7 @@ export interface EnrollmentResponse {
   progress: number;
   status: EnrollmentStatus;
   enrolledAt: string;
+  lastWatchedAt?: string;
   courseId: string;
   courseTitle: string;
   courseThumbnail: string;
@@ -434,6 +435,7 @@ export interface GetEnrollmentsParams {
   page?: number;
   pageSize?: number;
   status?: EnrollmentStatus;
+  sort?: string;
 }
 
 // ==================== Process Types ====================

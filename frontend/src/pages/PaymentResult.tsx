@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -8,22 +8,41 @@ import { useCart } from '@/contexts/CartContext';
 import { useDispatch } from 'react-redux';
 import type { AppDispatch } from '@/redux/store';
 import { fetchEnrolledCount } from '@/redux/slices/enrollmentSlice';
+import orderService from '@/services/orderService';
 
 export default function PaymentResult() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { clearCart } = useCart();
+  const { removeFromCart } = useCart();
   const dispatch = useDispatch<AppDispatch>();
 
   const success = searchParams.get('success') === 'true';
   const orderCode = searchParams.get('orderCode');
 
+  const [countdown, setCountdown] = useState(5);
+
   useEffect(() => {
-    if (success) {
-      clearCart();
-      dispatch(fetchEnrolledCount()); // cập nhật badge khóa học ngay lập tức
-      setTimeout(() => navigate('/dashboard'), 5000);
-    }
+    if (!success || !orderCode) return;
+
+    dispatch(fetchEnrolledCount());
+
+    orderService.getOrderByCode(orderCode).then((order) => {
+      const courseIds = order.orderItems?.map((item: any) => item.courseId) ?? [];
+      Promise.all(courseIds.map((id: string) => removeFromCart(id))).catch(() => {});
+    }).catch(() => {});
+
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          navigate('/dashboard');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
   }, [success]);
 
   return (
@@ -45,7 +64,8 @@ export default function PaymentResult() {
             </div>
 
             <div className="rounded-xl p-4 text-sm text-muted-foreground" style={{ background: '#EAF3DE', border: '1.5px solid #97C459' }}>
-              Bạn sẽ được chuyển đến trang học trong <strong>5 giây</strong>...
+              Bạn sẽ được chuyển đến trang học trong{' '}
+              <strong className="text-green-700 text-base">{countdown} giây</strong>...
             </div>
 
             <div className="flex flex-col gap-3">

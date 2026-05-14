@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { selectIsAuthenticated, selectUser } from '@/redux/slices/authSlice';
-import { MessageCircle, X, Send, Trash2, Bot, Loader2, ExternalLink } from 'lucide-react';
+import { MessageCircle, X, Send, Trash2, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import axiosInstance from '@/config/api';
 
@@ -25,14 +25,13 @@ const SYSTEM_PROMPT = `Bạn là trợ lý tư vấn AI của nền tảng học
 Nhiệm vụ của bạn:
 - Tư vấn học viên về các khóa học, lộ trình học, phương pháp học hiệu quả
 - Giải đáp thắc mắc về tính năng của nền tảng (mua khóa học, thanh toán, v.v.)
-- Hỗ trợ kỹ thuật cơ bản (không xem được video, lỗi đăng nhập, v.v.)
+- Hỗ trợ và giải thích các kiến thức cơ bản liên quan đến nội dung học tập trên nền tảng
 - Gợi ý khóa học phù hợp theo mục tiêu học viên
 
 Quy tắc:
 - Trả lời bằng tiếng Việt, thân thiện, ngắn gọn (tối đa 3–4 câu mỗi lượt)
 - Chỉ gợi ý đúng các khóa học có trong danh sách được cung cấp, không bịa đặt
 - Nền tảng KHÔNG cấp chứng chỉ, không đề cập hoặc hứa hẹn về chứng chỉ
-- Không tư vấn các chủ đề ngoài phạm vi học tập và nền tảng
 - Nếu vấn đề phức tạp, hướng dẫn liên hệ support@learnhub.vn
 - Khi gợi ý khóa học: chọn TỐI ĐA 3 khóa nổi bật nhất (ưu tiên khóa có outstanding=true) phù hợp với yêu cầu. Thêm JSON ở CUỐI response, KHÔNG thêm ký tự nào khác xung quanh:
   COURSE_CARDS:[{"id":"...","title":"...","thumbnail":"...","price":123456,"discountPrice":99000}]
@@ -60,7 +59,7 @@ async function callAI(
 
   const res = await axiosInstance.post('/ai/chat', {
     contents,
-    generationConfig: { temperature: 0.7, maxOutputTokens: 600 },
+    generationConfig: { temperature: 0.7, maxOutputTokens: 1200 },
   });
 
   const result = res.data.data;
@@ -168,14 +167,14 @@ function CourseCardList({ cards }: { cards: CourseCard[] }) {
   );
 }
 
+
+
 function Bubble({ msg }: { msg: Message }) {
   const isUser = msg.role === 'user';
   return (
     <div className={`flex gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'} items-end`}>
       {!isUser && (
-        <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center shrink-0">
-          <Bot size={14} className="text-primary-foreground" />
-        </div>
+        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-lg leading-none">🤖</div>
       )}
       <div className={`flex flex-col max-w-[78%] gap-1.5 ${isUser ? 'items-end' : 'items-start'}`}>
         <div
@@ -328,9 +327,7 @@ export default function AIChatBox() {
             className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground shrink-0 select-none cursor-grab active:cursor-grabbing"
           >
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-primary-foreground/20 flex items-center justify-center">
-                <Bot size={18} />
-              </div>
+              <div className="w-8 h-8 rounded-full bg-primary-foreground/20 flex items-center justify-center text-xl leading-none">🤖</div>
               <div>
                 <p className="font-semibold text-sm leading-tight">Trợ lý AI · LearnHub</p>
                 <p className="text-xs opacity-75">Nền tảng học tập trực tuyến</p>
@@ -360,10 +357,10 @@ export default function AIChatBox() {
           <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
             {messages.length === 0 && (
               <div className="text-center text-muted-foreground text-sm mt-6 space-y-3 px-2">
-                <Bot size={36} className="mx-auto opacity-30" />
+                <div className="text-5xl mx-auto">🤖</div>
                 <p className="font-medium">Xin chào, {user?.name || 'bạn'}! 👋</p>
                 <p className="text-xs opacity-70">
-                  Tôi có thể tư vấn về khóa học,<br />lộ trình học và hỗ trợ kỹ thuật.
+                  Tôi có thể tư vấn về khóa học,<br />lộ trình học và các kiến thức cơ bản.
                 </p>
                 <div className="flex flex-col gap-2 mt-2">
                   {QUICK_PROMPTS.map((q) => (
@@ -384,9 +381,7 @@ export default function AIChatBox() {
 
             {loading && (
               <div className="flex gap-2 items-end">
-                <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center shrink-0">
-                  <Bot size={14} className="text-primary-foreground" />
-                </div>
+                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-lg leading-none">🤖</div>
                 <div className="bg-muted px-3 py-2 rounded-2xl rounded-bl-sm">
                   <Loader2 size={16} className="animate-spin text-muted-foreground" />
                 </div>

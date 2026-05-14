@@ -158,6 +158,20 @@ body:has(.admin-theme) [role="alertdialog"] button[class*="border"]:hover {
 }
 
 .admin-dialog {
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 15% 16%;
+  --background: 0 0% 100%;
+  --foreground: 220 15% 16%;
+  --muted: 220 15% 95%;
+  --muted-foreground: 220 10% 50%;
+  --accent: 220 15% 93%;
+  --accent-foreground: 220 15% 16%;
+  --border: 220 15% 87%;
+  --input: 220 15% 87%;
+  --admin-foreground: 220 15% 16%;
+  --admin-muted-foreground: 220 10% 50%;
+  --admin-accent: 220 15% 93%;
+  --admin-border: 220 15% 87%;
   background-color: hsl(0, 0%, 100%) !important;
   color: hsl(220, 15%, 16%) !important;
   border-color: hsl(220, 15%, 87%) !important;
@@ -380,7 +394,7 @@ body:has(.admin-theme) [role="option"][data-highlighted] {
 
   
   .carousel-item {
-    @apply flex-none w-[280px];
+    @apply flex-none;
   }
 }
 

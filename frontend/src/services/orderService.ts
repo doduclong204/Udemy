@@ -80,7 +80,14 @@ const orderService = {
     return response.data.data;
   },
 
-  getOrderById: async (id: string): Promise<OrderResponse> => {
+  getOrderByCode: async (orderCode: string): Promise<OrderResponse> => {
+    const response = await axiosInstance.get<ApiResponse<OrderResponse>>(
+      `${API_ENDPOINTS.ORDERS?.BASE || "/orders"}/by-code/${orderCode}`
+    );
+    return response.data.data;
+  },
+
+    getOrderById: async (id: string): Promise<OrderResponse> => {
     const response = await axiosInstance.get<ApiResponse<OrderResponse>>(
       `${API_ENDPOINTS.ORDERS.BASE}/${id}`,
     );

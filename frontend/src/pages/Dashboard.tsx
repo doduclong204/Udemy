@@ -65,8 +65,8 @@ const DEFAULT_NOTIF_PREFS: NotifPrefs = {
   newsletter: false,
 };
 
-const ENROLLMENT_PAGE_SIZE = 6;
-const WISHLIST_PAGE_SIZE = 6;
+const ENROLLMENT_PAGE_SIZE = 4;
+const WISHLIST_PAGE_SIZE = 4;
 const NOTIF_PAGE_SIZE = 10;
 
 const getIconStyle = (type: NotificationType) => {
@@ -124,6 +124,7 @@ export default function Dashboard() {
       .getMyEnrollments({
         page: enrollmentPage,
         pageSize: ENROLLMENT_PAGE_SIZE,
+        sort: 'lastWatchedAt,desc',
       })
       .then((res) => {
         setEnrollments(res.result);
@@ -166,7 +167,7 @@ export default function Dashboard() {
       .get<ApiResponse<ApiPagination<WishlistResponse>>>(
         API_ENDPOINTS.WISHLIST.BASE,
         {
-          params: { page, size: WISHLIST_PAGE_SIZE },
+          params: { page, size: WISHLIST_PAGE_SIZE, sort: 'createdAt,desc' },
         },
       )
       .then((res) => {
@@ -202,7 +203,10 @@ export default function Dashboard() {
   >([]);
 
   // Trang 1: dùng Redux (realtime SSE); trang 2+: dùng server fetch
-  const notifItems = notifPage === 1 ? reduxNotifications.slice(0, NOTIF_PAGE_SIZE) : serverNotifItems;
+  const notifItems =
+    notifPage === 1
+      ? reduxNotifications.slice(0, NOTIF_PAGE_SIZE)
+      : serverNotifItems;
 
   const fetchNotifPage = (page: number) => {
     setLoadingNotifs(true);
@@ -436,7 +440,9 @@ export default function Dashboard() {
   ) => {
     e.preventDefault();
     e.stopPropagation();
-    const remainingAfterDelete = wishlistItems.filter((c) => c.courseId !== courseId).length;
+    const remainingAfterDelete = wishlistItems.filter(
+      (c) => c.courseId !== courseId,
+    ).length;
     // Optimistic update
     setWishlistItems((prev) => prev.filter((c) => c.courseId !== courseId));
     setWishlistTotal((t) => Math.max(0, t - 1));
@@ -575,7 +581,7 @@ export default function Dashboard() {
                   </div>
                 ) : enrollments.length > 0 ? (
                   <>
-                    <div className="grid sm:grid-cols-2 gap-6">
+                    <div className="grid sm:grid-cols-2 xl:grid-cols-2 gap-6">
                       {enrollments.map((e) => (
                         <Link
                           key={e._id}
@@ -614,9 +620,13 @@ export default function Dashboard() {
                               </span>
                               <span className="flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
-                                {new Date(e.enrolledAt).toLocaleDateString(
-                                  "vi-VN",
-                                )}
+                                {e.lastWatchedAt
+                                  ? new Date(
+                                      e.lastWatchedAt,
+                                    ).toLocaleDateString("vi-VN")
+                                  : new Date(e.enrolledAt).toLocaleDateString(
+                                      "vi-VN",
+                                    )}
                               </span>
                             </div>
                           </div>
@@ -693,7 +703,7 @@ export default function Dashboard() {
                               {item.title}
                             </h3>
                             <div className="flex items-center gap-2 mt-2">
-                              <span className="font-bold">
+                              <span className="font-bold text-primary">
                                 {formatCurrency(Number(item.price))}
                               </span>
                               {item.oldPrice > item.price && (
