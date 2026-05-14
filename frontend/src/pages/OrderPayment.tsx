@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -26,7 +28,6 @@ interface LocationState {
   paymentMethod: PaymentMethod;
 }
 
-// ─── VNPAY ────────────────────────────────────────────────────────────────────
 function VNPayPanel({ order }: { order: OrderResponse }) {
   const [loading, setLoading] = useState(false);
 
@@ -52,7 +53,6 @@ function VNPayPanel({ order }: { order: OrderResponse }) {
           <p className="text-sm mt-1" style={{ color: '#534AB7' }}>Hỗ trợ ATM nội địa, Visa/Mastercard, QR Pay</p>
         </div>
       </div>
-
       <div className="border border-border rounded-xl p-4 space-y-3">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Thông tin đơn hàng</p>
         <div className="flex justify-between text-sm">
@@ -64,7 +64,6 @@ function VNPayPanel({ order }: { order: OrderResponse }) {
           <span className="font-bold text-primary text-base">{formatCurrency(order.finalAmount)}</span>
         </div>
       </div>
-
       <Button
         className="w-full h-12 text-base font-semibold flex items-center justify-center gap-2"
         style={{ background: '#534AB7' }}
@@ -74,7 +73,6 @@ function VNPayPanel({ order }: { order: OrderResponse }) {
         {loading ? <Loader2 size={16} className="animate-spin" /> : <ExternalLink size={16} />}
         {loading ? 'Đang xử lý...' : 'Chuyển đến cổng VNPAY'}
       </Button>
-
       <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1.5">
         <Clock size={13} /> Phiên thanh toán hết hạn sau <strong>15 phút</strong>
       </p>
@@ -82,7 +80,6 @@ function VNPayPanel({ order }: { order: OrderResponse }) {
   );
 }
 
-// ─── MOMO ─────────────────────────────────────────────────────────────────────
 function MoMoPanel({ order }: { order: OrderResponse }) {
   const handleRedirect = () => {
     toast({ title: 'Chức năng đang phát triển', description: 'Backend chưa tích hợp MoMo gateway.' });
@@ -99,7 +96,6 @@ function MoMoPanel({ order }: { order: OrderResponse }) {
           <p className="text-sm mt-1" style={{ color: '#993556' }}>Quét mã QR hoặc mở ứng dụng MoMo</p>
         </div>
       </div>
-
       <div className="flex flex-col items-center gap-3">
         <div
           className="w-48 h-48 rounded-2xl flex items-center justify-center"
@@ -111,7 +107,6 @@ function MoMoPanel({ order }: { order: OrderResponse }) {
         </div>
         <p className="text-xs text-muted-foreground">Mở MoMo → Quét mã → Xác nhận thanh toán</p>
       </div>
-
       <div className="border border-border rounded-xl p-4 space-y-2 text-sm">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Mã đơn hàng</span>
@@ -122,7 +117,6 @@ function MoMoPanel({ order }: { order: OrderResponse }) {
           <span className="font-bold text-primary">{formatCurrency(order.finalAmount)}</span>
         </div>
       </div>
-
       <Button
         className="w-full h-12 text-base font-semibold flex items-center justify-center gap-2"
         style={{ background: '#993556' }}
@@ -134,35 +128,134 @@ function MoMoPanel({ order }: { order: OrderResponse }) {
   );
 }
 
-// ─── BANK TRANSFER ────────────────────────────────────────────────────────────
+const HTTP_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+const PAYMENT_TIMEOUT_MS = 10 * 60 * 1000;
+
 function BankTransferPanel({ order }: { order: OrderResponse }) {
-  const copyText = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    toast({ title: `Đã sao chép ${label}` });
-  };
+  const navigate = useNavigate();
+  const [wsConnected, setWsConnected] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
 
   const bank = {
-    name: 'VietinBank',
-    accountNumber: '102877669065',
+    bankCode: 'MBBank',
+    accountNumber: '0969654190',
     accountName: 'CONG TY TNHH EDU PLATFORM',
     branch: 'Chi nhánh Hà Nội',
     amount: order.finalAmount,
     content: `THANHTOAN ${order.orderCode}`,
   };
 
+  const sePayQrUrl = `https://qr.sepay.vn/img?bank=${bank.bankCode}&acc=${bank.accountNumber}&template=compact&amount=${bank.amount}&des=${encodeURIComponent(bank.content)}`;
+
+  const copyText = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: `Đã sao chép ${label}` });
+  };
+
+  useEffect(() => {
+    orderService.getOrderByCode(order.orderCode).then((o) => {
+      if (o.paymentStatus === 'COMPLETED') {
+        navigate(`/payment/result?success=true&orderCode=${order.orderCode}`);
+      }
+    }).catch(() => {});
+  }, [order.orderCode, navigate]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const timeoutId = setTimeout(() => setTimedOut(true), PAYMENT_TIMEOUT_MS);
+
+    const pollId = setInterval(() => {
+      if (cancelled) return;
+      orderService.getOrderByCode(order.orderCode).then((o) => {
+        if (cancelled) return;
+        if (o.paymentStatus === 'COMPLETED') {
+          cancelled = true;
+          clearTimeout(timeoutId);
+          clearInterval(pollId);
+          navigate(`/payment/result?success=true&orderCode=${order.orderCode}`);
+        }
+      }).catch(() => {});
+    }, 5000);
+
+    setWsConnected(true);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+      clearInterval(pollId);
+    };
+  }, [order.orderCode, navigate]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    const client = new Client({
+      webSocketFactory: () => new SockJS(`${HTTP_BASE_URL}/ws`),
+      connectHeaders: { Authorization: `Bearer ${token}` },
+      reconnectDelay: 5000,
+      onConnect: () => {
+        client.subscribe('/user/queue/payment', (message) => {
+          const data = JSON.parse(message.body);
+          if (data.orderCode === order.orderCode && data.status === 'COMPLETED') {
+            navigate(`/payment/result?success=true&orderCode=${data.orderCode}`);
+          }
+        });
+      },
+      onStompError: (frame) => {
+        console.error('Payment WebSocket error:', frame);
+      },
+    });
+
+    client.activate();
+
+    return () => {
+      client.deactivate();
+    };
+  }, [order.orderCode, navigate]);
+
   const rows = [
-    { label: 'Ngân hàng',      value: bank.name,          copy: false },
-    { label: 'Số tài khoản',   value: bank.accountNumber, copy: true  },
-    { label: 'Chủ tài khoản',  value: bank.accountName,   copy: true  },
-    { label: 'Chi nhánh',      value: bank.branch,        copy: false },
-    { label: 'Số tiền',        value: formatCurrency(bank.amount), copy: false, highlight: true },
-    { label: 'Nội dung CK',    value: bank.content,       copy: true,  highlight: true },
+    { label: 'Ngân hàng',     value: bank.bankCode,               copy: false                  },
+    { label: 'Số tài khoản',  value: bank.accountNumber,          copy: true                   },
+    { label: 'Chủ tài khoản', value: bank.accountName,            copy: true                   },
+    { label: 'Chi nhánh',     value: bank.branch,                 copy: false                  },
+    { label: 'Số tiền',       value: formatCurrency(bank.amount), copy: false, highlight: true },
+    { label: 'Nội dung CK',   value: bank.content,                copy: true,  highlight: true },
   ];
+
+  if (timedOut) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-8 text-center">
+        <Clock size={40} className="text-muted-foreground" />
+        <p className="font-semibold">Chưa nhận được xác nhận thanh toán</p>
+        <p className="text-sm text-muted-foreground">
+          Nếu bạn đã chuyển khoản, vui lòng liên hệ hỗ trợ kèm mã đơn{' '}
+          <span className="font-mono font-bold">{order.orderCode}</span>.
+        </p>
+        <Button variant="outline" onClick={() => navigate('/dashboard')}>
+          Xem đơn hàng của tôi
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
+      <div className="flex flex-col items-center gap-3">
+        <p className="text-sm font-semibold text-center text-muted-foreground">Quét mã QR để chuyển khoản</p>
+        <img
+          src={sePayQrUrl}
+          alt="SePay QR Code"
+          className="w-52 h-52 rounded-2xl border-2 border-border object-contain bg-white p-2"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+        />
+        <p className="text-xs text-muted-foreground">
+          Mở app ngân hàng → Quét mã → Kiểm tra thông tin → Xác nhận
+        </p>
+      </div>
+
       <div className="rounded-2xl p-5 space-y-4" style={{ background: '#E6F1FB', border: '1.5px solid #85B7EB' }}>
-        <p className="font-bold text-sm" style={{ color: '#0C447C' }}>Thông tin chuyển khoản</p>
+        <p className="font-bold text-sm" style={{ color: '#0C447C' }}>Hoặc chuyển khoản thủ công</p>
         <div className="space-y-3">
           {rows.map(({ label, value, copy, highlight }) => (
             <div key={label} className="flex items-center justify-between gap-4">
@@ -193,15 +286,19 @@ function BankTransferPanel({ order }: { order: OrderResponse }) {
         <p className="text-sm font-semibold" style={{ color: '#633806' }}>⚠️ Lưu ý quan trọng</p>
         <ul className="text-xs space-y-1 list-disc list-inside" style={{ color: '#854F0B' }}>
           <li>Ghi <strong>đúng nội dung</strong> chuyển khoản để hệ thống xác nhận tự động</li>
-          <li>Đơn hàng được duyệt trong <strong>1–2 giờ</strong> làm việc</li>
-          <li>Liên hệ hỗ trợ nếu chưa nhận khóa học sau 24 giờ</li>
+          <li>Hệ thống sẽ <strong>tự động xác nhận</strong> ngay khi nhận được chuyển khoản</li>
+          <li>Liên hệ hỗ trợ nếu chưa nhận khóa học sau 24 giờ kèm mã đơn <strong>{order.orderCode}</strong></li>
         </ul>
+      </div>
+
+      <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+        <span className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500' : 'bg-yellow-400'}`} />
+        {wsConnected ? 'Đang chờ xác nhận tự động...' : 'Đang kết nối...'}
       </div>
     </div>
   );
 }
 
-// ─── PAYPAL ───────────────────────────────────────────────────────────────────
 function PayPalPanel({ order }: { order: OrderResponse }) {
   const handleRedirect = () => {
     toast({ title: 'Chức năng đang phát triển', description: 'Backend chưa tích hợp PayPal gateway.' });
@@ -218,7 +315,6 @@ function PayPalPanel({ order }: { order: OrderResponse }) {
           <p className="text-sm mt-1" style={{ color: '#185FA5' }}>Thanh toán quốc tế nhanh chóng và an toàn</p>
         </div>
       </div>
-
       <div className="border border-border rounded-xl p-4 space-y-2 text-sm">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Mã đơn hàng</span>
@@ -233,7 +329,6 @@ function PayPalPanel({ order }: { order: OrderResponse }) {
           <span className="font-semibold text-muted-foreground">~ ${(order.finalAmount / 25000).toFixed(2)}</span>
         </div>
       </div>
-
       <Button
         className="w-full h-12 text-base font-semibold flex items-center justify-center gap-2"
         style={{ background: '#185FA5' }}
@@ -245,7 +340,6 @@ function PayPalPanel({ order }: { order: OrderResponse }) {
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
 const PANEL_MAP: Record<PaymentMethod, (order: OrderResponse) => React.ReactNode> = {
   VNPAY:         (o) => <VNPayPanel order={o} />,
   MOMO:          (o) => <MoMoPanel order={o} />,
@@ -276,7 +370,6 @@ export default function OrderPayment() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="flex items-center gap-2 text-sm mb-8 text-muted-foreground">
           <Link to="/cart" className="hover:text-primary flex items-center gap-1 transition-colors">
@@ -321,7 +414,6 @@ export default function OrderPayment() {
           </Button>
         </div>
       </div>
-
       <Footer />
     </div>
   );

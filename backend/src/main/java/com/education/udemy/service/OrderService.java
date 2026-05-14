@@ -4,6 +4,7 @@ import com.education.udemy.configuration.VNPayConfig;
 import com.education.udemy.dto.request.order.AdminOrderCreationRequest;
 import com.education.udemy.dto.request.order.OrderCreationRequest;
 import com.education.udemy.dto.request.order.OrderUpdateRequest;
+import com.education.udemy.dto.request.order.SePayWebhookRequest;
 import com.education.udemy.dto.response.api.ApiPagination;
 import com.education.udemy.dto.response.order.OrderResponse;
 import com.education.udemy.dto.response.stats.OrderStatsResponse;
@@ -27,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,6 +55,7 @@ public class OrderService {
     EnrollmentRepository enrollmentRepository;
     VNPayService vnPayService;
     VNPayConfig vnPayConfig;
+    SimpMessagingTemplate messagingTemplate;
 
     private BigDecimal getEffectivePrice(Course course) {
         return course.getDiscountPrice() != null ? course.getDiscountPrice() : course.getPrice();
@@ -226,6 +229,87 @@ public class OrderService {
             orderRepository.save(order);
             return false;
         }
+    }
+
+    @Transactional
+    public boolean handleSePayWebhook(SePayWebhookRequest request) {
+        String content = request.getContent();
+        if (content == null || content.isBlank()) {
+            return false;
+        }
+
+        String orderCode = extractOrderCode(content);
+        if (orderCode == null) {
+            log.warn("SePay webhook: cannot extract orderCode from content='{}'", content);
+            return false;
+        }
+
+        Order order = orderRepository.findByOrderCode(orderCode).orElse(null);
+        if (order == null) {
+            log.warn("SePay webhook: order not found for orderCode='{}'", orderCode);
+            return false;
+        }
+
+        if (order.getPaymentStatus() == OrderStatus.COMPLETED) {
+            return true;
+        }
+
+        if (request.getTransferAmount() != null) {
+            BigDecimal expected = order.getFinalAmount();
+            BigDecimal received = request.getTransferAmount();
+            if (received.compareTo(expected) < 0) {
+                log.warn("SePay webhook: amount mismatch for order={}: expected={}, received={}",
+                        orderCode, expected, received);
+                return false;
+            }
+        }
+
+        order.setPaymentStatus(OrderStatus.COMPLETED);
+        order.setPaymentMethod(PaymentMethod.BANK_TRANSFER);
+        orderRepository.save(order);
+
+        if (order.getCoupon() != null) {
+            couponService.incrementCouponUsage(order.getCoupon().getCode());
+        }
+
+        if (order.getOrderItems() != null) {
+            order.getOrderItems().forEach(item ->
+                    enrollmentService.internalEnroll(order.getUser(), item.getCourse().getId())
+            );
+        }
+
+        messagingTemplate.convertAndSendToUser(
+                order.getUser().getUsername(),
+                "/queue/payment",
+                Map.of("orderCode", orderCode, "status", "COMPLETED")
+        );
+
+        return true;
+    }
+
+    private String extractOrderCode(String content) {
+        if (content == null) return null;
+        String upper = content.toUpperCase();
+
+        int idx = upper.indexOf("ORD-");
+        if (idx != -1) {
+            String sub = content.substring(idx);
+            String[] parts = sub.split("\\s+");
+            return parts[0].trim();
+        }
+
+        idx = upper.indexOf("ORD");
+        if (idx != -1) {
+            String sub = content.substring(idx);
+            String[] parts = sub.split("\\s+");
+            String code = parts[0].trim();
+            if (code.matches("ORD\\d+")) {
+                code = "ORD-" + code.substring(3);
+            }
+            return code;
+        }
+
+        return null;
     }
 
     public OrderResponse getDetailByOrderCode(String orderCode) {

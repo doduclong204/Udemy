@@ -41,6 +41,7 @@ public class SecurityConfiguration {
                 "/auth/facebook",
                 "/auth/stats",
                 "/orders/vnpay/return",
+                "/orders/sepay/webhook",
                 "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
                 "/storage/**", "/files/**", "/images/**", "/videos/**",
                 "/ws/**",

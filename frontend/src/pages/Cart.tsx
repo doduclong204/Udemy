@@ -181,16 +181,18 @@ export default function Cart() {
           <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-border">
-                <button
-                  type="button"
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={toggleSelectAll}
-                  className="flex items-center gap-3 group"
+                  onKeyDown={(e) => e.key === 'Enter' && toggleSelectAll()}
+                  className="flex items-center gap-3 group cursor-pointer"
                 >
                   <Checkbox checked={allSelected} onChange={toggleSelectAll} />
                   <span className="text-base font-semibold text-foreground select-none group-hover:text-primary transition-colors">
                     Chọn tất cả
                   </span>
-                </button>
+                </div>
                 <span className="text-sm text-muted-foreground">
                   {selectedIds.size}/{items.length} khóa học
                 </span>
