@@ -177,8 +177,6 @@ function BankTransferPanel({ order }: { order: OrderResponse }) {
       }).catch(() => {});
     }, 5000);
 
-    setWsConnected(true);
-
     return () => {
       cancelled = true;
       clearTimeout(timeoutId);
@@ -195,6 +193,7 @@ function BankTransferPanel({ order }: { order: OrderResponse }) {
       connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 5000,
       onConnect: () => {
+        setWsConnected(true);
         client.subscribe('/user/queue/payment', (message) => {
           const data = JSON.parse(message.body);
           if (data.orderCode === order.orderCode && data.status === 'COMPLETED') {
@@ -202,7 +201,11 @@ function BankTransferPanel({ order }: { order: OrderResponse }) {
           }
         });
       },
+      onDisconnect: () => {
+        setWsConnected(false);
+      },
       onStompError: (frame) => {
+        setWsConnected(false);
         console.error('Payment WebSocket error:', frame);
       },
     });

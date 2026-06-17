@@ -110,13 +110,11 @@ export default function CoursePlayer() {
     lecture: 0,
   });
 
-  // ── Progress tracking ──
-  // watchedDurations: loaded from server on mount, used to resume video position
   const [watchedDurations, setWatchedDurations] = useState<
     Record<string, number>
   >({});
-  const videoTimeRef = useRef<number>(0); // current video time (no re-render)
-  const lastSavedTimeRef = useRef<number>(0); // last time we saved to server
+  const videoTimeRef = useRef<number>(0);
+  const lastSavedTimeRef = useRef<number>(0); 
   const currentLectureIdRef = useRef<string | null>(null);
   const enrollmentIdRef = useRef<string | null>(null);
 
@@ -176,7 +174,6 @@ export default function CoursePlayer() {
               });
               setWatchedDurations(durationsMap);
 
-              // Khoi phuc bai dang hoc do (lastWatchedAt moi nhat)
               const lastProgress = progressList
                 .filter((p) => p.lastWatchedAt)
                 .sort((a, b) => new Date(b.lastWatchedAt).getTime() - new Date(a.lastWatchedAt).getTime())[0];
@@ -241,8 +238,7 @@ export default function CoursePlayer() {
     },
   });
 
-  // ── Core save function (uses refs → no stale closure issues) ──
-  // Uses fetch with keepalive:true so the request survives page unload
+
   const saveProgress = useCallback(() => {
     const eid = enrollmentIdRef.current;
     const lid = currentLectureIdRef.current;
@@ -252,9 +248,8 @@ export default function CoursePlayer() {
 
     const apiBase =
       import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
-    // keepalive:true keeps the request alive even when the page is closed
     fetch(`${apiBase}/enrollments/${eid}/progress`, {
-      method: "PATCH", // ✅ PATCH, not POST
+      method: "PATCH",
       keepalive: true,
       headers: {
         "Content-Type": "application/json",

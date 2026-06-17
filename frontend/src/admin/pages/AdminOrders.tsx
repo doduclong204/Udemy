@@ -689,6 +689,14 @@ export default function AdminOrders() {
   };
 
   const handleExportCSV = () => {
+    const escapeCSV = (val: any) => {
+      const str = val == null ? "" : String(val);
+      if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
     const headers = [
       "Mã đơn",
       "Số tiền gốc",
@@ -707,8 +715,11 @@ export default function AdminOrders() {
       STATUS_MAP[o.paymentStatus]?.label ?? o.paymentStatus,
       formatDateTime(o.createdAt),
     ]);
-    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const csv = [
+      headers.map(escapeCSV).join(","),
+      ...rows.map((r) => r.map(escapeCSV).join(",")),
+    ].join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `orders_${new Date().toISOString().split("T")[0]}.csv`;

@@ -45,6 +45,7 @@ public class CreateCourseRequest {
     BigDecimal price;
 
     BigDecimal discountPrice;
+    Boolean outstanding;
 
     @NotNull(message = "Trình độ không được để trống")
     Level level;

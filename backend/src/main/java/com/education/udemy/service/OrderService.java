@@ -38,6 +38,8 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -56,6 +58,8 @@ public class OrderService {
     VNPayService vnPayService;
     VNPayConfig vnPayConfig;
     SimpMessagingTemplate messagingTemplate;
+
+    private static final Pattern ORDER_CODE_PATTERN = Pattern.compile("ORD-?(\\d+)");
 
     private BigDecimal getEffectivePrice(Course course) {
         return course.getDiscountPrice() != null ? course.getDiscountPrice() : course.getPrice();
@@ -289,26 +293,10 @@ public class OrderService {
 
     private String extractOrderCode(String content) {
         if (content == null) return null;
-        String upper = content.toUpperCase();
-
-        int idx = upper.indexOf("ORD-");
-        if (idx != -1) {
-            String sub = content.substring(idx);
-            String[] parts = sub.split("\\s+");
-            return parts[0].trim();
+        Matcher m = ORDER_CODE_PATTERN.matcher(content.toUpperCase().trim());
+        if (m.find()) {
+            return "ORD-" + m.group(1);
         }
-
-        idx = upper.indexOf("ORD");
-        if (idx != -1) {
-            String sub = content.substring(idx);
-            String[] parts = sub.split("\\s+");
-            String code = parts[0].trim();
-            if (code.matches("ORD\\d+")) {
-                code = "ORD-" + code.substring(3);
-            }
-            return code;
-        }
-
         return null;
     }
 

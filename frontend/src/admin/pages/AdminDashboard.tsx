@@ -416,6 +416,14 @@ const compareRange = useMemo(
   };
 
   const handleExport = () => {
+    const escapeCSV = (val: any) => {
+      const str = val == null ? "" : String(val);
+      if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
     const cmpLabel = compareModeLabel(
       compareMode,
       range,
@@ -448,7 +456,7 @@ const compareRange = useMemo(
       ]),
     ];
     const csv = lines
-      .map((r) => (Array.isArray(r) ? r.join(",") : r))
+      .map((r) => (Array.isArray(r) && r.length > 0 ? r.map(escapeCSV).join(",") : ""))
       .join("\n");
     const blob = new Blob(["\uFEFF" + csv], {
       type: "text/csv;charset=utf-8;",

@@ -375,6 +375,7 @@ export default function AdminCourseForm() {
   const [loadingCourse, setLoadingCourse] = useState(false);
   const [uploadItems, setUploadItems] = useState<UploadItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState({
     title: "",
@@ -514,13 +515,36 @@ export default function AdminCourseForm() {
     return true;
   };
 
+  const extractApiErrorMessage = (error: any): string => {
+    const data = error?.response?.data;
+    if (!data) return "";
+    if (data.message) return data.message;
+    if (Array.isArray(data.errors) && data.errors.length > 0)
+      return data.errors.map((e: any) => e.defaultMessage || e.message || e).join(", ");
+    return "";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!isEditing && (!thumbnailFile || !bannerFile)) {
-      toast.error("Vui lòng chọn Thumbnail và Banner");
+    const errors: Record<string, string> = {};
+    if (!formData.title.trim()) errors.title = "Tiêu đề không được để trống";
+    if (!formData.subtitle.trim()) errors.subtitle = "Mô tả ngắn không được để trống";
+    if (!formData.description.trim()) errors.description = "Mô tả chi tiết không được để trống";
+    if (!formData.category) errors.category = "Vui lòng chọn danh mục";
+    if (!formData.level) errors.level = "Vui lòng chọn trình độ";
+    if (!formData.price || parseInt(formData.price) <= 0) errors.price = "Giá phải lớn hơn 0";
+    if (!isEditing && !thumbnailFile) errors.thumbnail = "Vui lòng chọn Thumbnail";
+    if (!isEditing && !bannerFile) errors.banner = "Vui lòng chọn Banner";
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      const firstMsg = Object.values(errors)[0];
+      toast.error(firstMsg);
       return;
     }
+
+    setFieldErrors({});
 
     const imageItems: (UploadItem & { file: File; label: string })[] = [];
     if (thumbnailFile) {
@@ -693,6 +717,7 @@ export default function AdminCourseForm() {
               : undefined,
             level: formData.level as any,
             categoryId: formData.category,
+            outstanding: formData.isFeatured,
             learningOutcomes: learningOutcomesJson,
             sections: sectionsWithVideoUrl.map((s) => ({
               title: s.title,
@@ -712,7 +737,9 @@ export default function AdminCourseForm() {
       setIsUploading(false);
       setUploadItems([]);
       clearSignatureCache();
-      toast.error(isEditing ? "Cập nhật thất bại!" : "Tạo khóa học thất bại!");
+      const apiMsg = extractApiErrorMessage(error);
+      const fallback = isEditing ? "Cập nhật thất bại!" : "Tạo khóa học thất bại!";
+      toast.error(apiMsg || error?.message || fallback);
       console.error("Course submit error", error);
     }
   };
@@ -965,50 +992,57 @@ export default function AdminCourseForm() {
           </h2>
           <div className="space-y-4">
             <div>
-              <Label className="text-admin-foreground">Tiêu đề khoá học</Label>
+              <Label className="text-admin-foreground">Tiêu đề khoá học <span className="text-red-400">*</span></Label>
               <Input
                 value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
+                onChange={(e) => {
+                  setFormData({ ...formData, title: e.target.value });
+                  if (e.target.value.trim()) setFieldErrors((prev) => { const n = { ...prev }; delete n.title; return n; });
+                }}
                 placeholder="VD: Complete Web Development Bootcamp 2025"
-                className="mt-1.5 bg-admin-accent border-admin-border text-admin-foreground"
+                className={`mt-1.5 bg-admin-accent border-admin-border text-admin-foreground ${fieldErrors.title ? "border-red-500" : ""}`}
                 required
               />
+              {fieldErrors.title && <p className="mt-1 text-xs text-red-400">{fieldErrors.title}</p>}
             </div>
             <div>
-              <Label className="text-admin-foreground">Phụ đề</Label>
+              <Label className="text-admin-foreground">Phụ đề <span className="text-red-400">*</span></Label>
               <Input
                 value={formData.subtitle}
-                onChange={(e) =>
-                  setFormData({ ...formData, subtitle: e.target.value })
-                }
+                onChange={(e) => {
+                  setFormData({ ...formData, subtitle: e.target.value });
+                  if (e.target.value.trim()) setFieldErrors((prev) => { const n = { ...prev }; delete n.subtitle; return n; });
+                }}
                 placeholder="Mô tả ngắn gọn về khoá học"
-                className="mt-1.5 bg-admin-accent border-admin-border text-admin-foreground"
+                className={`mt-1.5 bg-admin-accent border-admin-border text-admin-foreground ${fieldErrors.subtitle ? "border-red-500" : ""}`}
               />
+              {fieldErrors.subtitle && <p className="mt-1 text-xs text-red-400">{fieldErrors.subtitle}</p>}
             </div>
             <div>
-              <Label className="text-admin-foreground">Mô tả chi tiết</Label>
+              <Label className="text-admin-foreground">Mô tả chi tiết <span className="text-red-400">*</span></Label>
               <Textarea
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
+                onChange={(e) => {
+                  setFormData({ ...formData, description: e.target.value });
+                  if (e.target.value.trim()) setFieldErrors((prev) => { const n = { ...prev }; delete n.description; return n; });
+                }}
                 placeholder="Mô tả đầy đủ về nội dung và lợi ích của khoá học..."
                 rows={5}
-                className="mt-1.5 bg-admin-accent border-admin-border text-admin-foreground"
+                className={`mt-1.5 bg-admin-accent border-admin-border text-admin-foreground ${fieldErrors.description ? "border-red-500" : ""}`}
               />
+              {fieldErrors.description && <p className="mt-1 text-xs text-red-400">{fieldErrors.description}</p>}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label className="text-admin-foreground">Danh mục</Label>
+                <Label className="text-admin-foreground">Danh mục <span className="text-red-400">*</span></Label>
                 <Select
                   value={formData.category}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, category: value })
-                  }
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, category: value });
+                    setFieldErrors((prev) => { const n = { ...prev }; delete n.category; return n; });
+                  }}
                 >
-                  <SelectTrigger className="mt-1.5 bg-admin-accent border-admin-border text-admin-foreground">
+                  <SelectTrigger className={`mt-1.5 bg-admin-accent border-admin-border text-admin-foreground ${fieldErrors.category ? "border-red-500" : ""}`}>
                     <SelectValue placeholder="Chọn danh mục" />
                   </SelectTrigger>
                   <SelectContent position="popper" sideOffset={4} className="bg-white border-[hsl(220,15%,87%)] text-gray-800 shadow-lg">
@@ -1019,16 +1053,18 @@ export default function AdminCourseForm() {
                     ))}
                   </SelectContent>
                 </Select>
+                {fieldErrors.category && <p className="mt-1 text-xs text-red-400">{fieldErrors.category}</p>}
               </div>
               <div>
-                <Label className="text-admin-foreground">Trình độ</Label>
+                <Label className="text-admin-foreground">Trình độ <span className="text-red-400">*</span></Label>
                 <Select
                   value={formData.level}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, level: value })
-                  }
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, level: value });
+                    setFieldErrors((prev) => { const n = { ...prev }; delete n.level; return n; });
+                  }}
                 >
-                  <SelectTrigger className="mt-1.5 bg-admin-accent border-admin-border text-admin-foreground">
+                  <SelectTrigger className={`mt-1.5 bg-admin-accent border-admin-border text-admin-foreground ${fieldErrors.level ? "border-red-500" : ""}`}>
                     <SelectValue placeholder="Chọn trình độ" />
                   </SelectTrigger>
                   <SelectContent position="popper" sideOffset={4} className="bg-white border-[hsl(220,15%,87%)] text-gray-800 shadow-lg">
@@ -1037,6 +1073,7 @@ export default function AdminCourseForm() {
                     <SelectItem value="ADVANCED">Nâng cao</SelectItem>
                   </SelectContent>
                 </Select>
+                {fieldErrors.level && <p className="mt-1 text-xs text-red-400">{fieldErrors.level}</p>}
               </div>
             </div>
           </div>
@@ -1063,6 +1100,7 @@ export default function AdminCourseForm() {
                     if (file && validateImageFile(file)) {
                       setThumbnailFile(file);
                       setThumbnailPreview(URL.createObjectURL(file));
+                      setFieldErrors((prev) => { const n = { ...prev }; delete n.thumbnail; return n; });
                     }
                     e.target.value = "";
                   }}
@@ -1096,6 +1134,7 @@ export default function AdminCourseForm() {
                   ✓ {thumbnailFile.name}
                 </p>
               )}
+              {fieldErrors.thumbnail && <p className="mt-1 text-xs text-red-400">{fieldErrors.thumbnail}</p>}
             </div>
 
             <div>
@@ -1113,6 +1152,7 @@ export default function AdminCourseForm() {
                     if (file && validateImageFile(file)) {
                       setBannerFile(file);
                       setBannerPreview(URL.createObjectURL(file));
+                      setFieldErrors((prev) => { const n = { ...prev }; delete n.banner; return n; });
                     }
                     e.target.value = "";
                   }}
@@ -1146,6 +1186,7 @@ export default function AdminCourseForm() {
                   ✓ {bannerFile.name}
                 </p>
               )}
+              {fieldErrors.banner && <p className="mt-1 text-xs text-red-400">{fieldErrors.banner}</p>}
             </div>
           </div>
         </div>
@@ -1157,17 +1198,19 @@ export default function AdminCourseForm() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label className="text-admin-foreground">Giá gốc (VNĐ)</Label>
+              <Label className="text-admin-foreground">Giá gốc (VNĐ) <span className="text-red-400">*</span></Label>
               <Input
                 type="number"
                 value={formData.price}
-                onChange={(e) =>
-                  setFormData({ ...formData, price: e.target.value })
-                }
+                onChange={(e) => {
+                  setFormData({ ...formData, price: e.target.value });
+                  if (parseInt(e.target.value) > 0) setFieldErrors((prev) => { const n = { ...prev }; delete n.price; return n; });
+                }}
                 placeholder="VD: 1499000"
-                className="mt-1.5 bg-admin-accent border-admin-border text-admin-foreground"
+                className={`mt-1.5 bg-admin-accent border-admin-border text-admin-foreground ${fieldErrors.price ? "border-red-500" : ""}`}
                 required
               />
+              {fieldErrors.price && <p className="mt-1 text-xs text-red-400">{fieldErrors.price}</p>}
             </div>
             <div>
               <Label className="text-admin-foreground">

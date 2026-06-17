@@ -11,6 +11,7 @@ import org.mapstruct.*;
 public interface CourseMapper {
 
     @Mapping(target = "category", ignore = true)
+    @Mapping(target = "outstanding", source = "outstanding")
     Course toCourse(CreateCourseRequest request);
 
     @Mapping(target = "categoryName", source = "category.name")

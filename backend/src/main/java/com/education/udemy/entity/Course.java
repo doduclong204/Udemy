@@ -54,7 +54,7 @@ public class Course extends BaseEntity{
     private Level level;
 
     @Builder.Default
-    Boolean outstanding = true;
+    Boolean outstanding = false;
 
     @Column(columnDefinition = "TEXT")
     private String learningOutcomes;
